@@ -4,7 +4,7 @@
  #include "Baselib.h"
  #include "Cpp/ReentrantLock.h"
  
-+#include "zts/jvm/TsAppDomain.h"
++#include "zts/jvm/JsAppDomain.h"
 +
  Il2CppDefaults il2cpp_defaults;
  bool g_il2cpp_is_fully_initialized = false;
@@ -14,7 +14,7 @@
  #endif
  
 -        return true;
-+        zts::TsAppDomain::Initialize();
++        zts::JsAppDomain::Initialize();
 +        return true;
      }
  

@@ -109,7 +109,7 @@ index 4b858bf..475f9ed 100644
  #include "Baselib.h"
  #include "Cpp/ReentrantLock.h"
  
-+#include "zts/jvm/TsAppDomain.h"
++#include "zts/jvm/JsAppDomain.h"
 +
  
  Il2CppDefaults il2cpp_defaults;
@@ -118,7 +118,7 @@ index 4b858bf..475f9ed 100644
  #if !IL2CPP_MONO_DEBUGGER
          il2cpp::utils::DebugSymbolReader::LoadDebugSymbols();
  #endif
-+        zts::TsAppDomain::Initialize();
++        zts::JsAppDomain::Initialize();
          return true;
      }
  

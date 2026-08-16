@@ -1,3 +1,23 @@
+// Copyright 2026 Code Philosophy
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+
 #include "MethodBridge.h"
 #include "../generated/MethodBridgeStub.h"
 #include "../marshal/ObjectRegistry.h"
@@ -31,8 +51,29 @@ bool FillDefaultParam(
     const MethodInfo* method,
     uint8_t paramIndex,
     const MarshalMetaInfo* paramMeta,
-    void* storage)
+    void* storage,
+    const MethodMarshalCtx* mctx)
 {
+    if (mctx != nullptr && mctx->defaults != nullptr
+        && paramIndex >= mctx->defaults->firstDefaultParamIndex
+        && paramIndex < (uint8_t)(mctx->defaults->firstDefaultParamIndex + mctx->defaults->defaultParamCount))
+    {
+        const MethodDefaultArgs* defaults = mctx->defaults;
+        const uint8_t slot = (uint8_t)(paramIndex - defaults->firstDefaultParamIndex);
+        if (paramMeta->passByValue)
+        {
+            Il2CppObject* obj =
+                defaults->defaultObjectSlots != nullptr ? defaults->defaultObjectSlots[slot] : nullptr;
+            *reinterpret_cast<void**>(storage) = obj;
+            return true;
+        }
+        if (defaults->defaultValueSlots != nullptr && defaults->defaultValueSlots[slot] != nullptr)
+        {
+            std::memcpy(storage, defaults->defaultValueSlots[slot], (size_t)paramMeta->size);
+            return true;
+        }
+    }
+
     bool isNullDefault = false;
     Il2CppObject* boxed =
         il2cpp::vm::Parameter::GetDefaultParameterValueObject(method, (int32_t)paramIndex, &isNullDefault);
@@ -191,7 +232,7 @@ JSValue MethodBridge::DefaultInvoke(
         }
         else if (IsOptionalParam(method->parameters[i]))
         {
-            FillDefaultParam(method, i, paramMeta, paramMeta->passByValue ? &tempStorage : storage);
+            FillDefaultParam(method, i, paramMeta, paramMeta->passByValue ? &tempStorage : storage, mctx);
         }
         else
         {

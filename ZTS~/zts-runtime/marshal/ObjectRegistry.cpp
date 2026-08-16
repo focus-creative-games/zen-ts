@@ -1,6 +1,26 @@
+// Copyright 2026 Code Philosophy
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+
 #include "ObjectRegistry.h"
 #include "../mt/MetaBinding.h"
-#include "../utils/TsException.h"
+#include "../utils/JsException.h"
 
 #include "gc/GarbageCollector.h"
 #include "utils/Memory.h"
@@ -169,7 +189,7 @@ JSValue PushWithProto(
     JSContext* ctx, Il2CppObject* obj, TypeBinding* binding, JSValueConst proto, const char* udKind)
 {
     if (obj == nullptr || binding == nullptr)
-        TsException::Throw("zts: ObjectRegistry::Push null");
+        JsException::Throw("zts: ObjectRegistry::Push null");
 
     ObjectRegistry::Initialize(JS_GetRuntime(ctx));
     uint32_t slot = AllocSlot(obj, binding);
@@ -178,10 +198,9 @@ JSValue PushWithProto(
     if (!JS_IsUndefined(proto) && JS_IsObject(proto))
     {
         if (JS_SetPrototype(ctx, js, proto) < 0)
-            TsException::Throw("zts: failed to set instance prototype");
+            JsException::Throw("zts: failed to set instance prototype");
     }
-    /* Own properties remain for exotic class objects where proto lookup is unreliable. */
-    MetaBinding::AttachInstanceMembers(ctx, js, binding);
+    /* Members live on instanceProto — do not AttachInstanceMembers per Push. */
     JS_SetPropertyStr(ctx, js, "__zts_id", JS_NewInt32(ctx, (int32_t)slot));
     if (udKind != nullptr)
         JS_SetPropertyStr(ctx, js, "__zts_ud_kind", JS_NewString(ctx, udKind));
@@ -191,6 +210,9 @@ JSValue PushWithProto(
 
 JSValue ObjectRegistry::Push(JSContext* ctx, Il2CppObject* obj, TypeBinding* binding)
 {
+    if (obj == nullptr)
+        return JS_NULL;
+
     JSValue js = PushUnwrapped(ctx, obj, binding);
     if (JS_IsException(js))
         return js;

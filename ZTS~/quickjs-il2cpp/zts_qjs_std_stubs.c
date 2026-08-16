@@ -113,9 +113,14 @@ void js_std_set_worker_new_context_func(JSContext *(*func)(JSRuntime *rt))
 }
 
 #include <stdio.h>
+#include <stdlib.h>
 
 /* Called via #define abort() in zts_il2cpp_config.h (QuickJS .c TUs only). */
+#ifdef _MSC_VER
 __declspec(noreturn) void zts_qjs_abort(const char* file, int line)
+#else
+__attribute__((noreturn)) void zts_qjs_abort(const char* file, int line)
+#endif
 {
     char message[2048];
     snprintf(
@@ -155,6 +160,7 @@ __declspec(noreturn) void zts_qjs_abort(const char* file, int line)
         }
     }
 
+#ifdef _MSC_VER
     {
         const char* tempDir = getenv("TEMP");
         if (tempDir == NULL || tempDir[0] == '\0')
@@ -176,4 +182,7 @@ __declspec(noreturn) void zts_qjs_abort(const char* file, int line)
     /* Never show CRT "abort() has been called" dialog. */
     _set_abort_behavior(0, _WRITE_ABORT_MSG | _CALL_REPORTFAULT);
     _exit(3);
+#else
+    _Exit(3);
+#endif
 }

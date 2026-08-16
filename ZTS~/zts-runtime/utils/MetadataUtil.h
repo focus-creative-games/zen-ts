@@ -1,3 +1,23 @@
+// Copyright 2026 Code Philosophy
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+
 #pragma once
 
 #include "../Il2CppCompatible.h"
@@ -16,8 +36,8 @@ namespace zts
         static Il2CppClass* ResolveType(const Il2CppAssembly* assembly, const char* typeName);
         /** Reflection-style name: arrays, closed generics, optional ", Assembly" AQN. */
         static Il2CppClass* ResolveTypeByName(const char* typeName);
-        static Il2CppClass* GetTsMethodClass();
-        static Il2CppClass* GetTsScriptExceptionClass();
+        static Il2CppClass* GetJsMethodClass();
+        static Il2CppClass* GetJsScriptExceptionClass();
         static const char* GetTypeFullName(Il2CppClass* klass);
 
         static inline void EnsureMethods(Il2CppClass* klass)
@@ -52,6 +72,10 @@ namespace zts
         }
 
         static std::string BuildTypeFullName(Il2CppClass* klass);
+
+        static std::string FormatParameterSignature(const MethodInfo* method);
+        static const MethodInfo* FindMethodByParameterSignature(Il2CppClass* klass, const char* name, const char* parameterSignature);
+        static const MethodInfo* FindMethodByParameterSignature(Il2CppClass* klass, const char* name, const char* parameterSignature, bool isStatic);
 
         static bool IsCtorOrCCtor(const MethodInfo* method)
         {
@@ -90,15 +114,16 @@ namespace zts
             return il2cpp::vm::Object::GetVirtualMethod(reinterpret_cast<Il2CppObject*>(target), declared);
         }
 
-        static bool TryReadTsAlias(const MethodInfo* method, std::string& aliasOut);
+        static bool TryReadJsAlias(const MethodInfo* method, std::string& aliasOut);
         static bool IsExtensionMethod(const MethodInfo* method);
-        static bool TryReadTsExtensionTypes(Il2CppClass* klass, std::vector<Il2CppClass*>& outExtensionClasses);
+        static bool TryReadJsExtensionTypes(Il2CppClass* klass, std::vector<Il2CppClass*>& outExtensionClasses);
 
-        /// Returns true when [TsMarshalAs(Bytes)] is present on a parameter (or return when paramIndex < 0).
+        /// Returns true when [JsMarshalAs(Bytes)] is present on a parameter (or return when paramIndex < 0).
         static bool ParameterHasBytesMarshal(const MethodInfo* method, int paramIndex);
 
-        /// Reads [TsMarshalAs]; returns kind: 0=Default,2=Bytes,5=Table. Members filled for Table.
-        static bool TryReadTsMarshalAs(
+        /// Reads [JsMarshalAs] or MarshalAs XML fallback; returns kind matching JsMarshalType ordinals.
+        /// Members filled for Table / UnpackedValues. Attribute always wins over XML.
+        static bool TryReadJsMarshalAs(
             const MethodInfo* method,
             int paramIndex,
             int32_t* outKind,

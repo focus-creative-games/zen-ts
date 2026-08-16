@@ -1,10 +1,29 @@
+// Copyright 2026 Code Philosophy
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
-using System.Runtime.InteropServices;
 using ZTS.Jvm;
 using ZTS.Marshaling;
 using ZTS.Utils;
@@ -13,7 +32,6 @@ namespace ZTS.DelegateImpl
 {
     internal static class DynamicBridgeFactory
     {
-        private static readonly int JsValueSize = Marshal.SizeOf<JSValue>();
         private static readonly List<JSValue> HeldFunctions = new List<JSValue>();
         private static readonly ConcurrentDictionary<Type, Func<JsEnv, JSValue, int, Delegate>> Factories =
             new ConcurrentDictionary<Type, Func<JsEnv, JSValue, int, Delegate>>();
@@ -45,18 +63,18 @@ namespace ZTS.DelegateImpl
         {
             if (!typeof(MulticastDelegate).IsAssignableFrom(delegateType))
             {
-                throw new TsScriptException($"zts: {delegateType.FullName} is not a delegate type.");
+                throw new JsScriptException($"zts: {delegateType.FullName} is not a delegate type.");
             }
 
             MethodInfo invoke = delegateType.GetMethod("Invoke");
             if (invoke == null)
             {
-                throw new TsScriptException($"zts: delegate {delegateType.FullName} has no Invoke.");
+                throw new JsScriptException($"zts: delegate {delegateType.FullName} has no Invoke.");
             }
 
             if (invoke.GetParameters().Any(p => p.GetCustomAttributes(typeof(ParamArrayAttribute), false).Length > 0))
             {
-                throw new TsScriptException("zts: GetFunction does not support params arrays.");
+                throw new JsScriptException("zts: GetFunction does not support params arrays.");
             }
 
             // Reuse identity so event remove_ with the same JS function matches add_.
@@ -166,7 +184,6 @@ namespace ZTS.DelegateImpl
 
             IntPtr ctx = env.Context;
             int argc = args?.Length ?? 0;
-            IntPtr argv = IntPtr.Zero;
             var jsArgs = new JSValue[argc];
             OpaqueParameterScope.Enter();
             try
@@ -184,16 +201,19 @@ namespace ZTS.DelegateImpl
                     }
                 }
 
-                if (argc > 0)
+                JSValue ret;
+                unsafe
                 {
-                    argv = Marshal.AllocHGlobal(argc * JsValueSize);
-                    for (int i = 0; i < argc; i++)
+                    fixed (JSValue* argvPtr = argc > 0 ? jsArgs : null)
                     {
-                        Marshal.StructureToPtr(jsArgs[i], IntPtr.Add(argv, i * JsValueSize), false);
+                        ret = QuickJsDll.JS_Call(
+                            ctx,
+                            func,
+                            JsValueUtil.Undefined,
+                            argc,
+                            argc > 0 ? (IntPtr)argvPtr : IntPtr.Zero);
                     }
                 }
-
-                JSValue ret = QuickJsDll.JS_Call(ctx, func, JsValueUtil.Undefined, argc, argv);
                 if (JsValueUtil.IsException(ret))
                 {
                     if (NestedJsCallPendingError.TryTake(out Exception nested))
@@ -204,7 +224,7 @@ namespace ZTS.DelegateImpl
                     JSValue ex = QuickJsDll.JS_GetException(ctx);
                     string msg = JsEnv.FormatJsValue(ctx, ex);
                     JsValueUtil.Free(ctx, ex);
-                    throw new TsScriptException($"zts: {msg}");
+                    throw new JsScriptException($"zts: {msg}");
                 }
 
                 // Write back by-ref via Opaque
@@ -248,11 +268,6 @@ namespace ZTS.DelegateImpl
                 for (int i = 0; i < argc; i++)
                 {
                     JsValueUtil.Free(ctx, jsArgs[i]);
-                }
-
-                if (argv != IntPtr.Zero)
-                {
-                    Marshal.FreeHGlobal(argv);
                 }
 
                 OpaqueParameterScope.Leave(ctx);

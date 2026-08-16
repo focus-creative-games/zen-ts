@@ -1,3 +1,23 @@
+// Copyright 2026 Code Philosophy
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+
 #include "DelegateMarshal.h"
 #include "MarshalMeta.h"
 #include "ObjectRegistry.h"
@@ -7,7 +27,7 @@
 #include "../mt/MetaBinding.h"
 
 #include "../utils/MetadataUtil.h"
-#include "../utils/TsException.h"
+#include "../utils/JsException.h"
 
 #include "gc/GarbageCollector.h"
 #include "vm/Class.h"
@@ -28,6 +48,7 @@ namespace zts
 struct TsDelegateCtorCache
 {
     const MethodInfo* originalInvokeMethod;
+    const MethodMarshalCtx* marshalCtx;
 };
 
 static std::unordered_map<const Il2CppClass*, const TsDelegateCtorCache*> s_ctorByClass;
@@ -90,9 +111,9 @@ void DelegateMarshal::Reset()
         Il2CppDelegate* del = s_rootedDelegates[i];
         if (del == nullptr || del->target == nullptr)
             continue;
-        Il2CppClass* methodClass = MetadataUtil::GetTsMethodClass();
+        Il2CppClass* methodClass = MetadataUtil::GetJsMethodClass();
         if (methodClass != nullptr && del->target->klass == methodClass)
-            reinterpret_cast<TsMethod*>(del->target)->disposed = true;
+            reinterpret_cast<JsMethod*>(del->target)->disposed = true;
     }
     s_jsFuncToDelegate.clear();
     if (s_rootedDelegates != nullptr)
@@ -134,35 +155,37 @@ static bool IsValueTypeParam(const Il2CppType* type)
     }
 }
 
-static JSValue PushArg(JSContext* ctx, const MethodInfo* invokeMethod, uint8_t paramIndex, const Il2CppType* type, void* argSlot)
+static JSValue PushArg(
+    JSContext* ctx,
+    const MethodMarshalCtx* mctx,
+    uint8_t paramIndex,
+    const Il2CppType* type,
+    void* argSlot)
 {
     if (type->byref)
         return OpaqueValueMarshal::Push(ctx, argSlot, type);
 
-    int32_t marshalKind = 0;
-    if (invokeMethod != nullptr
-        && MetadataUtil::TryReadTsMarshalAs(invokeMethod, (int)paramIndex, &marshalKind, nullptr)
-        && marshalKind == 3 /* OpaqueValue */)
-    {
-        return OpaqueValueMarshal::Push(ctx, argSlot, type);
-    }
+    if (mctx != nullptr && mctx->paramsMeta != nullptr && mctx->paramsMeta[paramIndex] != nullptr)
+        return mctx->paramsMeta[paramIndex]->cs2jsWriter(ctx, argSlot, mctx->paramsMeta[paramIndex]);
 
     const MarshalMetaInfo* meta = MarshalMeta::TryCreateDefault(type);
     if (meta != nullptr)
         return meta->cs2jsWriter(ctx, argSlot, meta);
 
-    TsException::ThrowFormat("zts: unsupported delegate param type %d", (int)type->type);
+    JsException::ThrowFormat("zts: unsupported delegate param type %d", (int)type->type);
     return JS_UNDEFINED;
 }
 
-static void PopRet(JSContext* ctx, const Il2CppType* type, JSValue value, void* __ret)
+static void PopRet(
+    JSContext* ctx, const MethodMarshalCtx* mctx, const Il2CppType* type, JSValue value, void* __ret)
 {
     if (type->type == IL2CPP_TYPE_VOID)
         return;
 
-    const MarshalMetaInfo* meta = MarshalMeta::TryCreateDefault(type);
+    const MarshalMetaInfo* meta =
+        (mctx != nullptr && mctx->retMeta != nullptr) ? mctx->retMeta : MarshalMeta::TryCreateDefault(type);
     if (meta == nullptr)
-        TsException::ThrowFormat("zts: unsupported delegate return type %d", (int)type->type);
+        JsException::ThrowFormat("zts: unsupported delegate return type %d", (int)type->type);
 
     void* tempStorage = nullptr;
     void* dest = meta->passByValue ? &tempStorage : __ret;
@@ -176,7 +199,7 @@ static void PopRet(JSContext* ctx, const Il2CppType* type, JSValue value, void* 
 // Unity InvokerMethod convention: value-type args are pointers; ref types live in __args[i].
 static void JsDelegateInvoke(Il2CppMethodPointer /*methodPtr*/, const MethodInfo* method, void* __this, void** __args, void* __ret)
 {
-    TsMethod* target = reinterpret_cast<TsMethod*>(__this);
+    JsMethod* target = reinterpret_cast<JsMethod*>(__this);
     JSContext* ctx = JsEnv::GetContext();
     if (target == nullptr || target->disposed || ctx == nullptr)
     {
@@ -188,10 +211,24 @@ static void JsDelegateInvoke(Il2CppMethodPointer /*methodPtr*/, const MethodInfo
     OpaqueParameterScope opaqueScope;
 
     JSValue func = JsGlobalRefs::Get(target->funcRef);
+    const MethodMarshalCtx* mctx = reinterpret_cast<const MethodMarshalCtx*>(target->methodMarshalCtx);
     const uint8_t argc = method->parameters_count;
+
+    /* Prefer stack for typical delegate arity; heap only for unusually large Invoke. */
+    constexpr uint8_t kStackArgc = 16;
+    JSValue stackArgv[kStackArgc];
     JSValue* argv = nullptr;
+    bool heapArgv = false;
     if (argc > 0)
-        argv = (JSValue*)il2cpp::utils::Memory::Malloc(sizeof(JSValue) * argc);
+    {
+        if (argc <= kStackArgc)
+            argv = stackArgv;
+        else
+        {
+            argv = (JSValue*)il2cpp::utils::Memory::Malloc(sizeof(JSValue) * argc);
+            heapArgv = true;
+        }
+    }
 
     for (uint8_t i = 0; i < argc; i++)
     {
@@ -199,7 +236,7 @@ static void JsDelegateInvoke(Il2CppMethodPointer /*methodPtr*/, const MethodInfo
         void* data = IsValueTypeParam(pt) ? __args[i] : &__args[i];
         if (pt->byref)
             data = &__args[i];
-        argv[i] = PushArg(ctx, method, i, pt, data);
+        argv[i] = PushArg(ctx, mctx, i, pt, data);
     }
 
     JSValue thisVal = JS_UNDEFINED;
@@ -207,13 +244,13 @@ static void JsDelegateInvoke(Il2CppMethodPointer /*methodPtr*/, const MethodInfo
 
     for (uint8_t i = 0; i < argc; i++)
         JS_FreeValue(ctx, argv[i]);
-    if (argv != nullptr)
+    if (heapArgv)
         il2cpp::utils::Memory::Free(argv);
 
     if (JS_IsException(result))
         JsEnv::ThrowPendingException();
 
-    PopRet(ctx, method->return_type, result, __ret);
+    PopRet(ctx, mctx, method->return_type, result, __ret);
     JS_FreeValue(ctx, result);
 }
 
@@ -503,7 +540,7 @@ static Il2CppMethodPointer ResolveClosedInvokeImpl(const MethodInfo* invoke)
         && ParamIsI4Like(invoke->parameters[1]))
         return (Il2CppMethodPointer)Trampoline_Func_i4_i4_i4;
 
-    TsException::ThrowFormat(
+    JsException::ThrowFormat(
         "zts: no closed-delegate trampoline for %s (argc=%u ret=%d)",
         MetadataUtil::GetTypeFullName(invoke->klass),
         (unsigned)n,
@@ -521,7 +558,8 @@ static const TsDelegateCtorCache* GetOrCreateCtor(Il2CppClass* delegateClass)
     std::memset(cache, 0, sizeof(TsDelegateCtorCache));
     cache->originalInvokeMethod = il2cpp::vm::Runtime::GetDelegateInvoke(delegateClass);
     if (cache->originalInvokeMethod == nullptr)
-        TsException::Throw("failed to resolve delegate Invoke");
+        JsException::Throw("failed to resolve delegate Invoke");
+    cache->marshalCtx = MetaBinding::CreateMethodMarshalCtx(cache->originalInvokeMethod);
     s_ctorByClass.insert({ delegateClass, cache });
     return cache;
 }
@@ -529,15 +567,15 @@ static const TsDelegateCtorCache* GetOrCreateCtor(Il2CppClass* delegateClass)
 Il2CppDelegate* DelegateMarshal::CreateFromFuncRef(JSContext* ctx, Il2CppClass* delegateClass, int funcRef)
 {
     const TsDelegateCtorCache* cache = GetOrCreateCtor(delegateClass);
-    Il2CppClass* methodClass = MetadataUtil::GetTsMethodClass();
+    Il2CppClass* methodClass = MetadataUtil::GetJsMethodClass();
     if (methodClass == nullptr)
-        TsException::Throw("TsMethod class not found (ZTS.Il2Cpp stripped?)");
+        JsException::Throw("JsMethod class not found (ZTS.Il2Cpp stripped?)");
 
-    TsMethod* target = reinterpret_cast<TsMethod*>(il2cpp::vm::Object::New(methodClass));
+    JsMethod* target = reinterpret_cast<JsMethod*>(il2cpp::vm::Object::New(methodClass));
     target->disposed = false;
     target->ctx = ctx;
     target->funcRef = funcRef;
-    target->methodMarshalCtx = nullptr;
+    target->methodMarshalCtx = cache->marshalCtx;
 
     Il2CppDelegate* del = reinterpret_cast<Il2CppDelegate*>(il2cpp::vm::Object::New(delegateClass));
     Il2CppMethodPointer invokeImpl = ResolveClosedInvokeImpl(cache->originalInvokeMethod);
@@ -577,11 +615,11 @@ bool DelegateMarshal::TryGetBoundJsFunction(JSContext* ctx, Il2CppDelegate* del,
     if (ctx == nullptr || del == nullptr || outFn == nullptr || del->target == nullptr)
         return false;
 
-    Il2CppClass* methodClass = MetadataUtil::GetTsMethodClass();
+    Il2CppClass* methodClass = MetadataUtil::GetJsMethodClass();
     if (methodClass == nullptr || del->target->klass != methodClass)
         return false;
 
-    TsMethod* tm = reinterpret_cast<TsMethod*>(del->target);
+    JsMethod* tm = reinterpret_cast<JsMethod*>(del->target);
     if (tm->disposed)
         return false;
 

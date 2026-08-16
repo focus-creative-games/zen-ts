@@ -3,7 +3,8 @@
 ZTS is a modern, concise, and easy-to-use Unity **TypeScript / JavaScript** scripting solution powered by **QuickJS**, with strong Il2Cpp optimization. Its design parallels [ZLua](https://github.com/focus-creative-games/zlua).
 
 - Documentation: [zts.code-philosophy.com](https://zts.code-philosophy.com/)
-- Sister product: [ZLua](https://doc.zlua.cn) / [zlua GitHub](https://github.com/focus-creative-games/zlua)
+- Sister product (Lua): [ZLua](https://doc.zlua.cn) / [zlua GitHub](https://github.com/focus-creative-games/zlua)
+- Unreal edition (WIP): [zts-ue](https://github.com/focus-creative-games/zts-ue)
 - 中文：[README.md](./README.md)
 
 ---
@@ -15,7 +16,7 @@ Compared with Puerts / xLua-style JS bridges, or “hand-rolled QuickJS + custom
 | | |
 |--|--|
 | **Easier** | C#-like DX; **no per-type Wrap whitelist**; lazy type binding |
-| **More complete** | Full C#↔JS interop: overloads, ref/out, struct ByVal/ByObj, Nullable, delegates, arrays, pointers, `[TsMarshalAs]`, etc. |
+| **More complete** | Full C#↔JS interop: overloads, ref/out, struct ByVal/ByObj, Nullable, delegates, arrays, pointers, `[JsMarshalAs]`, etc. |
 | **Unified with ZLua** | Same semantic contract (host API / marshal / type system / lifetime)—one mental model for Lua and TS/JS |
 | **Faster** | Player **Il2Cpp** hot paths are C++ bridges; same-signature stub reuse; even **0 generated bridges** can cover most paths |
 | **Less GC** | Reference types and structs (including structs with reference fields) use Registry / ByVal exotic by default; plus OpaqueValue strategies |
@@ -27,12 +28,16 @@ Compared with Puerts / xLua-style JS bridges, or “hand-rolled QuickJS + custom
 | | ZLua | ZTS |
 |--|------|-----|
 | Script side | Lua (PUC-Rio / LuaJIT) | JavaScript (QuickJS); optional TypeScript → ES modules |
-| Host façade | `LuaAppDomain` | `TsAppDomain` |
+| Host façade | `LuaAppDomain` | `JsAppDomain` |
 | Type entry | `CSharp[...]` | Same; plus `import { T } from "csharp:…"` |
 | Stdlib | `zlua.*` | `zts.*` |
-| Attributes | `[LuaMarshalAs]`, etc. | `[TsMarshalAs]` / `[TsAlias]` / `[TsExtension]` |
+| Attributes | `[LuaMarshalAs]`, etc. | `[JsMarshalAs]` / `[JsAlias]` / `[JsExtension]` |
 
 Host APIs are intentionally aligned: if you know ZLua, ZTS feels familiar.
+
+### Sister product: Unreal (zts-ue)
+
+For a modern TypeScript solution on **Unreal Engine** (aggressively optimized for C++), see **[zts-ue](https://github.com/focus-creative-games/zts-ue)**. It is **still under development**. This package and docs site cover **Unity / Tuanjie** only; follow that repo for UE progress and usage.
 
 ---
 
@@ -84,7 +89,7 @@ public static class ZtsBootstrap
     }
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
-    static void Init() => TsAppDomain.Initialize(LoadJsModule);
+    static void Init() => JsAppDomain.Initialize(LoadJsModule);
 }
 ```
 
@@ -97,7 +102,7 @@ public class GameEntry : MonoBehaviour
 {
     void Start()
     {
-        var add = TsAppDomain.GetFunction<System.Func<int, int, int>>("app", "add");
+        var add = JsAppDomain.GetFunction<System.Func<int, int, int>>("app", "add");
         Debug.Log(add(10, 20)); // 30
     }
 }
@@ -199,8 +204,8 @@ Rules of thumb:
 
 ```csharp
 // jsModule = canonical, no extension
-var onTick = TsAppDomain.GetFunction<System.Action<float>>("game/logic", "OnTick");
-var add = TsAppDomain.GetFunction<System.Func<int, int, int>>("game/logic", "add");
+var onTick = JsAppDomain.GetFunction<System.Action<float>>("game/logic", "OnTick");
+var add = JsAppDomain.GetFunction<System.Func<int, int, int>>("game/logic", "add");
 ```
 
 Editor: `moduleLoader` reads `TsProject/out/{canonical}.js`.  
@@ -214,7 +219,7 @@ Play mode runs `tsc --noEmit` by default. You can also run **`ZTS/Compile TypeSc
 
 | Assembly | Platform | Role |
 |----------|----------|------|
-| `ZTS.Common` | All | `TsAppDomain` façade, attributes, shared types |
+| `ZTS.Common` | All | `JsAppDomain` façade, attributes, shared types |
 | `ZTS.Mono` | Editor | QuickJS P/Invoke + Mono callback gate + Emit |
 | `ZTS.Il2Cpp` | Player | Il2Cpp host wiring (`ZTS~/zts-runtime`) |
 | `ZTS.Editor` | Editor | Install / Export / TypeScript toolchain / Settings |
@@ -254,3 +259,4 @@ MIT. Free to use, modify, and distribute.
 - Site: [code-philosophy.com](https://code-philosophy.com)
 - QQ group: `1095435513` (ZTS community)
 - Discord: [https://discord.gg/5bT7w9aRMz](https://discord.gg/5bT7w9aRMz)
+- Unreal (WIP): [zts-ue](https://github.com/focus-creative-games/zts-ue)

@@ -4,7 +4,7 @@ Install: floor — greatest `{X.Y.Z}.patch` with version **<=** Editor (letter s
 
 | File | Covers | Contents |
 |------|--------|----------|
-| `2021.3.0.patch` | `2021.3.0`–`2021.3.13` | `TsAppDomain::Initialize` hook; Debug `il2cpp_assert` → `zts_il2cpp_assert.log` |
+| `2021.3.0.patch` | `2021.3.0`–`2021.3.13` | `JsAppDomain::Initialize` hook; Debug `il2cpp_assert` → `zts_il2cpp_assert.log` |
 | `2021.3.14.patch` | `2021.3.14`–`2021.3.30` | same (Runtime context drift) |
 | `2021.3.31.patch` | `2021.3.31`+ | same (Runtime context drift) |
 

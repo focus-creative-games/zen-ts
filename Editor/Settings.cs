@@ -37,6 +37,15 @@ namespace ZTS
         [Tooltip("Extra source search paths for the JS debugger (in addition to TsProject/src).")]
         public string[] debuggerSourcePaths = { };
 
+        [Tooltip("MarshalAs XML files or directories (relative to project root or absolute). Root element ZTSMarshalAs. See Docs/spec/marshal/02-MARSHAL-AS §9.")]
+        public string[] marshalAsXmlPaths = { "Assets/CustomJsMarshalAsRules.xml" };
+
+        [Tooltip("JsAlias XML files or directories (relative to project root or absolute). Root element JsAlias. See Docs/spec/04-METHOD-OVERLOAD §5.4.")]
+        public string[] jsAliasXmlPaths = { "Assets/CustomJsAliasRules.xml" };
+
+        [Tooltip("JsExtensions XML files or directories (relative to project root or absolute). Root element JsExtensions. See Docs/spec/13-EXTENSION-METHODS §2.2.")]
+        public string[] jsExtensionXmlPaths = { "Assets/CustomJsExtensionRules.xml" };
+
         public static Settings Instance => instance;
 
         public static bool EnableForCurrentBuildTarget => Instance.enable;
@@ -87,6 +96,53 @@ namespace ZTS
 
                 settingsVersion = 1;
                 _needsSaveAfterMigrate = true;
+            }
+
+            if (settingsVersion < 2)
+            {
+                if (jsAliasXmlPaths == null)
+                {
+                    jsAliasXmlPaths = new[] { "Assets/CustomJsAliasRules.xml" };
+                }
+
+                if (jsExtensionXmlPaths == null)
+                {
+                    jsExtensionXmlPaths = new[] { "Assets/CustomJsExtensionRules.xml" };
+                }
+
+                settingsVersion = 2;
+                _needsSaveAfterMigrate = true;
+            }
+
+            if (settingsVersion < 3)
+            {
+                if (marshalAsXmlPaths == null)
+                {
+                    marshalAsXmlPaths = new[] { "Assets/CustomJsMarshalAsRules.xml" };
+                }
+
+                settingsVersion = 3;
+                _needsSaveAfterMigrate = true;
+            }
+            else
+            {
+                if (jsAliasXmlPaths == null)
+                {
+                    jsAliasXmlPaths = new[] { "Assets/CustomJsAliasRules.xml" };
+                    _needsSaveAfterMigrate = true;
+                }
+
+                if (jsExtensionXmlPaths == null)
+                {
+                    jsExtensionXmlPaths = new[] { "Assets/CustomJsExtensionRules.xml" };
+                    _needsSaveAfterMigrate = true;
+                }
+
+                if (marshalAsXmlPaths == null)
+                {
+                    marshalAsXmlPaths = new[] { "Assets/CustomJsMarshalAsRules.xml" };
+                    _needsSaveAfterMigrate = true;
+                }
             }
         }
     }

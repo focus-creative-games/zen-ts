@@ -109,7 +109,7 @@ index ef7eef1..6d7a1d2 100644
  #include "Baselib.h"
  #include "Cpp/ReentrantLock.h"
  
-+#include "zts/jvm/TsAppDomain.h"
++#include "zts/jvm/JsAppDomain.h"
 +
  #if IL2CPP_MONO_DEBUGGER
  extern "C" {
@@ -118,7 +118,7 @@ index ef7eef1..6d7a1d2 100644
          vm::MetadataCache::ExecuteEagerStaticClassConstructors();
          vm::MetadataCache::ExecuteModuleInitializers();
  
-+        zts::TsAppDomain::Initialize();
++        zts::JsAppDomain::Initialize();
          return true;
      }
  

@@ -1,9 +1,17 @@
-/* Vendored with quickjs-il2cpp. MSVC / Il2Cpp Bee shims. */
+/* Vendored with quickjs-il2cpp. MSVC / Clang (Android NDK) / Il2Cpp Bee shims. */
 #pragma once
 #ifndef CONFIG_VERSION
 #define CONFIG_VERSION "2026-06-04"
 #endif
 /* Leave CONFIG_ATOMICS undefined; quickjs.c skips it under _MSC_VER. */
+
+#include <stdint.h>
+#include <stdlib.h>
+#include <math.h>
+#include <string.h>
+#include <stdio.h>
+#include <time.h>
+
 #ifdef _MSC_VER
 #pragma warning(disable:4146) /* unary minus on unsigned in dtoa.c */
 #ifndef __builtin_expect
@@ -37,12 +45,7 @@
 #define __builtin_unreachable() __assume(0)
 #endif
 #include <intrin.h>
-#include <stdint.h>
-#include <stdlib.h>
 #include <malloc.h>
-#include <math.h>
-#include <string.h>
-#include <time.h>
 /* Redirect QuickJS abort() → log file/line, no CRT "abort() has been called" popup. */
 __declspec(noreturn) void zts_qjs_abort(const char* file, int line);
 #undef abort
@@ -83,4 +86,14 @@ static __forceinline double zts_nan_value(void)
 }
 #define NAN (zts_nan_value())
 #endif
+#else /* !_MSC_VER — Clang / GCC / Android NDK */
+#ifndef NAN
+#define NAN nan("")
+#endif
+#ifdef __cplusplus
+extern "C"
+#endif
+void zts_qjs_abort(const char* file, int line) __attribute__((noreturn));
+#undef abort
+#define abort() zts_qjs_abort(__FILE__, __LINE__)
 #endif /* _MSC_VER */

@@ -1,3 +1,23 @@
+// Copyright 2026 Code Philosophy
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+
 #include "TableMarshal.h"
 #include "MarshalMeta.h"
 
@@ -62,19 +82,17 @@ void ResolveMemberStorage(Il2CppClass* storageKlass, void* address, Il2CppClass*
     *outMemberAddr = address;
 }
 
-void WriteFieldFromJs(JSContext* ctx, JSValueConst prop, void* structAddr, Il2CppClass* klass, const char* name)
+void WriteFieldFromJs(
+    JSContext* ctx,
+    JSValueConst prop,
+    void* structAddr,
+    FieldInfo* field,
+    const MarshalMetaInfo* fieldMeta,
+    const char* name)
 {
-    FieldInfo* field = FindInstanceField(klass, name);
-    if (field == nullptr)
+    if (field == nullptr || fieldMeta == nullptr)
     {
         JS_ThrowTypeError(ctx, "zts: Table/Unpacked unknown member '%s'", name);
-        return;
-    }
-
-    const MarshalMetaInfo* fieldMeta = MarshalMeta::TryCreateDefault(field->type);
-    if (fieldMeta == nullptr)
-    {
-        JS_ThrowTypeError(ctx, "zts: Table/Unpacked member '%s' type unsupported", name);
         return;
     }
 
@@ -88,13 +106,10 @@ void WriteFieldFromJs(JSContext* ctx, JSValueConst prop, void* structAddr, Il2Cp
         *reinterpret_cast<void**>(slot) = tempStorage;
 }
 
-JSValue ReadFieldToJs(JSContext* ctx, void* structAddr, Il2CppClass* klass, const char* name)
+JSValue ReadFieldToJs(
+    JSContext* ctx, void* structAddr, FieldInfo* field, const MarshalMetaInfo* fieldMeta)
 {
-    FieldInfo* field = FindInstanceField(klass, name);
-    if (field == nullptr)
-        return JS_UNDEFINED;
-    const MarshalMetaInfo* fieldMeta = MarshalMeta::TryCreateDefault(field->type);
-    if (fieldMeta == nullptr)
+    if (field == nullptr || fieldMeta == nullptr)
         return JS_UNDEFINED;
     void* slot = FieldAddr(structAddr, field);
     return fieldMeta->cs2jsWriter(ctx, slot, fieldMeta);
@@ -113,6 +128,11 @@ const MarshalMetaInfo* TableMarshal::Create(
     tm->size = (int32_t)klass->instance_size - (int32_t)sizeof(Il2CppObject);
     tm->passByValue = false;
     tm->marshalAsKind = kind;
+
+    Il2CppClass* fieldOwner = klass;
+    if (klass != nullptr && klass->nullabletype)
+        fieldOwner = il2cpp::vm::Class::GetNullableArgument(klass);
+
     for (const std::string& spec : memberSpecs)
     {
         std::string name;
@@ -126,6 +146,12 @@ const MarshalMetaInfo* TableMarshal::Create(
         }
         tm->members.push_back(name);
         tm->optional.push_back(opt);
+
+        FieldInfo* field = FindInstanceField(fieldOwner, name.c_str());
+        tm->fields.push_back(field);
+        const MarshalMetaInfo* fieldMeta =
+            field != nullptr ? MarshalMeta::TryCreateDefault(field->type) : nullptr;
+        tm->fieldMetas.push_back(fieldMeta);
     }
 
     if (kind == MarshalAsKind::UnpackedValues)
@@ -185,7 +211,7 @@ void TableMarshal::Js2CsTable(JSContext* ctx, JSValueConst value, void* address,
             return;
         }
 
-        WriteFieldFromJs(ctx, prop, memberAddr, memberKlass, name);
+        WriteFieldFromJs(ctx, prop, memberAddr, tm->fields[i], tm->fieldMetas[i], name);
         JS_FreeValue(ctx, prop);
         if (JS_HasException(ctx))
             return;
@@ -211,7 +237,7 @@ JSValue TableMarshal::Cs2JsTable(JSContext* ctx, void* address, const MarshalMet
     for (size_t i = 0; i < tm->members.size(); ++i)
     {
         const char* name = tm->members[i].c_str();
-        JSValue prop = ReadFieldToJs(ctx, memberAddr, memberKlass, name);
+        JSValue prop = ReadFieldToJs(ctx, memberAddr, tm->fields[i], tm->fieldMetas[i]);
         if (JS_IsException(prop))
             return prop;
         if (JS_IsUndefined(prop))
@@ -242,7 +268,8 @@ void TableMarshal::Js2CsUnpacked(
     for (int i = 0; i < slots; ++i)
     {
         const char* name = tm->members[(size_t)i].c_str();
-        WriteFieldFromJs(ctx, argv[jsStart + i], memberAddr, memberKlass, name);
+        WriteFieldFromJs(
+            ctx, argv[jsStart + i], memberAddr, tm->fields[(size_t)i], tm->fieldMetas[(size_t)i], name);
         if (JS_HasException(ctx))
             return;
     }
@@ -266,8 +293,7 @@ JSValue TableMarshal::Cs2JsUnpacked(JSContext* ctx, void* address, const Marshal
     JSValue arr = JS_NewArray(ctx);
     for (size_t i = 0; i < tm->members.size(); ++i)
     {
-        const char* name = tm->members[i].c_str();
-        JSValue prop = ReadFieldToJs(ctx, memberAddr, memberKlass, name);
+        JSValue prop = ReadFieldToJs(ctx, memberAddr, tm->fields[i], tm->fieldMetas[i]);
         if (JS_IsException(prop))
             return prop;
         JS_SetPropertyUint32(ctx, arr, (uint32_t)i, prop);

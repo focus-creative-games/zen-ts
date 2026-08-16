@@ -1,3 +1,23 @@
+// Copyright 2026 Code Philosophy
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -12,7 +32,7 @@ namespace ZTS.Marshaling
     /// </summary>
     internal static class TypedMarshal
     {
-        public static JSValue Push(IntPtr ctx, object value, Type declaredType = null, TsMarshalAsAttribute marshalAs = null)
+        public static JSValue Push(IntPtr ctx, object value, Type declaredType = null, JsMarshalAsAttribute marshalAs = null)
         {
             if (value == null)
             {
@@ -29,23 +49,23 @@ namespace ZTS.Marshaling
 
             if (marshalAs != null)
             {
-                if (marshalAs.TsMarshalType == TsMarshalType.Bytes)
+                if (marshalAs.JsMarshalType == JsMarshalType.Bytes)
                 {
                     if (value is byte[] bytes)
                     {
                         return BytesMarshal.Push(ctx, bytes);
                     }
 
-                    throw new TsScriptException("zts: [TsMarshalAs(Bytes)] push requires byte[].");
+                    throw new JsScriptException("zts: [JsMarshalAs(Bytes)] push requires byte[].");
                 }
 
-                if (marshalAs.TsMarshalType == TsMarshalType.Table ||
-                    marshalAs.TsMarshalType == TsMarshalType.UnpackedValues)
+                if (marshalAs.JsMarshalType == JsMarshalType.Table ||
+                    marshalAs.JsMarshalType == JsMarshalType.UnpackedValues)
                 {
                     return TableMarshal.Push(ctx, value, pushAs, marshalAs);
                 }
 
-                if (marshalAs.TsMarshalType == TsMarshalType.OpaqueValue)
+                if (marshalAs.JsMarshalType == JsMarshalType.OpaqueValue)
                 {
                     return OpaqueParameterScope.Push(ctx, value);
                 }
@@ -112,11 +132,11 @@ namespace ZTS.Marshaling
                 case TypeCode.Double:
                     return JsValueUtil.NewFloat64(Convert.ToDouble(value, CultureInfo.InvariantCulture));
                 case TypeCode.Decimal:
-                    throw new TsScriptException("zts: System.Decimal marshal is not supported.");
+                    throw new JsScriptException("zts: System.Decimal marshal is not supported.");
                 case TypeCode.String:
                     return QuickJsDll.NewString(ctx, (string)value);
                 case TypeCode.DateTime:
-                    throw new TsScriptException("zts: System.DateTime marshal is not supported.");
+                    throw new JsScriptException("zts: System.DateTime marshal is not supported.");
             }
 
             if (underlying == typeof(IntPtr))
@@ -178,7 +198,7 @@ namespace ZTS.Marshaling
             return PushByObj(ctx, value, view);
         }
 
-        public static object Pop(IntPtr ctx, JSValue jsValue, Type expectedType, TsMarshalAsAttribute marshalAs = null)
+        public static object Pop(IntPtr ctx, JSValue jsValue, Type expectedType, JsMarshalAsAttribute marshalAs = null)
         {
             if (expectedType == null)
             {
@@ -188,24 +208,24 @@ namespace ZTS.Marshaling
             Type underlying = Nullable.GetUnderlyingType(expectedType) ?? expectedType;
             if (marshalAs != null)
             {
-                if (marshalAs.TsMarshalType == TsMarshalType.Object && underlying == typeof(object))
+                if (marshalAs.JsMarshalType == JsMarshalType.Object && underlying == typeof(object))
                 {
                     return PopObjectMarshal(ctx, jsValue);
                 }
 
-                if (marshalAs.TsMarshalType == TsMarshalType.Table)
+                if (marshalAs.JsMarshalType == JsMarshalType.Table)
                 {
                     return TableMarshal.Pop(ctx, jsValue, expectedType, marshalAs);
                 }
 
-                if (marshalAs.TsMarshalType == TsMarshalType.Bytes)
+                if (marshalAs.JsMarshalType == JsMarshalType.Bytes)
                 {
                     if (underlying == typeof(byte[]))
                     {
                         return BytesMarshal.Pop(ctx, jsValue);
                     }
 
-                    throw new TsScriptException("zts: [TsMarshalAs(Bytes)] pop requires byte[].");
+                    throw new JsScriptException("zts: [JsMarshalAs(Bytes)] pop requires byte[].");
                 }
             }
 
@@ -221,7 +241,7 @@ namespace ZTS.Marshaling
                 if (nullable && !expectedType.IsValueType)
                 {
                     // Optional / missing — treat as error for required ref unless OptionalAttribute (v1: throw)
-                    throw new TsScriptException($"zts: undefined is not assignable to {expectedType.FullName} (use null for CLR null).");
+                    throw new JsScriptException($"zts: undefined is not assignable to {expectedType.FullName} (use null for CLR null).");
                 }
 
                 if (Nullable.GetUnderlyingType(expectedType) != null)
@@ -229,14 +249,14 @@ namespace ZTS.Marshaling
                     return null;
                 }
 
-                throw new TsScriptException($"zts: undefined is not assignable to {expectedType.FullName}.");
+                throw new JsScriptException($"zts: undefined is not assignable to {expectedType.FullName}.");
             }
 
             if (tag == JsValueUtil.TagNull)
             {
                 if (!nullable && expectedType.IsValueType && Nullable.GetUnderlyingType(expectedType) == null)
                 {
-                    throw new TsScriptException($"zts: null is not assignable to {expectedType.FullName}.");
+                    throw new JsScriptException($"zts: null is not assignable to {expectedType.FullName}.");
                 }
 
                 return null;
@@ -281,7 +301,7 @@ namespace ZTS.Marshaling
                     return CoerceArray((object[])arr, underlying.GetElementType());
                 }
 
-                throw new TsScriptException($"zts: expected CLR array or JS Array for {underlying.FullName}.");
+                throw new JsScriptException($"zts: expected CLR array or JS Array for {underlying.FullName}.");
             }
 
             if (underlying.IsValueType && !underlying.IsPrimitive && !underlying.IsEnum)
@@ -303,7 +323,7 @@ namespace ZTS.Marshaling
             object raw = PrimitiveMarshal.Pop(ctx, jsValue);
             if (ReferenceEquals(raw, DBNull.Value))
             {
-                throw new TsScriptException($"zts: undefined is not assignable to {expectedType.FullName}.");
+                throw new JsScriptException($"zts: undefined is not assignable to {expectedType.FullName}.");
             }
 
             return Coerce(raw, underlying);
@@ -314,7 +334,7 @@ namespace ZTS.Marshaling
             int tag = JsValueUtil.GetNormTag(jsValue);
             if (tag == JsValueUtil.TagUndefined)
             {
-                throw new TsScriptException("zts: undefined is not assignable to System.Object (use null for CLR null).");
+                throw new JsScriptException("zts: undefined is not assignable to System.Object (use null for CLR null).");
             }
 
             if (tag == JsValueUtil.TagNull)
@@ -327,7 +347,7 @@ namespace ZTS.Marshaling
                 return obj;
             }
 
-            throw new TsScriptException("zts: [TsMarshalAs(Object)] requires a CLR object handle.");
+            throw new JsScriptException("zts: [JsMarshalAs(Object)] requires a CLR object handle.");
         }
 
         private static object Coerce(object value, Type target)
@@ -373,7 +393,7 @@ namespace ZTS.Marshaling
             }
             catch (Exception ex)
             {
-                throw new TsScriptException($"zts: cannot convert {value.GetType().FullName} to {target.FullName}: {ex.Message}");
+                throw new JsScriptException($"zts: cannot convert {value.GetType().FullName} to {target.FullName}: {ex.Message}");
             }
         }
 

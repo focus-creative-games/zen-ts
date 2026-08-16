@@ -1,4 +1,26 @@
+// Copyright 2026 Code Philosophy
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+
 #include "MetadataUtil.h"
+
+#include "../marshal/MarshalAsXmlTable.h"
 
 #include "vm/Assembly.h"
 #include "vm/Class.h"
@@ -17,11 +39,11 @@
 
 namespace zts
 {
-static Il2CppClass* s_tsMethodClass = nullptr;
-static Il2CppClass* s_tsScriptExceptionClass = nullptr;
-static Il2CppClass* s_tsAliasAttributeClass = nullptr;
-static Il2CppClass* s_tsExtensionAttributeClass = nullptr;
-static Il2CppClass* s_tsMarshalAsAttributeClass = nullptr;
+static Il2CppClass* s_jsMethodClass = nullptr;
+static Il2CppClass* s_jsScriptExceptionClass = nullptr;
+static Il2CppClass* s_jsAliasAttributeClass = nullptr;
+static Il2CppClass* s_jsExtensionAttributeClass = nullptr;
+static Il2CppClass* s_jsMarshalAsAttributeClass = nullptr;
 static Il2CppClass* s_extensionAttributeClass = nullptr;
 static Il2CppClass* s_paramArrayAttributeClass = nullptr;
 
@@ -30,10 +52,10 @@ void MetadataUtil::Initialize()
     const Il2CppAssembly* common = ResolveAssembly("ZTS.Common");
     if (common != nullptr)
     {
-        s_tsScriptExceptionClass = il2cpp::vm::Class::FromName(common->image, "ZTS", "TsScriptException");
-        s_tsAliasAttributeClass = il2cpp::vm::Class::FromName(common->image, "ZTS", "TsAliasAttribute");
-        s_tsExtensionAttributeClass = il2cpp::vm::Class::FromName(common->image, "ZTS", "TsExtensionAttribute");
-        s_tsMarshalAsAttributeClass = il2cpp::vm::Class::FromName(common->image, "ZTS", "TsMarshalAsAttribute");
+        s_jsScriptExceptionClass = il2cpp::vm::Class::FromName(common->image, "ZTS", "JsScriptException");
+        s_jsAliasAttributeClass = il2cpp::vm::Class::FromName(common->image, "ZTS", "JsAliasAttribute");
+        s_jsExtensionAttributeClass = il2cpp::vm::Class::FromName(common->image, "ZTS", "JsExtensionAttribute");
+        s_jsMarshalAsAttributeClass = il2cpp::vm::Class::FromName(common->image, "ZTS", "JsMarshalAsAttribute");
     }
 
     const Il2CppAssembly* mscorlib = ResolveAssembly("mscorlib");
@@ -49,9 +71,9 @@ void MetadataUtil::Initialize()
     const Il2CppAssembly* il2cppAsm = ResolveAssembly("ZTS.Il2Cpp");
     if (il2cppAsm != nullptr)
     {
-        s_tsMethodClass = il2cpp::vm::Class::FromName(il2cppAsm->image, "ZTS", "TsMethod");
-        if (s_tsMethodClass != nullptr)
-            il2cpp::vm::Class::Init(s_tsMethodClass);
+        s_jsMethodClass = il2cpp::vm::Class::FromName(il2cppAsm->image, "ZTS", "JsMethod");
+        if (s_jsMethodClass != nullptr)
+            il2cpp::vm::Class::Init(s_jsMethodClass);
     }
 }
 
@@ -238,18 +260,18 @@ Il2CppClass* MetadataUtil::ResolveTypeByName(const char* typeName)
     return nullptr;
 }
 
-Il2CppClass* MetadataUtil::GetTsMethodClass()
+Il2CppClass* MetadataUtil::GetJsMethodClass()
 {
-    if (s_tsMethodClass == nullptr)
+    if (s_jsMethodClass == nullptr)
         Initialize();
-    return s_tsMethodClass;
+    return s_jsMethodClass;
 }
 
-Il2CppClass* MetadataUtil::GetTsScriptExceptionClass()
+Il2CppClass* MetadataUtil::GetJsScriptExceptionClass()
 {
-    if (s_tsScriptExceptionClass == nullptr)
+    if (s_jsScriptExceptionClass == nullptr)
         Initialize();
-    return s_tsScriptExceptionClass;
+    return s_jsScriptExceptionClass;
 }
 
 const char* MetadataUtil::GetTypeFullName(Il2CppClass* klass)
@@ -267,21 +289,74 @@ std::string MetadataUtil::BuildTypeFullName(Il2CppClass* klass)
     return il2cpp::vm::Type::GetName(&klass->byval_arg, IL2CPP_TYPE_NAME_FORMAT_FULL_NAME);
 }
 
-bool MetadataUtil::TryReadTsAlias(const MethodInfo* method, std::string& aliasOut)
+std::string MetadataUtil::FormatParameterSignature(const MethodInfo* method)
+{
+    if (method == nullptr || method->parameters_count == 0)
+        return "()";
+
+    std::string signature = "(";
+    for (int i = 0; i < method->parameters_count; ++i)
+    {
+        if (i > 0)
+            signature.push_back(',');
+        signature += il2cpp::vm::Type::GetName(method->parameters[i], IL2CPP_TYPE_NAME_FORMAT_FULL_NAME);
+    }
+    signature.push_back(')');
+    return signature;
+}
+
+const MethodInfo* MetadataUtil::FindMethodByParameterSignature(Il2CppClass* klass, const char* name, const char* parameterSignature)
+{
+    for (Il2CppClass* cursor = klass; cursor != nullptr; cursor = cursor->parent)
+    {
+        EnsureMethods(cursor);
+        for (uint16_t i = 0; i < cursor->method_count; ++i)
+        {
+            const MethodInfo* method = cursor->methods[i];
+            if (strcmp(method->name, name) != 0)
+                continue;
+            if (FormatParameterSignature(method) == parameterSignature)
+                return method;
+        }
+    }
+    return nullptr;
+}
+
+const MethodInfo* MetadataUtil::FindMethodByParameterSignature(Il2CppClass* klass, const char* name, const char* parameterSignature, bool isStatic)
+{
+    for (Il2CppClass* cursor = klass; cursor != nullptr; cursor = cursor->parent)
+    {
+        EnsureMethods(cursor);
+        for (uint16_t i = 0; i < cursor->method_count; ++i)
+        {
+            const MethodInfo* method = cursor->methods[i];
+            if (strcmp(method->name, name) != 0)
+                continue;
+            const bool methodIsStatic = (method->flags & METHOD_ATTRIBUTE_STATIC) != 0;
+            if (methodIsStatic != isStatic)
+                continue;
+            if (FormatParameterSignature(method) == parameterSignature)
+                return method;
+        }
+    }
+    return nullptr;
+}
+
+bool MetadataUtil::TryReadJsAlias(const MethodInfo* method, std::string& aliasOut)
 {
     aliasOut.clear();
     if (method == nullptr)
         return false;
-    if (s_tsAliasAttributeClass == nullptr)
+    if (s_jsAliasAttributeClass == nullptr)
         Initialize();
-    if (s_tsAliasAttributeClass == nullptr)
+    if (s_jsAliasAttributeClass == nullptr)
         return false;
-    if (!il2cpp::vm::Method::HasAttribute(method, s_tsAliasAttributeClass))
+    if (!il2cpp::vm::Method::HasAttribute(method, s_jsAliasAttributeClass))
         return false;
 
     Il2CppMetadataCustomAttributeHandle handle =
         il2cpp::vm::MetadataCache::GetCustomAttributeTypeToken(method->klass->image, il2cpp::vm::Method::GetToken(method));
-    Il2CppObject* attr = il2cpp::vm::Reflection::GetCustomAttribute(handle, s_tsAliasAttributeClass);
+    Il2CppObject* attr = il2cpp::vm::Reflection::GetCustomAttribute(handle, s_jsAliasAttributeClass);
     if (attr == nullptr)
         return false;
 
@@ -312,21 +387,21 @@ bool MetadataUtil::IsExtensionMethod(const MethodInfo* method)
     return il2cpp::vm::Method::HasAttribute(method, s_extensionAttributeClass);
 }
 
-bool MetadataUtil::TryReadTsExtensionTypes(Il2CppClass* klass, std::vector<Il2CppClass*>& outExtensionClasses)
+bool MetadataUtil::TryReadJsExtensionTypes(Il2CppClass* klass, std::vector<Il2CppClass*>& outExtensionClasses)
 {
     outExtensionClasses.clear();
     if (klass == nullptr)
         return false;
-    if (s_tsExtensionAttributeClass == nullptr)
+    if (s_jsExtensionAttributeClass == nullptr)
         Initialize();
-    if (s_tsExtensionAttributeClass == nullptr)
+    if (s_jsExtensionAttributeClass == nullptr)
         return false;
-    if (!il2cpp::vm::Class::HasAttribute(klass, s_tsExtensionAttributeClass))
+    if (!il2cpp::vm::Class::HasAttribute(klass, s_jsExtensionAttributeClass))
         return false;
 
     Il2CppReflectionType* typeObj = il2cpp::vm::Reflection::GetTypeObject(&klass->byval_arg);
     Il2CppArray* attrs = il2cpp::vm::Reflection::GetCustomAttrsInfo(
-        reinterpret_cast<Il2CppObject*>(typeObj), s_tsExtensionAttributeClass);
+        reinterpret_cast<Il2CppObject*>(typeObj), s_jsExtensionAttributeClass);
     if (attrs == nullptr || attrs->max_length == 0)
         return false;
 
@@ -362,12 +437,12 @@ bool MetadataUtil::TryReadTsExtensionTypes(Il2CppClass* klass, std::vector<Il2Cp
 bool MetadataUtil::ParameterHasBytesMarshal(const MethodInfo* method, int paramIndex)
 {
     int32_t kind = 0;
-    if (!TryReadTsMarshalAs(method, paramIndex, &kind, nullptr))
+    if (!TryReadJsMarshalAs(method, paramIndex, &kind, nullptr))
         return false;
-    return kind == 2; /* TsMarshalType.Bytes */
+    return kind == 2; /* JsMarshalType.Bytes */
 }
 
-bool MetadataUtil::TryReadTsMarshalAs(
+bool MetadataUtil::TryReadJsMarshalAs(
     const MethodInfo* method, int paramIndex, int32_t* outKind, std::vector<std::string>* outMembers)
 {
     if (outKind == nullptr || method == nullptr)
@@ -376,52 +451,64 @@ bool MetadataUtil::TryReadTsMarshalAs(
     if (outMembers != nullptr)
         outMembers->clear();
 
-    if (s_tsMarshalAsAttributeClass == nullptr)
+    if (s_jsMarshalAsAttributeClass == nullptr)
         Initialize();
-    if (s_tsMarshalAsAttributeClass == nullptr)
+    if (s_jsMarshalAsAttributeClass == nullptr)
         return false;
 
     uint32_t token = il2cpp::vm::Method::GetParameterToken(method, paramIndex);
-    if (token == 0)
-        return false;
-
-    Il2CppMetadataCustomAttributeHandle handle =
-        il2cpp::vm::MetadataCache::GetCustomAttributeTypeToken(method->klass->image, token);
-    Il2CppObject* attr = il2cpp::vm::Reflection::GetCustomAttribute(handle, s_tsMarshalAsAttributeClass);
-    if (attr == nullptr)
-        return false;
-
-    const PropertyInfo* kindProp = il2cpp::vm::Class::GetPropertyFromName(attr->klass, "TsMarshalType");
-    if (kindProp == nullptr || kindProp->get == nullptr)
-        return false;
-
-    Il2CppException* exc = nullptr;
-    Il2CppObject* boxed = il2cpp::vm::Runtime::Invoke(kindProp->get, attr, nullptr, &exc);
-    if (exc != nullptr || boxed == nullptr)
-        return false;
-    *outKind = *reinterpret_cast<int32_t*>(ObjectUnbox(boxed));
-
-    if (outMembers != nullptr && (*outKind == 5 || *outKind == 4)) /* Table / UnpackedValues */
+    if (token != 0)
     {
-        const PropertyInfo* membersProp = il2cpp::vm::Class::GetPropertyFromName(attr->klass, "Members");
-        if (membersProp != nullptr && membersProp->get != nullptr)
+        Il2CppMetadataCustomAttributeHandle handle =
+            il2cpp::vm::MetadataCache::GetCustomAttributeTypeToken(method->klass->image, token);
+        Il2CppObject* attr = il2cpp::vm::Reflection::GetCustomAttribute(handle, s_jsMarshalAsAttributeClass);
+        if (attr != nullptr)
         {
-            Il2CppObject* membersObj = il2cpp::vm::Runtime::Invoke(membersProp->get, attr, nullptr, &exc);
-            if (exc == nullptr && membersObj != nullptr)
+            const PropertyInfo* kindProp = il2cpp::vm::Class::GetPropertyFromName(attr->klass, "JsMarshalType");
+            if (kindProp == nullptr || kindProp->get == nullptr)
+                return false;
+
+            Il2CppException* exc = nullptr;
+            Il2CppObject* boxed = il2cpp::vm::Runtime::Invoke(kindProp->get, attr, nullptr, &exc);
+            if (exc != nullptr || boxed == nullptr)
+                return false;
+            *outKind = *reinterpret_cast<int32_t*>(ObjectUnbox(boxed));
+
+            if (outMembers != nullptr && (*outKind == 5 || *outKind == 4)) /* Table / UnpackedValues */
             {
-                Il2CppArray* arr = reinterpret_cast<Il2CppArray*>(membersObj);
-                int32_t n = (int32_t)il2cpp::vm::Array::GetLength(arr);
-                for (int32_t i = 0; i < n; ++i)
+                const PropertyInfo* membersProp = il2cpp::vm::Class::GetPropertyFromName(attr->klass, "Members");
+                if (membersProp != nullptr && membersProp->get != nullptr)
                 {
-                    Il2CppString* s = il2cpp_array_get(arr, Il2CppString*, i);
-                    if (s == nullptr)
-                        continue;
-                    outMembers->push_back(il2cpp::utils::StringUtils::Utf16ToUtf8(
-                        il2cpp::utils::StringUtils::GetChars(s),
-                        il2cpp::utils::StringUtils::GetLength(s)));
+                    Il2CppObject* membersObj = il2cpp::vm::Runtime::Invoke(membersProp->get, attr, nullptr, &exc);
+                    if (exc == nullptr && membersObj != nullptr)
+                    {
+                        Il2CppArray* arr = reinterpret_cast<Il2CppArray*>(membersObj);
+                        int32_t n = (int32_t)il2cpp::vm::Array::GetLength(arr);
+                        for (int32_t i = 0; i < n; ++i)
+                        {
+                            Il2CppString* s = il2cpp_array_get(arr, Il2CppString*, i);
+                            if (s == nullptr)
+                                continue;
+                            outMembers->push_back(il2cpp::utils::StringUtils::Utf16ToUtf8(
+                                il2cpp::utils::StringUtils::GetChars(s),
+                                il2cpp::utils::StringUtils::GetLength(s)));
+                        }
+                    }
                 }
             }
+            return true;
         }
+    }
+
+    // Attribute missing → MarshalAs XML table (Il2Cpp Player does not read XML files).
+    JsMarshalAsResolvedData xml;
+    if (!MarshalAsXmlTable::TryGetForMethodSlot(method, paramIndex, xml))
+        return false;
+
+    *outKind = static_cast<int32_t>(xml.marshalType);
+    if (outMembers != nullptr)
+    {
+        outMembers->assign(xml.members.begin(), xml.members.end());
     }
     return true;
 }

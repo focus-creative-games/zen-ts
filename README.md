@@ -3,7 +3,8 @@
 ZTS 是一个针对 Il2Cpp 优化的现代、简洁、易用的 Unity **TypeScript / JavaScript** 脚本方案，由 **QuickJS** 驱动，设计与 [ZLua](https://github.com/focus-creative-games/zlua) 对齐。
 
 - 文档：[zts.code-philosophy.com](https://zts.code-philosophy.com/)
-- 对照产品：[ZLua](https://doc.zlua.cn) / [zlua GitHub](https://github.com/focus-creative-games/zlua)
+- 对照产品（Lua）：[ZLua](https://doc.zlua.cn) / [zlua GitHub](https://github.com/focus-creative-games/zlua)
+- Unreal 版本（开发中）：[zts-ue](https://github.com/focus-creative-games/zts-ue)
 - English：[README_EN.md](./README_EN.md)
 
 ---
@@ -15,7 +16,7 @@ ZTS 是一个针对 Il2Cpp 优化的现代、简洁、易用的 Unity **TypeScri
 | | |
 |--|--|
 | **更易用** | 设计贴近 C#；**零 per-type Wrap 白名单**；类型懒绑定 |
-| **更完备** | 标准和完备的 C#↔JS 交互：方法重载、ref/out、struct ByVal/ByObj、Nullable、委托、数组、指针、`[TsMarshalAs]` 等 |
+| **更完备** | 标准和完备的 C#↔JS 交互：方法重载、ref/out、struct ByVal/ByObj、Nullable、委托、数组、指针、`[JsMarshalAs]` 等 |
 | **更统一** | 与 ZLua **同一套语义契约**（门面 / Marshal / 类型系统 / 生命周期），Lua 与 TS/JS 可共用产品心智 |
 | **更高效** | Player **Il2Cpp** 热路径为 C++ 桥接；签名复用 stub；支持少生成甚至 **0 桥接函数** 仍可跑通主路径 |
 | **更少 GC** | 引用类型与 struct（含含引用字段的 struct）默认走 Registry / ByVal exotic；另有 OpaqueValue 等策略 |
@@ -27,12 +28,16 @@ ZTS 是一个针对 Il2Cpp 优化的现代、简洁、易用的 Unity **TypeScri
 | | ZLua | ZTS |
 |--|------|-----|
 | 脚本侧 | Lua（PUC-Rio / LuaJIT） | JavaScript（QuickJS）；可选 TypeScript → ES module |
-| 宿主门面 | `LuaAppDomain` | `TsAppDomain` |
+| 宿主门面 | `LuaAppDomain` | `JsAppDomain` |
 | 类型入口 | `CSharp[...]` | 同左；另支持 `import { T } from "csharp:…"` |
 | 标准库 | `zlua.*` | `zts.*` |
-| 属性 | `[LuaMarshalAs]` 等 | `[TsMarshalAs]` / `[TsAlias]` / `[TsExtension]` |
+| 属性 | `[LuaMarshalAs]` 等 | `[JsMarshalAs]` / `[JsAlias]` / `[JsExtension]` |
 
 业务侧 API 形态刻意对齐：会用 ZLua，即可很快上手 ZTS。
+
+### 同族产品：Unreal（zts-ue）
+
+面向 **Unreal Engine**、对 C++ 优化的现代 TypeScript 方案见 **[zts-ue](https://github.com/focus-creative-games/zts-ue)**。**目前仍在开发中**；本仓库与文档站仅覆盖 **Unity / 团结** 上的 ZTS，UE 用法与进度请跟进该仓库。
 
 ---
 
@@ -84,7 +89,7 @@ public static class ZtsBootstrap
     }
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
-    static void Init() => TsAppDomain.Initialize(LoadJsModule);
+    static void Init() => JsAppDomain.Initialize(LoadJsModule);
 }
 ```
 
@@ -97,7 +102,7 @@ public class GameEntry : MonoBehaviour
 {
     void Start()
     {
-        var add = TsAppDomain.GetFunction<System.Func<int, int, int>>("app", "add");
+        var add = JsAppDomain.GetFunction<System.Func<int, int, int>>("app", "add");
         Debug.Log(add(10, 20)); // 30
     }
 }
@@ -199,8 +204,8 @@ export function add(a: number, b: number): number {
 
 ```csharp
 // jsModule = canonical，不含后缀
-var onTick = TsAppDomain.GetFunction<System.Action<float>>("game/logic", "OnTick");
-var add = TsAppDomain.GetFunction<System.Func<int, int, int>>("game/logic", "add");
+var onTick = JsAppDomain.GetFunction<System.Action<float>>("game/logic", "OnTick");
+var add = JsAppDomain.GetFunction<System.Func<int, int, int>>("game/logic", "add");
 ```
 
 Editor：`moduleLoader` 读 `TsProject/out/{canonical}.js`。  
@@ -214,7 +219,7 @@ Player：构建时拷贝 `out/**/*.js` → `StreamingAssets/ZTS/`，运行时 **
 
 | 程序集 | 平台 | 说明 |
 |--------|------|------|
-| `ZTS.Common` | 全平台 | `TsAppDomain` 门面、属性、公共类型 |
+| `ZTS.Common` | 全平台 | `JsAppDomain` 门面、属性、公共类型 |
 | `ZTS.Mono` | Editor | QuickJS P/Invoke + Mono Callback Gate + Emit |
 | `ZTS.Il2Cpp` | Player | Il2Cpp 宿主接线（实现于 `ZTS~/zts-runtime`） |
 | `ZTS.Editor` | Editor | Install / Export / TypeScript 工具链 / Settings |
@@ -254,3 +259,4 @@ MIT。欢迎自由使用、修改和分发。
 - 产品站：[code-philosophy.com](https://code-philosophy.com)
 - QQ 群：`1095435513`（ZTS 交流群）
 - Discord：[https://discord.gg/5bT7w9aRMz](https://discord.gg/5bT7w9aRMz)
+- Unreal（开发中）：[zts-ue](https://github.com/focus-creative-games/zts-ue)

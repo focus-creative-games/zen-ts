@@ -29,6 +29,12 @@ namespace ZTS
             ZTS.Editor.ExportWin64Command.ExportSolution();
         }
 
+        [MenuItem("ZTS/Generate Xml Bindings", priority = 30)]
+        public static void GenerateXmlBindings()
+        {
+            Run("Generate Xml Bindings", () => ZTS.Editor.XmlBindingsGenerate.Generate());
+        }
+
         [MenuItem("ZTS/Init TypeScript Project", priority = 40)]
         public static void InitTypeScriptProject()
         {

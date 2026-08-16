@@ -1,3 +1,23 @@
+// Copyright 2026 Code Philosophy
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+
 #include "PrimitiveMarshal.h"
 
 #include "vm/String.h"
@@ -280,10 +300,12 @@ JSValue PrimitiveMarshal::Cs2JsString(JSContext* ctx, void* address, const Marsh
     Il2CppString* str = *reinterpret_cast<Il2CppString**>(address);
     if (str == nullptr)
         return JS_NULL;
-    std::string utf8 = il2cpp::utils::StringUtils::Utf16ToUtf8(
+    /* Reuse TLS buffer to avoid per-call std::string heap churn on hot paths. */
+    static thread_local std::string s_utf8Scratch;
+    s_utf8Scratch = il2cpp::utils::StringUtils::Utf16ToUtf8(
         il2cpp::utils::StringUtils::GetChars(str),
         il2cpp::utils::StringUtils::GetLength(str));
-    return JS_NewStringLen(ctx, utf8.c_str(), utf8.size());
+    return JS_NewStringLen(ctx, s_utf8Scratch.c_str(), s_utf8Scratch.size());
 }
 
 void PrimitiveMarshal::Js2CsVoid(JSContext* /*ctx*/, JSValueConst /*value*/, void* /*address*/, const MarshalMetaInfo* /*meta*/)

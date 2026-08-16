@@ -1,10 +1,30 @@
+// Copyright 2026 Code Philosophy
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+
 #include "JsInternalCalls.h"
-#include "TsAppDomain.h"
+#include "JsAppDomain.h"
 #include "JsEnv.h"
 #include "JsGlobalRefs.h"
 
 #include "../marshal/DelegateMarshal.h"
-#include "../utils/TsException.h"
+#include "../utils/JsException.h"
 #include "../utils/MetadataUtil.h"
 
 #include "vm/InternalCalls.h"
@@ -21,17 +41,17 @@ namespace zts
 static std::mutex s_pendingMutex;
 static std::vector<int> s_pendingRefReleases;
 
-static void TsIl2CppAppDomain_InitializeInternal(Il2CppDelegate* moduleLoader)
+static void JsIl2CppAppDomain_InitializeInternal(Il2CppDelegate* moduleLoader)
 {
-    TsAppDomain::InitializeFromManaged(moduleLoader);
+    JsAppDomain::InitializeFromManaged(moduleLoader);
 }
 
-static void TsIl2CppAppDomain_ResetInternal(Il2CppDelegate* moduleLoader)
+static void JsIl2CppAppDomain_ResetInternal(Il2CppDelegate* moduleLoader)
 {
-    TsAppDomain::ResetFromManaged(moduleLoader);
+    JsAppDomain::ResetFromManaged(moduleLoader);
 }
 
-static void TsIl2CppAppDomain_ProcessPendingRefReleases()
+static void JsIl2CppAppDomain_ProcessPendingRefReleases()
 {
     std::vector<int> local;
     {
@@ -44,13 +64,13 @@ static void TsIl2CppAppDomain_ProcessPendingRefReleases()
         JsGlobalRefs::FreeAndRelease(ctx, refIndex);
 }
 
-static void TsMethod_AddPendingRef(JSContext* /*ctx*/, int32_t refIndex)
+static void JsMethod_AddPendingRef(JSContext* /*ctx*/, int32_t refIndex)
 {
     std::lock_guard<std::mutex> lock(s_pendingMutex);
     s_pendingRefReleases.push_back(refIndex);
 }
 
-static Il2CppObject* TsIl2CppAppDomain_GetFunctionInternal(
+static Il2CppObject* JsIl2CppAppDomain_GetFunctionInternal(
     Il2CppReflectionType* delegateTypeObj,
     Il2CppString* jsModule,
     Il2CppString* jsExportName)
@@ -67,13 +87,13 @@ static Il2CppObject* TsIl2CppAppDomain_GetFunctionInternal(
     }
 
     if (!JsEnv::IsAlive())
-        TsException::Throw("ZTS is not initialized. Call TsAppDomain.Initialize first.");
+        JsException::Throw("ZTS is not initialized. Call JsAppDomain.Initialize first.");
 
     Il2CppClass* delegateClass = il2cpp::vm::Class::FromIl2CppType(delegateTypeObj->type);
     il2cpp::vm::Class::Init(delegateClass);
     if (!il2cpp::vm::Class::IsSubclassOf(delegateClass, il2cpp_defaults.multicastdelegate_class, false))
     {
-        TsException::ThrowFormat(
+        JsException::ThrowFormat(
             "Type '%s' is not a MulticastDelegate",
             MetadataUtil::GetTypeFullName(delegateClass));
     }
@@ -101,19 +121,19 @@ static Il2CppObject* TsIl2CppAppDomain_GetFunctionInternal(
 void JsInternalCalls::RegisterCoreInternalCalls()
 {
     il2cpp::vm::InternalCalls::Add(
-        "ZTS.TsIl2CppAppDomain::InitializeInternal",
-        (Il2CppMethodPointer)TsIl2CppAppDomain_InitializeInternal);
+        "ZTS.JsIl2CppAppDomain::InitializeInternal",
+        (Il2CppMethodPointer)JsIl2CppAppDomain_InitializeInternal);
     il2cpp::vm::InternalCalls::Add(
-        "ZTS.TsIl2CppAppDomain::ResetInternal",
-        (Il2CppMethodPointer)TsIl2CppAppDomain_ResetInternal);
+        "ZTS.JsIl2CppAppDomain::ResetInternal",
+        (Il2CppMethodPointer)JsIl2CppAppDomain_ResetInternal);
     il2cpp::vm::InternalCalls::Add(
-        "ZTS.TsIl2CppAppDomain::ProcessPendingRefReleases",
-        (Il2CppMethodPointer)TsIl2CppAppDomain_ProcessPendingRefReleases);
+        "ZTS.JsIl2CppAppDomain::ProcessPendingRefReleases",
+        (Il2CppMethodPointer)JsIl2CppAppDomain_ProcessPendingRefReleases);
     il2cpp::vm::InternalCalls::Add(
-        "ZTS.TsIl2CppAppDomain::GetFunctionInternal",
-        (Il2CppMethodPointer)TsIl2CppAppDomain_GetFunctionInternal);
+        "ZTS.JsIl2CppAppDomain::GetFunctionInternal",
+        (Il2CppMethodPointer)JsIl2CppAppDomain_GetFunctionInternal);
     il2cpp::vm::InternalCalls::Add(
-        "ZTS.TsMethod::AddPendingRef",
-        (Il2CppMethodPointer)TsMethod_AddPendingRef);
+        "ZTS.JsMethod::AddPendingRef",
+        (Il2CppMethodPointer)JsMethod_AddPendingRef);
 }
 }

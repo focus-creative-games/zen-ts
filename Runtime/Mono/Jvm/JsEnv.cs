@@ -1,3 +1,23 @@
+// Copyright 2026 Code Philosophy
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+
 using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
@@ -39,7 +59,7 @@ namespace ZTS
             _runtime = QuickJsDll.JS_NewRuntime();
             if (_runtime == IntPtr.Zero)
             {
-                throw new TsScriptException("zts: JS_NewRuntime failed.");
+                throw new JsScriptException("zts: JS_NewRuntime failed.");
             }
 
             QuickJsDll.js_std_init_handlers(_runtime);
@@ -49,7 +69,7 @@ namespace ZTS
             {
                 QuickJsDll.JS_FreeRuntime(_runtime);
                 _runtime = IntPtr.Zero;
-                throw new TsScriptException("zts: JS_NewContext failed.");
+                throw new JsScriptException("zts: JS_NewContext failed.");
             }
 
             QuickJsDll.JS_SetContextOpaque(_context, GCHandle.ToIntPtr(GCHandle.Alloc(this)));
@@ -132,7 +152,7 @@ namespace ZTS
                 int state = QuickJsDll.JS_PromiseState(_context, promise);
                 if (state == QuickJsDll.JsPromisePending)
                 {
-                    throw new TsScriptException($"zts: module '{moduleName}' promise still pending after draining jobs.");
+                    throw new JsScriptException($"zts: module '{moduleName}' promise still pending after draining jobs.");
                 }
 
                 JSValue ns = QuickJsDll.JS_PromiseResult(_context, promise);
@@ -161,7 +181,7 @@ namespace ZTS
                     }
 
                     JsValueUtil.Free(_context, ns);
-                    throw new TsScriptException($"zts: module '{moduleName}' rejected (tag={tag}): {message}");
+                    throw new JsScriptException($"zts: module '{moduleName}' rejected (tag={tag}): {message}");
                 }
 
                 if (JsValueUtil.IsException(ns))
@@ -199,7 +219,7 @@ namespace ZTS
                     JSValue ex = QuickJsDll.JS_GetException(errCtx);
                     string message = FormatJsValue(errCtx, ex);
                     JsValueUtil.Free(errCtx, ex);
-                    throw new TsScriptException($"zts: pending job failed: {message}");
+                    throw new JsScriptException($"zts: pending job failed: {message}");
                 }
             }
         }
@@ -218,7 +238,7 @@ namespace ZTS
                 if (QuickJsDll.JS_IsFunction(_context, export) == 0)
                 {
                     JsValueUtil.Free(_context, export);
-                    throw new TsScriptException($"zts: export '{moduleName}.{exportName}' is not callable.");
+                    throw new JsScriptException($"zts: export '{moduleName}.{exportName}' is not callable.");
                 }
 
                 return export;
@@ -234,7 +254,7 @@ namespace ZTS
             JSValue ex = QuickJsDll.JS_GetException(_context);
             string message = FormatJsValue(_context, ex);
             JsValueUtil.Free(_context, ex);
-            throw new TsScriptException($"zts: {message}");
+            throw new JsScriptException($"zts: {message}");
         }
 
         internal static string FormatJsValue(IntPtr ctx, JSValue val)

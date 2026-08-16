@@ -4,7 +4,7 @@ Install: floor — greatest `{X.Y.Z}.patch` with version **<=** Editor (letter s
 
 | File | Covers | Contents |
 |------|--------|----------|
-| `2022.3.0.patch` | `2022.3.x` (incl. Tuanjie `…tN` on this line) | `TsAppDomain::Initialize` from `Runtime.cpp`; Debug `il2cpp_assert` → `zts_il2cpp_assert.log` (no CRT popup) |
+| `2022.3.0.patch` | `2022.3.x` (incl. Tuanjie `…tN` on this line) | `JsAppDomain::Initialize` from `Runtime.cpp`; Debug `il2cpp_assert` → `zts_il2cpp_assert.log` (no CRT popup) |
 
 No `default.patch`. Authored against Unity 2022.3.62f3.
 

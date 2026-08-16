@@ -109,7 +109,7 @@ index 6ad39b9..dd8bec4 100644
  #include "Baselib.h"
  #include "Cpp/ReentrantLock.h"
  
-+#include "zts/jvm/TsAppDomain.h"
++#include "zts/jvm/JsAppDomain.h"
 +
  Il2CppDefaults il2cpp_defaults;
  bool g_il2cpp_is_fully_initialized = false;
@@ -119,7 +119,7 @@ index 6ad39b9..dd8bec4 100644
          il2cpp::utils::DebugSymbolReader::LoadDebugSymbols();
  #endif
 -
-+        zts::TsAppDomain::Initialize();
++        zts::JsAppDomain::Initialize();
          return true;
      }
  

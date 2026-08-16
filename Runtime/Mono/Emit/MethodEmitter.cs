@@ -1,4 +1,25 @@
+// Copyright 2026 Code Philosophy
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -125,7 +146,7 @@ namespace ZTS.Emit
             {
                 if (!IsStrictlyBetter(first, tied[i]) && !IsStrictlyBetter(tied[i], first))
                 {
-                    throw new TsScriptException(
+                    throw new JsScriptException(
                         $"zts: ambiguous overload; candidates: {FormatCandidates(tied)}");
                 }
             }
@@ -218,9 +239,9 @@ namespace ZTS.Emit
                     return true;
                 }
 
-                TsMarshalAsAttribute mas = ps[i].GetCustomAttribute<TsMarshalAsAttribute>();
+                JsMarshalAsAttribute mas = JsMarshalAsXmlRegistry.ResolveParameterMarshal(ps[i]);
                 if (mas != null &&
-                    mas.TsMarshalType == TsMarshalType.UnpackedValues &&
+                    mas.JsMarshalType == JsMarshalType.UnpackedValues &&
                     mas.Members != null &&
                     mas.Members.Length > 0)
                 {
@@ -549,8 +570,49 @@ namespace ZTS.Emit
     /// <summary>Expression-compiled method bridge (no Method.Invoke on hot path).</summary>
     internal static class MethodEmitter
     {
-        private static readonly Dictionary<MethodInfo, Func<object, object[], object>> Compiled =
-            new Dictionary<MethodInfo, Func<object, object[], object>>();
+        private static readonly ConcurrentDictionary<MethodInfo, Func<object, object[], object>> Compiled =
+            new ConcurrentDictionary<MethodInfo, Func<object, object[], object>>();
+
+        private static readonly ConcurrentDictionary<MethodInfo, MethodArgPlan> ArgPlans =
+            new ConcurrentDictionary<MethodInfo, MethodArgPlan>();
+
+        /// <summary>Per-method marshal / default cache so hot invoke skips XML/attribute resolve.</summary>
+        private sealed class MethodArgPlan
+        {
+            public readonly ParameterInfo[] Parameters;
+            public readonly JsMarshalAsAttribute[] ParamMarshal;
+            public readonly JsMarshalAsAttribute ReturnMarshal;
+            public readonly object[] DefaultValues;
+            public readonly bool[] HasDefault;
+
+            public MethodArgPlan(MethodInfo method)
+            {
+                Parameters = method.GetParameters();
+                ParamMarshal = new JsMarshalAsAttribute[Parameters.Length];
+                DefaultValues = new object[Parameters.Length];
+                HasDefault = new bool[Parameters.Length];
+                for (int i = 0; i < Parameters.Length; i++)
+                {
+                    ParamMarshal[i] = JsMarshalAsXmlRegistry.ResolveParameterMarshal(Parameters[i]);
+                    if (Parameters[i].IsOptional)
+                    {
+                        HasDefault[i] = true;
+                        DefaultValues[i] = Parameters[i].DefaultValue;
+                    }
+                }
+
+                ReturnMarshal = JsMarshalAsXmlRegistry.ResolveReturnMarshal(method);
+            }
+        }
+
+        private static MethodArgPlan GetArgPlan(MethodInfo method) =>
+            ArgPlans.GetOrAdd(method, static m => new MethodArgPlan(m));
+
+        internal static void ResetCaches()
+        {
+            Compiled.Clear();
+            ArgPlans.Clear();
+        }
 
         public static JSValue EmitMethod(JsEnv env, MethodInfo method) =>
             EmitMethod(env, method, ownerType: method.DeclaringType, isByVal: false);
@@ -648,13 +710,9 @@ namespace ZTS.Emit
 
         internal static Func<object, object[], object> EnsureCompiled(MethodInfo method)
         {
-            // Hot path: Expression-compiled call. Fallback to Invoke if emit fails.
-            lock (Compiled)
+            if (Compiled.TryGetValue(method, out Func<object, object[], object> existing))
             {
-                if (Compiled.TryGetValue(method, out Func<object, object[], object> existing))
-                {
-                    return existing;
-                }
+                return existing;
             }
 
             Func<object, object[], object> fn;
@@ -668,12 +726,7 @@ namespace ZTS.Emit
                 fn = (target, args) => m.Invoke(target, args);
             }
 
-            lock (Compiled)
-            {
-                Compiled[method] = fn;
-            }
-
-            return fn;
+            return Compiled.GetOrAdd(method, fn);
         }
 
         private static Func<object, object[], object> Compile(MethodInfo method)
@@ -724,7 +777,7 @@ namespace ZTS.Emit
             return Expression.Convert(raw, target);
         }
 
-        private static object PopParameter(IntPtr ctx, JSValue jsArg, ParameterInfo param)
+        private static object PopParameter(IntPtr ctx, JSValue jsArg, ParameterInfo param, JsMarshalAsAttribute mas)
         {
             Type pt = param.ParameterType;
             if (pt.IsByRef)
@@ -732,13 +785,13 @@ namespace ZTS.Emit
                 pt = pt.GetElementType();
             }
 
-            TsMarshalAsAttribute mas = param.GetCustomAttribute<TsMarshalAsAttribute>();
             return TypedMarshal.Pop(ctx, jsArg, pt, mas);
         }
 
         private static object[] PopArgs(IntPtr ctx, MethodInfo method, int argc, IntPtr argvPtr)
         {
-            ParameterInfo[] ps = method.GetParameters();
+            MethodArgPlan plan = GetArgPlan(method);
+            ParameterInfo[] ps = plan.Parameters;
             var args = new object[ps.Length];
             int jsIndex = 0;
             for (int i = 0; i < ps.Length; i++)
@@ -759,15 +812,15 @@ namespace ZTS.Emit
                     }
                     else
                     {
-                        args[i] = PopParameter(ctx, ArgReader.Read(argvPtr, jsIndex), ps[i]);
+                        args[i] = PopParameter(ctx, ArgReader.Read(argvPtr, jsIndex), ps[i], plan.ParamMarshal[i]);
                     }
 
                     continue;
                 }
 
-                TsMarshalAsAttribute mas = ps[i].GetCustomAttribute<TsMarshalAsAttribute>();
+                JsMarshalAsAttribute mas = plan.ParamMarshal[i];
                 if (mas != null &&
-                    mas.TsMarshalType == TsMarshalType.UnpackedValues &&
+                    mas.JsMarshalType == JsMarshalType.UnpackedValues &&
                     mas.Members != null &&
                     mas.Members.Length > 0)
                 {
@@ -791,12 +844,12 @@ namespace ZTS.Emit
 
                 if (jsIndex < argc)
                 {
-                    args[i] = PopParameter(ctx, ArgReader.Read(argvPtr, jsIndex), ps[i]);
+                    args[i] = PopParameter(ctx, ArgReader.Read(argvPtr, jsIndex), ps[i], mas);
                     jsIndex++;
                 }
-                else if (ps[i].IsOptional)
+                else if (plan.HasDefault[i])
                 {
-                    args[i] = ps[i].DefaultValue;
+                    args[i] = plan.DefaultValues[i];
                 }
                 else
                 {
@@ -941,7 +994,8 @@ namespace ZTS.Emit
                     object[] args;
                     if (isExtension)
                     {
-                        ParameterInfo[] ps = _method.GetParameters();
+                        MethodArgPlan plan = GetArgPlan(_method);
+                        ParameterInfo[] ps = plan.Parameters;
                         args = new object[ps.Length];
                         args[0] = target;
                         int jsIndex = 0;
@@ -953,9 +1007,9 @@ namespace ZTS.Emit
                                 pt = pt.GetElementType();
                             }
 
-                            TsMarshalAsAttribute mas = ps[i].GetCustomAttribute<TsMarshalAsAttribute>();
+                            JsMarshalAsAttribute mas = plan.ParamMarshal[i];
                             if (mas != null &&
-                                mas.TsMarshalType == TsMarshalType.UnpackedValues &&
+                                mas.JsMarshalType == JsMarshalType.UnpackedValues &&
                                 mas.Members != null &&
                                 mas.Members.Length > 0)
                             {
@@ -979,12 +1033,12 @@ namespace ZTS.Emit
 
                             if (jsIndex < argc)
                             {
-                                args[i] = PopParameter(ctx, ArgReader.Read(argvPtr, jsIndex), ps[i]);
+                                args[i] = PopParameter(ctx, ArgReader.Read(argvPtr, jsIndex), ps[i], mas);
                                 jsIndex++;
                             }
-                            else if (ps[i].IsOptional)
+                            else if (plan.HasDefault[i])
                             {
-                                args[i] = ps[i].DefaultValue;
+                                args[i] = plan.DefaultValues[i];
                             }
                             else
                             {
@@ -999,7 +1053,7 @@ namespace ZTS.Emit
                             return JsValueUtil.Undefined;
                         }
 
-                        return TypedMarshal.Push(ctx, resultExt, _method.ReturnType, GetReturnMarshal(_method));
+                        return TypedMarshal.Push(ctx, resultExt, _method.ReturnType, plan.ReturnMarshal);
                     }
 
                     args = PopArgs(ctx, _method, argc, argvPtr);
@@ -1010,7 +1064,7 @@ namespace ZTS.Emit
                         return JsValueUtil.Undefined;
                     }
 
-                    return TypedMarshal.Push(ctx, result, _method.ReturnType, GetReturnMarshal(_method));
+                    return TypedMarshal.Push(ctx, result, _method.ReturnType, GetArgPlan(_method).ReturnMarshal);
                 }
                 catch (Exception ex)
                 {
@@ -1062,7 +1116,8 @@ namespace ZTS.Emit
                     object result;
                     if (isExtension)
                     {
-                        ParameterInfo[] ps = method.GetParameters();
+                        MethodArgPlan plan = GetArgPlan(method);
+                        ParameterInfo[] ps = plan.Parameters;
                         args = new object[ps.Length];
                         args[0] = target;
                         int jsIndex = 0;
@@ -1076,12 +1131,13 @@ namespace ZTS.Emit
 
                             if (jsIndex < argc)
                             {
-                                args[i] = PopParameter(ctx, ArgReader.Read(argvPtr, jsIndex), ps[i]);
+                                args[i] = PopParameter(
+                                    ctx, ArgReader.Read(argvPtr, jsIndex), ps[i], plan.ParamMarshal[i]);
                                 jsIndex++;
                             }
-                            else if (ps[i].IsOptional)
+                            else if (plan.HasDefault[i])
                             {
-                                args[i] = ps[i].DefaultValue;
+                                args[i] = plan.DefaultValues[i];
                             }
                             else
                             {
@@ -1114,8 +1170,8 @@ namespace ZTS.Emit
             }
         }
 
-        private static TsMarshalAsAttribute GetReturnMarshal(MethodInfo method) =>
-            method.ReturnParameter?.GetCustomAttribute<TsMarshalAsAttribute>();
+        private static JsMarshalAsAttribute GetReturnMarshal(MethodInfo method) =>
+            GetArgPlan(method).ReturnMarshal;
     }
 
     internal static class FieldEmitter
@@ -1150,7 +1206,8 @@ namespace ZTS.Emit
                         }
                     }
 
-                    return TypedMarshal.Push(ctx, _field.GetValue(target), _field.FieldType);
+                    return TypedMarshal.Push(ctx, _field.GetValue(target), _field.FieldType,
+                        JsMarshalAsXmlRegistry.ResolveFieldMarshal(_field));
                 }
                 catch (Exception ex)
                 {
@@ -1179,7 +1236,8 @@ namespace ZTS.Emit
                     }
 
                     JSValue jsArg = ArgReader.Read(argv, 0);
-                    object value = TypedMarshal.Pop(ctx, jsArg, _field.FieldType);
+                    object value = TypedMarshal.Pop(ctx, jsArg, _field.FieldType,
+                        JsMarshalAsXmlRegistry.ResolveFieldMarshal(_field));
                     _field.SetValue(target, value);
                     return JsValueUtil.Undefined;
                 }
@@ -1231,7 +1289,8 @@ namespace ZTS.Emit
                         }
                     }
 
-                    return TypedMarshal.Push(ctx, _property.GetValue(target), _property.PropertyType);
+                    return TypedMarshal.Push(ctx, _property.GetValue(target), _property.PropertyType,
+                        JsMarshalAsXmlRegistry.ResolvePropertyMarshal(_property));
                 }
                 catch (Exception ex)
                 {
@@ -1266,7 +1325,8 @@ namespace ZTS.Emit
                         }
                     }
 
-                    object value = TypedMarshal.Pop(ctx, ArgReader.Read(argv, 0), _property.PropertyType);
+                    object value = TypedMarshal.Pop(ctx, ArgReader.Read(argv, 0), _property.PropertyType,
+                        JsMarshalAsXmlRegistry.ResolvePropertyMarshal(_property));
                     _property.SetValue(target, value);
                     return JsValueUtil.Undefined;
                 }
@@ -1464,7 +1524,7 @@ namespace ZTS.Emit
 
             for (Type t = extendedType; t != null && t != typeof(object); t = t.BaseType)
             {
-                foreach (TsExtensionAttribute attr in t.GetCustomAttributes<TsExtensionAttribute>(inherit: false))
+                foreach (JsExtensionAttribute attr in t.GetCustomAttributes<JsExtensionAttribute>(inherit: false))
                 {
                     if (attr.ExtensionTypes == null)
                     {
@@ -1480,14 +1540,17 @@ namespace ZTS.Emit
                         }
                     }
                 }
-            }
 
-            foreach (Type extType in TsXmlOverlayLoader.GetExtensionTypes(extendedType))
-            {
-                foreach (MethodInfo method in EnumerateExtensionTypeMethods(
-                             extType, extendedType, seenMethods, scannedExtTypes))
+                if (JsExtensionXmlRegistry.TryGetExtensionTypes(t, out Type[] xmlTypes))
                 {
-                    yield return method;
+                    foreach (Type extType in xmlTypes)
+                    {
+                        foreach (MethodInfo method in EnumerateExtensionTypeMethods(
+                                     extType, extendedType, seenMethods, scannedExtTypes))
+                        {
+                            yield return method;
+                        }
+                    }
                 }
             }
         }

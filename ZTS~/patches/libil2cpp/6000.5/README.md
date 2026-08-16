@@ -5,7 +5,7 @@ Within a dir: floor — greatest `{X.Y.Z}.patch` **<=** Editor.
 
 | File | Covers | Contents |
 |------|--------|----------|
-| `6000.5.0.patch` | `6000.5.0+` | `TsAppDomain::Initialize`; Debug assert log (`#if IL2CPP_TARGET_WINDOWS`) |
+| `6000.5.0.patch` | `6000.5.0+` | `JsAppDomain::Initialize`; Debug assert log (`#if IL2CPP_TARGET_WINDOWS`) |
 
 Notes vs `6000/6000.0.0.patch`:
 - `Runtime.cpp` include / init line numbers differ

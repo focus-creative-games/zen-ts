@@ -1,3 +1,23 @@
+// Copyright 2026 Code Philosophy
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+
 using System;
 using System.Collections.Generic;
 using System.Reflection;
@@ -27,18 +47,18 @@ namespace ZTS
         {
             if (!JsModuleSpecifier.IsCsharp(specifier))
             {
-                throw new TsScriptException($"zts: invalid csharp module specifier: {specifier}");
+                throw new JsScriptException($"zts: invalid csharp module specifier: {specifier}");
             }
 
             string rest = specifier.Substring(JsModuleSpecifier.CsharpScheme.Length);
             if (string.IsNullOrEmpty(rest) || rest[0] == '/')
             {
-                throw new TsScriptException($"zts: invalid csharp module specifier: {specifier}");
+                throw new JsScriptException($"zts: invalid csharp module specifier: {specifier}");
             }
 
             if (rest.IndexOf('/') != rest.LastIndexOf('/'))
             {
-                throw new TsScriptException($"zts: invalid csharp module specifier: {specifier}");
+                throw new JsScriptException($"zts: invalid csharp module specifier: {specifier}");
             }
 
             string assemblyName;
@@ -57,13 +77,13 @@ namespace ZTS
 
             if (string.IsNullOrEmpty(assemblyName))
             {
-                throw new TsScriptException($"zts: invalid csharp module specifier: {specifier}");
+                throw new JsScriptException($"zts: invalid csharp module specifier: {specifier}");
             }
 
             Assembly asm = FindAssembly(assemblyName);
             if (asm == null)
             {
-                throw new TsScriptException($"zts: assembly not found: {assemblyName}");
+                throw new JsScriptException($"zts: assembly not found: {assemblyName}");
             }
 
             bool nestedModule = path.EndsWith("+", StringComparison.Ordinal);
@@ -80,7 +100,7 @@ namespace ZTS
                 Type declaring = asm.GetType(path) ?? FindTypeByFullName(types, path);
                 if (declaring == null)
                 {
-                    throw new TsScriptException($"zts: type not found: {path}");
+                    throw new JsScriptException($"zts: type not found: {path}");
                 }
 
                 foreach (Type nested in declaring.GetNestedTypes(BindingFlags.Public))
@@ -127,7 +147,7 @@ namespace ZTS
             {
                 if (!seen.Add(exportName))
                 {
-                    throw new TsScriptException(
+                    throw new JsScriptException(
                         $"zts: csharp export name conflict: {exportName} in {specifier}");
                 }
 

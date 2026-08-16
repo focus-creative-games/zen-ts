@@ -1,3 +1,23 @@
+// Copyright 2026 Code Philosophy
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+
 #include "MetaBinding.h"
 #include "TypeRegistry.h"
 #include "ArrayBinding.h"
@@ -6,16 +26,21 @@
 #include "../marshal/MarshalMeta.h"
 #include "../marshal/BytesMarshal.h"
 #include "../marshal/TableMarshal.h"
+#include "../marshal/OpaqueValueMarshal.h"
 #include "../marshal/MethodOverloadResolver.h"
 #include "../marshal/ObjectRegistry.h"
 #include "../utils/MetadataUtil.h"
-#include "../utils/TsException.h"
-#include "../utils/XmlOverlay.h"
+#include "../utils/JsException.h"
+#include "AliasXmlTable.h"
+#include "ExtensionXmlTable.h"
 
 #include "il2cpp-tabledefs.h"
+#include "gc/GarbageCollector.h"
+#include "utils/Memory.h"
 #include "vm/Class.h"
 #include "vm/Field.h"
 #include "vm/Object.h"
+#include "vm/Parameter.h"
 
 #include <cstring>
 #include <list>
@@ -23,6 +48,11 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
+#if defined(_MSC_VER)
+#include <malloc.h>
+#else
+#include <alloca.h>
+#endif
 
 namespace zts
 {
@@ -254,6 +284,132 @@ static void AttachStructDefault(JSContext* ctx, JSValue typeObj, TypeBinding* bi
     JS_SetPropertyStr(ctx, typeObj, "_default", fn);
 }
 
+static JSValue Cs2JsOpaqueValue(JSContext* ctx, void* address, const MarshalMetaInfo* meta)
+{
+    return OpaqueValueMarshal::Push(ctx, address, meta->type);
+}
+
+static void Js2CsOpaqueValue(JSContext* ctx, JSValueConst value, void* address, const MarshalMetaInfo* meta)
+{
+    if (OpaqueValueMarshal::IsOpaqueHandle(ctx, value))
+    {
+        void* src = nullptr;
+        if (OpaqueValueMarshal::TryGetValueAddress(ctx, value, &src) && src != nullptr)
+        {
+            if (meta->passByValue)
+                *reinterpret_cast<void**>(address) = *reinterpret_cast<void**>(src);
+            else
+                std::memcpy(address, src, (size_t)meta->size);
+            return;
+        }
+    }
+    const MarshalMetaInfo* base = MarshalMeta::TryCreateDefault(meta->type);
+    if (base != nullptr)
+        base->js2csWriter(ctx, value, address, base);
+}
+
+static bool TryMaterializeDefaultParam(
+    const MethodInfo* method,
+    int paramIndex,
+    const MarshalMetaInfo* meta,
+    void** outValueSlot,
+    Il2CppObject** outObjectSlot)
+{
+    *outValueSlot = nullptr;
+    *outObjectSlot = nullptr;
+    if (meta == nullptr)
+        return false;
+    if ((method->parameters[paramIndex]->attrs & PARAM_ATTRIBUTE_HAS_DEFAULT) == 0
+        && (method->parameters[paramIndex]->attrs & PARAM_ATTRIBUTE_OPTIONAL) == 0)
+        return false;
+
+    bool isExplicitNull = false;
+    Il2CppObject* obj =
+        il2cpp::vm::Parameter::GetDefaultParameterValueObject(method, paramIndex, &isExplicitNull);
+    if (obj == nullptr && !isExplicitNull
+        && (method->parameters[paramIndex]->attrs & PARAM_ATTRIBUTE_HAS_DEFAULT) == 0)
+    {
+        if (meta->passByValue)
+        {
+            *outObjectSlot = nullptr;
+            return true;
+        }
+        void* buf = il2cpp::utils::Memory::Malloc((size_t)meta->size);
+        std::memset(buf, 0, (size_t)meta->size);
+        *outValueSlot = buf;
+        return true;
+    }
+
+    if (meta->passByValue)
+    {
+        *outObjectSlot = obj;
+        return true;
+    }
+
+    void* buf = il2cpp::utils::Memory::Malloc((size_t)meta->size);
+    std::memset(buf, 0, (size_t)meta->size);
+    if (obj != nullptr)
+    {
+        void* unboxed = ObjectUnbox(obj);
+        std::memcpy(buf, unboxed, (size_t)meta->size);
+    }
+    *outValueSlot = buf;
+    return true;
+}
+
+static MethodDefaultArgs* TryBuildDefaultArgs(
+    const MethodInfo* method, const MarshalMetaInfo** paramsMeta, bool isExtension)
+{
+    if (method == nullptr || paramsMeta == nullptr || method->parameters_count == 0)
+        return nullptr;
+
+    const int paramStart = isExtension ? 1 : 0;
+    void** tempValues = (void**)alloca(method->parameters_count * sizeof(void*));
+    Il2CppObject** tempObjects = (Il2CppObject**)alloca(method->parameters_count * sizeof(Il2CppObject*));
+    std::memset(tempValues, 0, method->parameters_count * sizeof(void*));
+    std::memset(tempObjects, 0, method->parameters_count * sizeof(Il2CppObject*));
+
+    int firstDefault = -1;
+    bool anyObjectDefault = false;
+    for (int i = (int)method->parameters_count - 1; i >= paramStart; --i)
+    {
+        void* valueSlot = nullptr;
+        Il2CppObject* objectSlot = nullptr;
+        if (!TryMaterializeDefaultParam(method, i, paramsMeta[i], &valueSlot, &objectSlot))
+            break;
+        firstDefault = i;
+        tempValues[i] = valueSlot;
+        tempObjects[i] = objectSlot;
+        if (paramsMeta[i]->passByValue)
+            anyObjectDefault = true;
+    }
+    if (firstDefault < 0)
+        return nullptr;
+
+    const uint8_t defaultCount = (uint8_t)(method->parameters_count - firstDefault);
+    void** valueSlots = (void**)il2cpp::utils::Memory::Malloc(defaultCount * sizeof(void*));
+    std::memset(valueSlots, 0, defaultCount * sizeof(void*));
+    Il2CppObject** objectSlots = nullptr;
+    if (anyObjectDefault)
+        objectSlots = (Il2CppObject**)il2cpp::gc::GarbageCollector::AllocateFixed(
+            defaultCount * sizeof(Il2CppObject*), nullptr);
+
+    for (uint8_t di = 0; di < defaultCount; ++di)
+    {
+        const int paramIndex = firstDefault + di;
+        valueSlots[di] = tempValues[paramIndex];
+        if (objectSlots != nullptr)
+            objectSlots[di] = tempObjects[paramIndex];
+    }
+
+    auto* defaults = new MethodDefaultArgs();
+    defaults->firstDefaultParamIndex = (uint8_t)firstDefault;
+    defaults->defaultParamCount = defaultCount;
+    defaults->defaultValueSlots = valueSlots;
+    defaults->defaultObjectSlots = objectSlots;
+    return defaults;
+}
+
 static bool TryBuildMarshalCtx(const MethodInfo* method, MethodMarshalCtx** outCtx)
 {
     if (method == nullptr)
@@ -266,6 +422,7 @@ static bool TryBuildMarshalCtx(const MethodInfo* method, MethodMarshalCtx** outC
     ctx->js2CsInvoker = nullptr; /* open generic: invoke rejects */
     ctx->paramsMeta = nullptr;
     ctx->retMeta = nullptr;
+    ctx->defaults = nullptr;
     ctx->arity = method->parameters_count;
     ctx->minArity = method->parameters_count;
     ctx->sealed = true;
@@ -285,7 +442,7 @@ static bool TryBuildMarshalCtx(const MethodInfo* method, MethodMarshalCtx** outC
             const MarshalMetaInfo* meta = nullptr;
             int32_t marshalKind = 0;
             std::vector<std::string> members;
-            MetadataUtil::TryReadTsMarshalAs(method, (int)i, &marshalKind, &members);
+            MetadataUtil::TryReadJsMarshalAs(method, (int)i, &marshalKind, &members);
             if (marshalKind == 2 /* Bytes */)
             {
                 Il2CppClass* arrKlass = il2cpp::vm::Class::FromIl2CppType(method->parameters[i]);
@@ -318,6 +475,18 @@ static bool TryBuildMarshalCtx(const MethodInfo* method, MethodMarshalCtx** outC
                     }
                 }
             }
+            else if (marshalKind == 3 /* OpaqueValue */)
+            {
+                const MarshalMetaInfo* base = MarshalMeta::TryCreateDefault(method->parameters[i]);
+                if (base != nullptr)
+                {
+                    auto* om = new MarshalMetaInfo();
+                    *om = *base;
+                    om->js2csWriter = Js2CsOpaqueValue;
+                    om->cs2jsWriter = Cs2JsOpaqueValue;
+                    meta = om;
+                }
+            }
             else if ((marshalKind == 5 /* Table */ || marshalKind == 4 /* UnpackedValues */)
                      && !members.empty())
             {
@@ -345,7 +514,7 @@ static bool TryBuildMarshalCtx(const MethodInfo* method, MethodMarshalCtx** outC
     {
         int32_t retMarshalKind = 0;
         std::vector<std::string> retMembers;
-        MetadataUtil::TryReadTsMarshalAs(method, -1, &retMarshalKind, &retMembers);
+        MetadataUtil::TryReadJsMarshalAs(method, -1, &retMarshalKind, &retMembers);
         if (retMarshalKind == 2 /* Bytes */)
         {
             Il2CppClass* arrKlass = il2cpp::vm::Class::FromIl2CppType(method->return_type);
@@ -363,7 +532,7 @@ static bool TryBuildMarshalCtx(const MethodInfo* method, MethodMarshalCtx** outC
                 bytesMeta->passByValue = true;
                 bytesMeta->jsArgSlots = 1;
                 bytesMeta->marshalAsKind = MarshalAsKind::None;
-                retMeta = bytesMeta;
+                    retMeta = bytesMeta;
             }
             else
             {
@@ -376,6 +545,18 @@ static bool TryBuildMarshalCtx(const MethodInfo* method, MethodMarshalCtx** outC
                     bad->cs2jsWriter = BytesMarshal::Cs2JsBytesTypeMismatch;
                     retMeta = bad;
                 }
+            }
+        }
+        else if (retMarshalKind == 3 /* OpaqueValue */)
+        {
+            const MarshalMetaInfo* base = MarshalMeta::TryCreateDefault(method->return_type);
+            if (base != nullptr)
+            {
+                auto* om = new MarshalMetaInfo();
+                *om = *base;
+                om->js2csWriter = Js2CsOpaqueValue;
+                om->cs2jsWriter = Cs2JsOpaqueValue;
+                retMeta = om;
             }
         }
         else if ((retMarshalKind == 5 || retMarshalKind == 4) && !retMembers.empty())
@@ -433,6 +614,7 @@ static bool TryBuildMarshalCtx(const MethodInfo* method, MethodMarshalCtx** outC
         ctx->arity = jsArity;
         ctx->minArity = jsMin;
     }
+    ctx->defaults = TryBuildDefaultArgs(method, paramsMeta, isExtension);
     ctx->sealed = MetadataUtil::IsMethodSealed(method, false);
     *outCtx = ctx;
     return true;
@@ -754,7 +936,7 @@ static void CollectExtensionMethods(Il2CppClass* klass, std::vector<const Method
             break;
 
         std::vector<Il2CppClass*> attrTypes;
-        if (MetadataUtil::TryReadTsExtensionTypes(walk, attrTypes))
+        if (MetadataUtil::TryReadJsExtensionTypes(walk, attrTypes))
         {
             for (Il2CppClass* ext : attrTypes)
             {
@@ -762,15 +944,15 @@ static void CollectExtensionMethods(Il2CppClass* klass, std::vector<const Method
                     extensionClasses.push_back(ext);
             }
         }
-    }
 
-    {
-        std::vector<Il2CppClass*> xmlExt;
-        XmlOverlay::GetExtensionTypes(MetadataUtil::BuildTypeFullName(klass), xmlExt);
-        for (Il2CppClass* ext : xmlExt)
+        std::vector<Il2CppClass*> xmlTypes;
+        if (ExtensionXmlTable::TryGetExtensionClasses(walk, xmlTypes))
         {
-            if (ext != nullptr && seen.insert(ext).second)
-                extensionClasses.push_back(ext);
+            for (Il2CppClass* ext : xmlTypes)
+            {
+                if (ext != nullptr && seen.insert(ext).second)
+                    extensionClasses.push_back(ext);
+            }
         }
     }
 
@@ -876,9 +1058,9 @@ static void RegisterUniqueMethods(
     {
         std::string key = method->name;
         std::string alias;
-        if (MetadataUtil::TryReadTsAlias(method, alias))
+        if (MetadataUtil::TryReadJsAlias(method, alias))
             key = alias;
-        else if (XmlOverlay::TryGetAlias(MetadataUtil::BuildTypeFullName(method->klass), method->name, alias))
+        else if (AliasXmlTable::TryGetAlias(method, alias) && !alias.empty())
             key = alias;
         groups[key].push_back(method);
     }

@@ -1,3 +1,23 @@
+// Copyright 2026 Code Philosophy
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+
 #include "BytesMarshal.h"
 
 #include "vm/Array.h"
@@ -21,7 +41,7 @@ void BytesMarshal::Js2CsBytes(JSContext* ctx, JSValueConst value, void* address,
     }
     if (!JS_IsString(value))
     {
-        JS_ThrowTypeError(ctx, "zts: [TsMarshalAs(Bytes)] requires a JS string (raw octets)");
+        JS_ThrowTypeError(ctx, "zts: [JsMarshalAs(Bytes)] requires a JS string (raw octets)");
         return;
     }
 
@@ -52,11 +72,11 @@ JSValue BytesMarshal::Cs2JsBytes(JSContext* ctx, void* address, const MarshalMet
 
 void BytesMarshal::Js2CsBytesTypeMismatch(JSContext* ctx, JSValueConst /*value*/, void* /*address*/, const MarshalMetaInfo* /*meta*/)
 {
-    JS_ThrowTypeError(ctx, "zts: [TsMarshalAs(Bytes)] pop requires byte[].");
+    JS_ThrowTypeError(ctx, "zts: [JsMarshalAs(Bytes)] pop requires byte[].");
 }
 
 JSValue BytesMarshal::Cs2JsBytesTypeMismatch(JSContext* ctx, void* /*address*/, const MarshalMetaInfo* /*meta*/)
 {
-    return JS_ThrowTypeError(ctx, "zts: [TsMarshalAs(Bytes)] push requires byte[].");
+    return JS_ThrowTypeError(ctx, "zts: [JsMarshalAs(Bytes)] push requires byte[].");
 }
 }

@@ -1,3 +1,23 @@
+// Copyright 2026 Code Philosophy
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+
 #include "JsEnv.h"
 #include "JsLoader.h"
 #include "JsGlobalRefs.h"
@@ -7,8 +27,13 @@
 #include "../marshal/PointerMarshal.h"
 #include "../marshal/DelegateMarshal.h"
 #include "../mt/TypeRegistry.h"
-#include "../utils/TsException.h"
-#include "../utils/XmlOverlay.h"
+#include "../mt/AliasXmlTable.h"
+#include "../mt/ExtensionXmlTable.h"
+#include "../marshal/MarshalAsXmlTable.h"
+#include "../utils/JsException.h"
+#include "../generated/MarshalBindings.h"
+#include "../generated/AliasBindings.h"
+#include "../generated/ExtensionBindings.h"
 
 #include <string>
 
@@ -35,11 +60,11 @@ void JsEnv::ClearModuleNamespaceCache()
 void JsEnv::Initialize()
 {
     if (s_context != nullptr)
-        TsException::Throw("JsEnv is already initialized");
+        JsException::Throw("JsEnv is already initialized");
 
     s_runtime = JS_NewRuntime();
     if (s_runtime == nullptr)
-        TsException::Throw("JS_NewRuntime failed");
+        JsException::Throw("JS_NewRuntime failed");
 
     js_std_init_handlers(s_runtime);
 
@@ -49,14 +74,16 @@ void JsEnv::Initialize()
         js_std_free_handlers(s_runtime);
         JS_FreeRuntime(s_runtime);
         s_runtime = nullptr;
-        TsException::Throw("JS_NewContext failed");
+        JsException::Throw("JS_NewContext failed");
     }
 
     js_std_add_helpers(s_context, 0, nullptr);
     JsLoader::InstallOnRuntime(s_runtime);
     JsGlobalRefs::Initialize();
     MethodBridge::Initialize();
-    XmlOverlay::LoadFromStreamingAssets();
+    RegisterMarshalBindingTables();
+    RegisterAliasBindingTables();
+    RegisterExtensionBindingTables();
     JsLib::RegisterGlobals(s_context);
     s_generation++;
 }
@@ -79,7 +106,9 @@ void JsEnv::Shutdown()
         TypeRegistry::Reset(s_context);
         PointerMarshal::Reset();
         DelegateMarshal::Reset();
-        XmlOverlay::Reset();
+        MarshalAsXmlTable::Clear();
+        AliasXmlTable::Clear();
+        ExtensionXmlTable::Clear();
         if (s_runtime != nullptr)
             JS_RunGC(s_runtime);
 
@@ -92,7 +121,9 @@ void JsEnv::Shutdown()
         TypeRegistry::Reset(nullptr);
         PointerMarshal::Reset();
         DelegateMarshal::Reset();
-        XmlOverlay::Reset();
+        MarshalAsXmlTable::Clear();
+        AliasXmlTable::Clear();
+        ExtensionXmlTable::Clear();
     }
 
     if (s_runtime != nullptr)
@@ -138,7 +169,7 @@ void JsEnv::DrainPendingJobs()
             JSValue ex = JS_GetException(errCtx);
             std::string msg = FormatJsValue(errCtx, ex);
             JS_FreeValue(errCtx, ex);
-            TsException::ThrowFormat("pending job failed: %s", msg.c_str());
+            JsException::ThrowFormat("pending job failed: %s", msg.c_str());
         }
     }
 }
@@ -146,7 +177,7 @@ void JsEnv::DrainPendingJobs()
 JSValue JsEnv::LoadModuleNamespace(const char* moduleName)
 {
     if (s_context == nullptr)
-        TsException::Throw("ZTS is not initialized");
+        JsException::Throw("ZTS is not initialized");
 
     auto it = s_moduleNamespaces.find(moduleName);
     if (it != s_moduleNamespaces.end())
@@ -162,7 +193,7 @@ JSValue JsEnv::LoadModuleNamespace(const char* moduleName)
     if (state == JS_PROMISE_PENDING)
     {
         JS_FreeValue(s_context, promise);
-        TsException::ThrowFormat("module '%s' promise still pending", moduleName);
+        JsException::ThrowFormat("module '%s' promise still pending", moduleName);
     }
 
     JSValue ns = JS_PromiseResult(s_context, promise);
@@ -172,7 +203,7 @@ JSValue JsEnv::LoadModuleNamespace(const char* moduleName)
     {
         std::string msg = FormatJsValue(s_context, ns);
         JS_FreeValue(s_context, ns);
-        TsException::ThrowFormat("module '%s' rejected: %s", moduleName, msg.c_str());
+        JsException::ThrowFormat("module '%s' rejected: %s", moduleName, msg.c_str());
     }
 
     if (JS_IsException(ns))
@@ -194,7 +225,7 @@ JSValue JsEnv::GetModuleExport(const char* moduleName, const char* exportName)
     if (!JS_IsFunction(s_context, exp))
     {
         JS_FreeValue(s_context, exp);
-        TsException::ThrowFormat("export '%s.%s' is not callable", moduleName, exportName);
+        JsException::ThrowFormat("export '%s.%s' is not callable", moduleName, exportName);
     }
 
     return exp;
@@ -205,7 +236,7 @@ void JsEnv::ThrowPendingException()
     JSValue ex = JS_GetException(s_context);
     std::string msg = FormatJsValue(s_context, ex);
     JS_FreeValue(s_context, ex);
-    TsException::ThrowFormat("%s", msg.c_str());
+    JsException::ThrowFormat("%s", msg.c_str());
 }
 
 std::string JsEnv::FormatJsValue(JSContext* ctx, JSValue val)

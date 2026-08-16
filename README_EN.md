@@ -49,15 +49,15 @@ For a modern TypeScript solution on **Unreal Engine** (aggressively optimized fo
 - **TypeScript workflow**: `ZTS/Init TypeScript Project` → `TsProject/`; `tsc --noEmit`; esbuild 1:1 emit; copy to StreamingAssets for Player
 - **Debugger hooks**: Editor Debugger Host interface (work in progress)
 
-### Platforms and versions (current)
+### Platforms and versions
 
-| Category | Status |
-|----------|--------|
+| Category | Supported |
+|----------|-----------|
 | **Engine** | Unity **2021.3.x** / **2022.3.x** / **6000.0.x** / **6000.3.x** / **6000.5.x**; **Tuanjie Engine 1.x.y** |
 | **VM** | QuickJS (see pin under `ZTS~/` / docs) |
 | **Runtime** | Editor **Mono** + Player **Il2Cpp** |
-| **Dev platform** | Windows x64 Editor |
-| **Player** | Win64 Il2Cpp primary; other Il2Cpp targets follow |
+| **Editor platforms** | Windows x64, macOS (Apple Silicon / Intel) |
+| **Player platforms** | Platforms supported by Il2Cpp (including Win64, Android, iOS, WebGL, WeChat Mini Games, HarmonyOS / automotive, etc.) |
 
 ---
 
@@ -230,8 +230,10 @@ Play mode runs `tsc --noEmit` by default. You can also run **`ZTS/Compile TypeSc
 
 ```text
 Plugins/quickjs/
-  win32-x64/quickjs.dll     # QuickJS Win64 (no NAN boxing: JSValue = 16 bytes)
-  zts_mono_gate.dll         # Editor-only JS→C# callback gate
+  win32-x64/quickjs.dll          # QuickJS Win64 (no NAN boxing: JSValue = 16 bytes)
+  zts_mono_gate.dll              # Editor-only JS→C# callback gate (Windows)
+  darwin-arm64/quickjs.dylib     # QuickJS macOS arm64
+  libzts_mono_gate.dylib         # Editor-only gate (macOS)
 ```
 
 Build (from the package root):
@@ -244,7 +246,9 @@ ZTS~\mono-native\build_quickjs_msvc.bat
 powershell -NoProfile -ExecutionPolicy Bypass -File ZTS~\mono-native\build_zts_mono_gate.ps1
 ```
 
-Il2Cpp: menu **ZTS / Install...** installs `ZTS~/zts-runtime` + QuickJS into LocalIl2Cpp; **ZTS / Export Build-Win64...** exports an MSBuildable Player solution.
+macOS: `ZTS~/mono-native/build_quickjs_darwin.sh`, `build_zts_mono_gate_unix.sh`.
+
+Il2Cpp: menu **ZTS / Install...** installs `ZTS~/zts-runtime` + QuickJS into LocalIl2Cpp; on Windows, **ZTS / Export Build-Win64...** exports an MSBuildable Player solution. For iOS and other targets, follow Unity’s export + native toolchain (see docs).
 
 ---
 

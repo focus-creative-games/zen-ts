@@ -40,6 +40,14 @@ namespace ZTS.BuildProcessors
                 return;
             }
 
+            string skip = Environment.GetEnvironmentVariable("ZTS_SKIP_TYPESCRIPT");
+            if (!string.IsNullOrEmpty(skip)
+                && (skip == "1" || skip.Equals("true", StringComparison.OrdinalIgnoreCase)))
+            {
+                UnityEngine.Debug.Log("[ZTS] Skipping TypeScript build step (ZTS_SKIP_TYPESCRIPT).");
+                return;
+            }
+
             try
             {
                 TypescriptToolchain.Check();

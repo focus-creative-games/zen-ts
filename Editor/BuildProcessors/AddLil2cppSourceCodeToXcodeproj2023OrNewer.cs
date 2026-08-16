@@ -18,27 +18,42 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-using UnityEditor.Build;
-using UnityEditor.Build.Reporting;
-using ZTS.Editor;
+using System.IO;
+using UnityEditor;
+using UnityEditor.Callbacks;
+using UnityEngine;
+using ZTS.Utils;
+
+#if UNITY_2023_1_OR_NEWER && (UNITY_IOS || UNITY_TVOS || UNITY_VISIONOS)
 
 namespace ZTS.BuildProcessors
 {
-    /// <summary>
-    /// Ensure Alias/Extension C++ tables are regenerated before Player builds.
-    /// </summary>
-    internal sealed class GenerateXmlBindingsOnBuild : IPreprocessBuildWithReport
+    public static class AddLil2cppSourceCodeToXcodeproj2023OrNewer
     {
-        public int callbackOrder => 10;
-
-        public void OnPreprocessBuild(BuildReport report)
+        [PostProcessBuild(50)]
+        public static void OnPostProcessBuild(BuildTarget target, string pathToBuiltProject)
         {
             if (!Settings.EnableForCurrentBuildTarget)
             {
                 return;
             }
 
-            XmlBindingsGenerate.Generate();
+            if (target != BuildTarget.iOS && target != BuildTarget.tvOS)
+            {
+                return;
+            }
+
+            CopyLibil2cppToXcodeProj(pathToBuiltProject);
+        }
+
+        private static void CopyLibil2cppToXcodeProj(string pathToBuiltProject)
+        {
+            string srcLibil2cppDir = CommonDirs.LocalLibil2cppPath;
+            string destLibil2cppDir = Path.Combine(pathToBuiltProject, "Il2CppOutputProject", "IL2CPP", "libil2cpp");
+            DirectoryUtil.RemoveDir(destLibil2cppDir);
+            DirectoryUtil.CopyDir(srcLibil2cppDir, destLibil2cppDir, true);
+            Debug.Log($"[AddLil2cppSourceCodeToXcodeproj] copied libil2cpp -> {destLibil2cppDir}");
         }
     }
 }
+#endif

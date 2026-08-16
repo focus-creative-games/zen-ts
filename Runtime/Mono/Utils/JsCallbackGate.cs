@@ -70,12 +70,6 @@ namespace ZTS.Utils
         [DllImport(QuickJsDllName.MonoGate, CallingConvention = CallingConvention.Cdecl, EntryPoint = "zts_callback_error_sentinel")]
         private static extern int NativeErrorSentinel();
 
-        [DllImport("kernel32", CharSet = CharSet.Ansi, EntryPoint = "GetModuleHandleA", SetLastError = true)]
-        private static extern IntPtr GetModuleHandle(string lpModuleName);
-
-        [DllImport("kernel32", CharSet = CharSet.Ansi, EntryPoint = "GetProcAddress", SetLastError = true)]
-        private static extern IntPtr GetProcAddress(IntPtr hModule, string procName);
-
         [DllImport(QuickJsDllName.MonoGate, CallingConvention = CallingConvention.Cdecl, EntryPoint = "zts_gate_reset")]
         private static extern void NativeGateReset();
 
@@ -170,7 +164,7 @@ namespace ZTS.Utils
             }
 
             // Direct path is unsafe for 16-byte JSValue returns on Mono; require gate.
-            throw new JsScriptException("zts: zts_mono_gate.dll is required on Win64 Editor.");
+            throw new JsScriptException("zts: zts_mono_gate is required on Editor Mono.");
         }
 
         public static JSValue NewCFunctionMagic(IntPtr ctx, JsCFunctionMagic callback, string name, int length, int userMagic)
@@ -202,7 +196,7 @@ namespace ZTS.Utils
                     slot);
             }
 
-            throw new JsScriptException("zts: zts_mono_gate.dll is required on Win64 Editor.");
+            throw new JsScriptException("zts: zts_mono_gate is required on Editor Mono.");
         }
 
         public static JSValue ReturnErrorSentinel(IntPtr ctx, string message)
@@ -215,14 +209,8 @@ namespace ZTS.Utils
         {
             try
             {
-                IntPtr qjs = GetModuleHandle(QuickJsDllName.QuickJs);
-                if (qjs == IntPtr.Zero)
-                {
-                    return false;
-                }
-
                 // Use pointer-ABI throw shim (not raw JS_Throw).
-                IntPtr throwPtr = GetProcAddress(qjs, "zts_JS_Throw");
+                IntPtr throwPtr = NativeExport.Find("zts_JS_Throw");
                 if (throwPtr == IntPtr.Zero)
                 {
                     return false;
@@ -235,9 +223,63 @@ namespace ZTS.Utils
             }
             catch (DllNotFoundException)
             {
-                JsPrintBuffer.Log("[ZTS] zts_mono_gate.dll not found.");
+                JsPrintBuffer.Log("[ZTS] zts_mono_gate not found.");
                 return false;
             }
+        }
+
+        private static class NativeExport
+        {
+#if UNITY_EDITOR_WIN || UNITY_STANDALONE_WIN
+            [DllImport("kernel32", CharSet = CharSet.Ansi, EntryPoint = "GetModuleHandleA", SetLastError = true)]
+            private static extern IntPtr GetModuleHandle(string lpModuleName);
+
+            [DllImport("kernel32", CharSet = CharSet.Ansi, EntryPoint = "GetProcAddress", SetLastError = true)]
+            private static extern IntPtr GetProcAddress(IntPtr hModule, string procName);
+
+            internal static IntPtr Find(string symbol)
+            {
+                string baseName = QuickJsDllName.QuickJs;
+                string[] candidates =
+                {
+                    baseName,
+                    baseName + ".dll",
+                    "lib" + baseName,
+                    "lib" + baseName + ".dll",
+                };
+
+                for (int i = 0; i < candidates.Length; i++)
+                {
+                    IntPtr module = GetModuleHandle(candidates[i]);
+                    if (module == IntPtr.Zero)
+                    {
+                        continue;
+                    }
+
+                    IntPtr proc = GetProcAddress(module, symbol);
+                    if (proc != IntPtr.Zero)
+                    {
+                        return proc;
+                    }
+                }
+
+                return IntPtr.Zero;
+            }
+#elif UNITY_EDITOR_OSX || UNITY_STANDALONE_OSX
+            private static readonly IntPtr RTLD_DEFAULT = (IntPtr)(-2);
+
+            [DllImport("libdl.dylib", EntryPoint = "dlsym")]
+            private static extern IntPtr dlsym(IntPtr handle, string symbol);
+
+            internal static IntPtr Find(string symbol) => dlsym(RTLD_DEFAULT, symbol);
+#else
+            private static readonly IntPtr RTLD_DEFAULT = IntPtr.Zero;
+
+            [DllImport("libdl.so.2", EntryPoint = "dlsym")]
+            private static extern IntPtr dlsym(IntPtr handle, string symbol);
+
+            internal static IntPtr Find(string symbol) => dlsym(RTLD_DEFAULT, symbol);
+#endif
         }
     }
 }

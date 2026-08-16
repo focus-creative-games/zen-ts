@@ -400,15 +400,38 @@ bool MetadataUtil::TryReadJsExtensionTypes(Il2CppClass* klass, std::vector<Il2Cp
         return false;
 
     Il2CppReflectionType* typeObj = il2cpp::vm::Reflection::GetTypeObject(&klass->byval_arg);
+
+    Il2CppObject** attrArray = nullptr;
+    int32_t count = 0;
+#if ZTS_UNITY_VERSION >= 20220000
     Il2CppArray* attrs = il2cpp::vm::Reflection::GetCustomAttrsInfo(
         reinterpret_cast<Il2CppObject*>(typeObj), s_jsExtensionAttributeClass);
     if (attrs == nullptr || attrs->max_length == 0)
         return false;
+    attrArray = il2cpp_array_addr(attrs, Il2CppObject*, 0);
+    count = (int32_t)attrs->max_length;
+#else
+    CustomAttributesCache* cache = il2cpp::vm::Reflection::GetCustomAttrsInfo(
+        reinterpret_cast<Il2CppObject*>(typeObj));
+    if (cache == nullptr || cache->count == 0)
+        return false;
+    std::vector<Il2CppObject*> jsExtensionAttrs;
+    for (int i = 0; i < cache->count; i++)
+    {
+        Il2CppObject* attr = cache->attributes[i];
+        if (attr != nullptr && il2cpp::vm::Class::IsAssignableFrom(s_jsExtensionAttributeClass, attr->klass))
+            jsExtensionAttrs.push_back(attr);
+    }
+    if (jsExtensionAttrs.empty())
+        return false;
+    attrArray = jsExtensionAttrs.data();
+    count = (int32_t)jsExtensionAttrs.size();
+#endif
 
     std::unordered_set<Il2CppClass*> seen;
-    for (il2cpp_array_size_t a = 0; a < attrs->max_length; ++a)
+    for (int32_t a = 0; a < count; ++a)
     {
-        Il2CppObject* attr = il2cpp_array_get(attrs, Il2CppObject*, a);
+        Il2CppObject* attr = attrArray[a];
         if (attr == nullptr)
             continue;
         const PropertyInfo* typesProperty = il2cpp::vm::Class::GetPropertyFromName(attr->klass, "ExtensionTypes");

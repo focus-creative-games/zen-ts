@@ -1,4 +1,22 @@
-﻿// Copyright 2026 Code Philosophy
+// Copyright 2026 Code Philosophy
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
 
 using System;
 using System.Diagnostics;
@@ -45,11 +63,49 @@ namespace ZTS.Utils
                 throw new InvalidOperationException($"Patch working directory not found: {workingDirectory}");
             }
 
-            string patchExe = ResolvePatchExecutable();
-            string args = $"-p{stripComponents} --forward --batch -i \"{patchFile}\"";
-            RunPatch(patchExe, args, workingDirectory, dryRun: true);
-            RunPatch(patchExe, args, workingDirectory, dryRun: false);
-            Debug.Log($"[ZTS] Applied patch: {patchFile}");
+            // macOS /usr/bin/patch rejects CRLF unified diffs against LF sources; normalize to LF.
+            string patchInput = EnsureLfPatchFile(patchFile);
+            try
+            {
+                string patchExe = ResolvePatchExecutable();
+                string args = $"-p{stripComponents} --forward --batch -i \"{patchInput}\"";
+                RunPatch(patchExe, args, workingDirectory, dryRun: true);
+                RunPatch(patchExe, args, workingDirectory, dryRun: false);
+                Debug.Log($"[ZTS] Applied patch: {patchFile}");
+            }
+            finally
+            {
+                if (!string.Equals(patchInput, patchFile, StringComparison.Ordinal)
+                    && File.Exists(patchInput))
+                {
+                    try { File.Delete(patchInput); } catch { /* best-effort */ }
+                }
+            }
+        }
+
+        /// <summary>Returns <paramref name="patchFile"/> if already LF; otherwise a temp LF copy.</summary>
+        private static string EnsureLfPatchFile(string patchFile)
+        {
+            byte[] bytes = File.ReadAllBytes(patchFile);
+            bool hasCr = false;
+            for (int i = 0; i < bytes.Length; i++)
+            {
+                if (bytes[i] == (byte)'\r')
+                {
+                    hasCr = true;
+                    break;
+                }
+            }
+
+            if (!hasCr)
+            {
+                return patchFile;
+            }
+
+            string text = Encoding.UTF8.GetString(bytes).Replace("\r\n", "\n").Replace("\r", "\n");
+            string temp = Path.Combine(Path.GetTempPath(), "zts-" + Path.GetFileName(patchFile) + ".lf.patch");
+            File.WriteAllText(temp, text, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
+            return temp;
         }
 
         private static void RunPatch(string patchExe, string args, string workingDirectory, bool dryRun)

@@ -1,9 +1,32 @@
 // Copyright 2026 Code Philosophy
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+
+#if UNITY_6000_3_OR_NEWER && UNITY_EDITOR_OSX
+#define NEW_IL2CPP_PATH
+#endif
 
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
 using UnityEditor;
 using UnityEditor.Build;
@@ -30,8 +53,26 @@ namespace ZTS
             _curVersion = new UnityVersion(Application.unityVersion);
         }
 
-        public string ApplicationIl2cppPath =>
-            $"{EditorApplication.applicationContentsPath}/il2cpp";
+        public string ApplicationIl2cppPath
+        {
+            get
+            {
+#if NEW_IL2CPP_PATH
+#if UNITY_IOS
+                string platformDirName = "iOSSupport";
+#elif UNITY_TVOS
+                string platformDirName = "AppleTVSupport";
+#elif UNITY_VISIONOS
+                string platformDirName = "VisionOSPlayer";
+#else
+                string platformDirName = "iOSSupport";
+#endif
+                return $"{EditorApplication.applicationContentsPath}/../../PlaybackEngines/{platformDirName}/il2cpp";
+#else
+                return $"{EditorApplication.applicationContentsPath}/il2cpp";
+#endif
+            }
+        }
 
         public void InstallLocal()
         {
@@ -105,11 +146,25 @@ namespace ZTS
             string localIl2CppDataDir = CommonDirs.LocalIl2CppDataPath;
             DirectoryUtil.RecreateDir(localIl2CppDataDir);
 
+#if !NEW_IL2CPP_PATH
             DirectoryUtil.CopyDir(
                 $"{Directory.GetParent(editorIl2cppPath)}/MonoBleedingEdge",
                 $"{localIl2CppDataDir}/MonoBleedingEdge",
                 true);
+#endif
             DirectoryUtil.CopyDir(editorIl2cppPath, CommonDirs.LocalIl2CppPath, true);
+#if NEW_IL2CPP_PATH
+            string buildDir = $"{CommonDirs.LocalIl2CppPath}/build";
+            if (RuntimeInformation.ProcessArchitecture == Architecture.Arm
+                || RuntimeInformation.ProcessArchitecture == Architecture.Arm64)
+            {
+                DirectoryUtil.CopyDir($"{buildDir}/deploy_arm64", $"{buildDir}/deploy", false);
+            }
+            else
+            {
+                DirectoryUtil.CopyDir($"{buildDir}/deploy_x86_64", $"{buildDir}/deploy", false);
+            }
+#endif
 
             if (!UnityIl2CppPatchUtil.TryResolvePatchFile(
                     Application.unityVersion, out string il2cppPatchFile, out string il2cppPatchKey))
@@ -210,7 +265,7 @@ namespace ZTS
                     "[ZTS] Vendored QuickJS incomplete after copy (need quickjs.c + zts_qjs_std_stubs.c).");
             }
 
-            Debug.Log($"[ZTS] Installed vendored QuickJS {qjsInfo.Id} → {dest}");
+            Debug.Log($"[ZTS] Installed vendored QuickJS {qjsInfo.Id} ? {dest}");
         }
 
         private static void EnsureMinimalGeneratedStubs()
@@ -219,7 +274,7 @@ namespace ZTS
             Directory.CreateDirectory(dir);
 
             WriteIfMissing(Path.Combine(dir, "BuiltinScripts.inc"),
-                "/* M0 stub — Generate/All will replace. */\n");
+                "/* M0 stub � Generate/All will replace. */\n");
             WriteIfMissing(Path.Combine(dir, "MethodBridgeStub.h"),
                 "#pragma once\nnamespace zts { void MethodBridge_Initialize(); }\n");
             WriteIfMissing(Path.Combine(dir, "MethodBridgeStub.cpp"),
@@ -279,11 +334,30 @@ namespace ZTS
 
         private static void WarnIfEditorPluginMissing()
         {
+#if UNITY_EDITOR_OSX
+            string qjs = Path.Combine(CommonDirs.PackagePluginsRoot, "quickjs", "darwin-arm64", "libquickjs.dylib");
+            if (!File.Exists(qjs))
+            {
+                qjs = Path.Combine(CommonDirs.PackagePluginsRoot, "quickjs", "darwin-universal", "libquickjs.dylib");
+            }
+
+            if (!File.Exists(qjs))
+            {
+                Debug.LogWarning($"[ZTS] Editor QuickJS plugin missing (non-fatal for Install): {qjs}");
+            }
+
+            string gate = Path.Combine(CommonDirs.PackagePluginsRoot, "quickjs", "libzts_mono_gate.dylib");
+            if (!File.Exists(gate))
+            {
+                Debug.LogWarning($"[ZTS] Editor zts_mono_gate missing (non-fatal for Install): {gate}");
+            }
+#else
             string dll = Path.Combine(CommonDirs.PackagePluginsRoot, "quickjs", "win32-x64", "quickjs.dll");
             if (!File.Exists(dll))
             {
                 Debug.LogWarning($"[ZTS] Editor QuickJS plugin missing (non-fatal for Install): {dll}");
             }
+#endif
         }
 
         private string ApplyScriptingDefines()

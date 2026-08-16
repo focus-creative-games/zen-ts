@@ -86,7 +86,8 @@ static __forceinline double zts_nan_value(void)
 }
 #define NAN (zts_nan_value())
 #endif
-#else /* !_MSC_VER — Clang / GCC / Android NDK */
+#else /* !_MSC_VER — Clang / GCC / Android NDK / Apple */
+#include <sys/time.h>
 #ifndef NAN
 #define NAN nan("")
 #endif

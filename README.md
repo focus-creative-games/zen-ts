@@ -49,15 +49,15 @@ ZTS 是一个针对 Il2Cpp 优化的现代、简洁、易用的 Unity **TypeScri
 - **TypeScript 工作流**：`ZTS/Init TypeScript Project` → `TsProject/`；`tsc --noEmit` 检查；esbuild 1:1 emit；Player 拷贝到 StreamingAssets
 - **原生调试路径预留**：Editor 侧 Debugger Host 接口（持续完善）
 
-### 平台与版本（当前）
+### 平台与版本
 
-| 类别 | 状态 |
-|------|------|
+| 类别 | 已支持 |
+|------|--------|
 | **引擎** | Unity **2021.3.x** / **2022.3.x** / **6000.0.x** / **6000.3.x** / **6000.5.x**；**团结引擎 1.x.y** |
 | **脚本 VM** | QuickJS（pin 见包内 `ZTS~/` / 文档） |
 | **运行时** | Editor **Mono** + Player **Il2Cpp** |
-| **平台（开发）** | Windows x64 Editor |
-| **平台（Player）** | 以 Win64 Il2Cpp 为主验证；其它 Il2Cpp 目标陆续跟进 |
+| **平台（Editor）** | Windows x64、macOS（Apple Silicon / Intel） |
+| **平台（Player）** | Il2Cpp 支持的平台（含 Win64、Android、iOS、WebGL、微信小游戏、鸿蒙 / 车机等） |
 
 ---
 
@@ -230,8 +230,10 @@ Player：构建时拷贝 `out/**/*.js` → `StreamingAssets/ZTS/`，运行时 **
 
 ```text
 Plugins/quickjs/
-  win32-x64/quickjs.dll     # QuickJS Win64（非 NAN boxing：JSValue = 16 字节）
-  zts_mono_gate.dll         # Editor-only JS→C# callback gate
+  win32-x64/quickjs.dll          # QuickJS Win64（非 NAN boxing：JSValue = 16 字节）
+  zts_mono_gate.dll              # Editor-only JS→C# callback gate（Windows）
+  darwin-arm64/quickjs.dylib     # QuickJS macOS arm64
+  libzts_mono_gate.dylib         # Editor-only gate（macOS）
 ```
 
 构建（在包目录下）：
@@ -244,7 +246,9 @@ ZTS~\mono-native\build_quickjs_msvc.bat
 powershell -NoProfile -ExecutionPolicy Bypass -File ZTS~\mono-native\build_zts_mono_gate.ps1
 ```
 
-Il2Cpp：菜单 **ZTS / Install...** 将 `ZTS~/zts-runtime` 与 QuickJS 源装入 LocalIl2Cpp；**ZTS / Export Build-Win64...** 导出可 MSBuild 的 Player 工程。
+macOS：`ZTS~/mono-native/build_quickjs_darwin.sh`、`build_zts_mono_gate_unix.sh`。
+
+Il2Cpp：菜单 **ZTS / Install...** 将 `ZTS~/zts-runtime` 与 QuickJS 源装入 LocalIl2Cpp；Windows 上可用 **ZTS / Export Build-Win64...** 导出可 MSBuild 的 Player 工程。iOS 等目标按 Unity 导出 Xcode 后构建（见文档）。
 
 ---
 

@@ -1,0 +1,4 @@
+<linker>
+  <assembly fullname="ZTS.Common" preserve="all" />
+  <assembly fullname="ZTS.Il2Cpp" preserve="all" />
+</linker>

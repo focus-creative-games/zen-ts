@@ -1,0 +1,20 @@
+{
+  "name": "com.code-philosophy.zts",
+  "version": "0.1.0-beta.1",
+  "displayName": "ZTS",
+  "description": "ZTS is a high-performance TypeScript/JavaScript scripting solution for Unity powered by QuickJS, designed in parallel with ZLua.",
+  "category": "Scripting",
+  "keywords": [
+    "zts",
+    "typescript",
+    "javascript",
+    "quickjs",
+    "hot update",
+    "code-philosophy"
+  ],
+  "author": {
+    "name": "Code Philosophy",
+    "email": "zts@code-philosophy.com",
+    "url": "https://code-philosophy.com"
+  }
+}

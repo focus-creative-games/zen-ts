@@ -9,7 +9,7 @@
 
 #if defined(_MSC_VER)
 #include <intrin.h>
-/* Avoid #include <windows.h> — Bee lumps this with LibraryLoader (winsock clash).
+/* Avoid #include <windows.h> -- Bee lumps this with LibraryLoader (winsock clash).
    Do NOT redeclare Win32 APIs here either: the same lump may already include them. */
 extern "C" __declspec(dllimport) int __stdcall IsDebuggerPresent(void);
 extern "C" __declspec(dllimport) void __stdcall OutputDebugStringA(const char*);

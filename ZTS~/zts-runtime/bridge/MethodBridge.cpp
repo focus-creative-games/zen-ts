@@ -48,7 +48,7 @@ bool FillDefaultParam(
     Il2CppClass* klass = il2cpp::vm::Class::FromIl2CppType(method->parameters[paramIndex]);
     if (klass != nullptr && il2cpp::vm::Class::IsValuetype(klass))
     {
-        void* raw = il2cpp::vm::Object::Unbox(boxed);
+        void* raw = ObjectUnbox(boxed);
         std::memcpy(storage, raw, (size_t)paramMeta->size);
         return true;
     }
@@ -93,7 +93,7 @@ bool TryBindByRefAddress(
     if (!il2cpp::vm::Class::IsAssignableFrom(paramMeta->typeKlass, holder->klass))
         return false;
 
-    *outAddr = il2cpp::vm::Object::Unbox(holder);
+    *outAddr = ObjectUnbox(holder);
     return true;
 }
 } // namespace
@@ -131,7 +131,7 @@ JSValue MethodBridge::DefaultInvoke(
         else
         {
             Il2CppObject* boxed = reinterpret_cast<Il2CppObject*>(target);
-            void* raw = il2cpp::vm::Object::Unbox(boxed);
+            void* raw = ObjectUnbox(boxed);
             std::memcpy(storage, raw, (size_t)selfMeta->size);
             params[0] = storage;
         }
@@ -211,7 +211,7 @@ JSValue MethodBridge::DefaultInvoke(
     {
         auto* obj = reinterpret_cast<Il2CppObject*>(target);
         if (obj->klass != nullptr && il2cpp::vm::Class::IsValuetype(obj->klass) && !obj->klass->enumtype)
-            invokeThis = il2cpp::vm::Object::Unbox(obj);
+            invokeThis = ObjectUnbox(obj);
     }
 
     if (mctx->retMeta != nullptr)

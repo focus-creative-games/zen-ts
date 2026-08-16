@@ -48,7 +48,7 @@ ZTS 是一个针对 Il2Cpp 优化的现代、简洁、易用的 Unity **TypeScri
 
 | 类别 | 状态 |
 |------|------|
-| **引擎** | Unity **2022.3.x**（主验证）；其它 LTS / 团结引擎按需扩展 |
+| **引擎** | Unity **2021.3.x** / **2022.3.x** / **6000.0.x** / **6000.3.x** / **6000.5.x**；**团结引擎 1.x.y** |
 | **脚本 VM** | QuickJS（pin 见包内 `ZTS~/` / 文档） |
 | **运行时** | Editor **Mono** + Player **Il2Cpp** |
 | **平台（开发）** | Windows x64 Editor |
@@ -252,4 +252,5 @@ MIT。欢迎自由使用、修改和分发。
 - 文档：[https://zts.code-philosophy.com/](https://zts.code-philosophy.com/)
 - 邮件：`zts@code-philosophy.com`
 - 产品站：[code-philosophy.com](https://code-philosophy.com)
-- QQ / Discord：与 ZLua 社区共用渠道（见 [ZLua README](https://github.com/focus-creative-games/zlua)）
+- QQ 群：`1095435513`（ZTS 交流群）
+- Discord：[https://discord.gg/5bT7w9aRMz](https://discord.gg/5bT7w9aRMz)

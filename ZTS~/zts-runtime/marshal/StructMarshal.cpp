@@ -60,7 +60,7 @@ void StructMarshal::Js2CsStruct(JSContext* ctx, JSValueConst value, void* addres
                 MetadataUtil::GetTypeFullName(klass));
             return;
         }
-        void* src = il2cpp::vm::Object::Unbox(obj);
+        void* src = ObjectUnbox(obj);
         std::memcpy(address, src, size);
         return;
     }

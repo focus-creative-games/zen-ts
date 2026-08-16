@@ -307,7 +307,7 @@ static JSValue UnboxCallback(JSContext* ctx, JSValueConst /*this_val*/, int argc
 
     if (il2cpp::vm::Class::IsValuetype(klass))
     {
-        void* raw = il2cpp::vm::Object::Unbox(obj);
+        void* raw = ObjectUnbox(obj);
         return meta->cs2jsWriter(ctx, raw, meta);
     }
 

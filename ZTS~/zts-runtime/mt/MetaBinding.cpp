@@ -236,7 +236,7 @@ static JSValue StructDefaultInvoke(
     Il2CppObject* boxed = il2cpp::vm::Object::New(klass);
     size_t size = (size_t)il2cpp::vm::Class::GetInstanceSize(klass);
     if (size > sizeof(Il2CppObject))
-        std::memset(il2cpp::vm::Object::Unbox(boxed), 0, size - sizeof(Il2CppObject));
+        std::memset(ObjectUnbox(boxed), 0, size - sizeof(Il2CppObject));
     return ObjectRegistry::PushByVal(ctx, boxed, binding);
 }
 

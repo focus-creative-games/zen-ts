@@ -48,7 +48,7 @@ Host APIs are intentionally aligned: if you know ZLua, ZTS feels familiar.
 
 | Category | Status |
 |----------|--------|
-| **Engine** | Unity **2022.3.x** (primary); other LTS / Tuanjie as needed |
+| **Engine** | Unity **2021.3.x** / **2022.3.x** / **6000.0.x** / **6000.3.x** / **6000.5.x**; **Tuanjie Engine 1.x.y** |
 | **VM** | QuickJS (see pin under `ZTS~/` / docs) |
 | **Runtime** | Editor **Mono** + Player **Il2Cpp** |
 | **Dev platform** | Windows x64 Editor |
@@ -252,4 +252,5 @@ MIT. Free to use, modify, and distribute.
 - Docs: [https://zts.code-philosophy.com/](https://zts.code-philosophy.com/)
 - Email: `zts@code-philosophy.com`
 - Site: [code-philosophy.com](https://code-philosophy.com)
-- QQ / Discord: same community channels as ZLua (see [ZLua README](https://github.com/focus-creative-games/zlua))
+- QQ group: `1095435513` (ZTS community)
+- Discord: [https://discord.gg/5bT7w9aRMz](https://discord.gg/5bT7w9aRMz)

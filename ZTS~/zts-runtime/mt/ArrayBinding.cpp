@@ -104,8 +104,7 @@ static JSValue ArrayGet(
     }
     else
     {
-        il2cpp_array_size_t flat =
-            il2cpp::vm::Array::IndexFromIndices(arr, indices.data());
+        il2cpp_array_size_t flat = ArrayIndexFromIndices(arr, indices.data());
         slot = il2cpp_array_addr_with_size(arr, actx->elementSize, (int32_t)flat);
     }
 
@@ -136,8 +135,7 @@ static JSValue ArraySet(
 
     if (actx->rank != 1)
     {
-        il2cpp_array_size_t flat =
-            il2cpp::vm::Array::IndexFromIndices(arr, indices.data());
+        il2cpp_array_size_t flat = ArrayIndexFromIndices(arr, indices.data());
         void* slot = il2cpp_array_addr_with_size(arr, actx->elementSize, (int32_t)flat);
         void* tempStorage = nullptr;
         void* storage = actx->elementMeta->passByValue ? &tempStorage : alloca((size_t)actx->elementMeta->size);

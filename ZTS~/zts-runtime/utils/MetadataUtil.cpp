@@ -399,7 +399,7 @@ bool MetadataUtil::TryReadTsMarshalAs(
     Il2CppObject* boxed = il2cpp::vm::Runtime::Invoke(kindProp->get, attr, nullptr, &exc);
     if (exc != nullptr || boxed == nullptr)
         return false;
-    *outKind = *reinterpret_cast<int32_t*>(il2cpp::vm::Object::Unbox(boxed));
+    *outKind = *reinterpret_cast<int32_t*>(ObjectUnbox(boxed));
 
     if (outMembers != nullptr && (*outKind == 5 || *outKind == 4)) /* Table / UnpackedValues */
     {

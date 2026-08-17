@@ -18,6 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+using System;
 using System.IO;
 using UnityEngine;
 
@@ -29,9 +30,46 @@ namespace ZenTS
 
         public static string InstallRootDir => Path.GetFullPath("Library/ZenTS");
 
-        public static string ZentsDataPathInPackage => $"Packages/{PackageName}/ZenTS~";
+        /// <summary>
+        /// Physical package root (embedded <c>Packages/…</c> or <c>Library/PackageCache/…</c>).
+        /// Prefer this over assuming <c>Packages/{name}</c> exists on disk.
+        /// </summary>
+        public static string PackageResolvedRoot
+        {
+            get
+            {
+                try
+                {
+                    var info = UnityEditor.PackageManager.PackageInfo.FindForAssetPath(
+                        $"Packages/{PackageName}/package.json");
+                    if (info != null
+                        && !string.IsNullOrEmpty(info.resolvedPath)
+                        && Directory.Exists(info.resolvedPath))
+                    {
+                        return Path.GetFullPath(info.resolvedPath);
+                    }
+                }
+                catch (Exception)
+                {
+                    // Fall through to embedded path.
+                }
 
-        public static string JsLibPathInPackage => $"{ZentsDataPathInPackage}/jslib";
+                string embedded = Path.GetFullPath(Path.Combine("Packages", PackageName));
+                if (Directory.Exists(embedded))
+                {
+                    return embedded;
+                }
+
+                throw new InvalidOperationException(
+                    $"[ZenTS] package not resolved: {PackageName}");
+            }
+        }
+
+        public static string ZentsDataPathInPackage =>
+            Path.Combine(PackageResolvedRoot, "ZenTS~");
+
+        public static string JsLibPathInPackage =>
+            Path.Combine(ZentsDataPathInPackage, "jslib");
 
         public static string GetJsLibScriptPath(string fileName) =>
             Path.GetFullPath(Path.Combine(JsLibPathInPackage, fileName));
@@ -47,6 +85,22 @@ namespace ZenTS
 
         public static string QuickJsSrcCacheDir =>
             Path.GetFullPath(Path.Combine(InstallRootDir, "QuickJsSrcCache"));
+
+        /// <summary>
+        /// Staged TS/JS toolchain files for tools outside Unity (tsc, IDE, Node).
+        /// Layout: <c>types/</c> + <c>jslib/</c>.
+        /// </summary>
+        public static string CoreLibsRoot =>
+            Path.GetFullPath(Path.Combine(InstallRootDir, "CoreLibs"));
+
+        public static string CoreLibsTypesPath =>
+            Path.Combine(CoreLibsRoot, "types");
+
+        public static string CoreLibsJsLibPath =>
+            Path.Combine(CoreLibsRoot, "jslib");
+
+        public static string CoreLibsStampPath =>
+            Path.Combine(CoreLibsRoot, ".stamp");
 
         public static string Libil2cppPatchesPathInPackage =>
             Path.GetFullPath(Path.Combine(ZentsDataPathInPackage, "patches", "libil2cpp"));
@@ -99,6 +153,6 @@ namespace ZenTS
             $"Temp/TempAotProject/{target}";
 
         public static string PackagePluginsRoot =>
-            Path.GetFullPath(Path.Combine("Packages", PackageName, "Plugins"));
+            Path.GetFullPath(Path.Combine(PackageResolvedRoot, "Plugins"));
     }
 }

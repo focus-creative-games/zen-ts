@@ -9,7 +9,8 @@ See `Docs/spec/11-MULTI-VERSION.md`.
 | `zents-runtime/` | Install → `Local.../libil2cpp/zents` |
 | `quickjs-il2cpp/` | Vendored QuickJS for Il2Cpp（整目录拷贝，**无** patch） |
 | `patches/libil2cpp/` | Stock libil2cpp hooks only |
-| `jslib/` | Embedded JS (`zentslib.js`) |
+| `jslib/` | Embedded JS (`zentslib.js`); also staged to `Library/ZenTS/CoreLibs/jslib` |
+| `types/` | `zents.d.ts` / `tsconfig.base.json` / scaffold; staged to `Library/ZenTS/CoreLibs/types` |
 | `mono-native/` | Editor QuickJS / Mono gate builds |
 
 ## Dev loop (Win64)

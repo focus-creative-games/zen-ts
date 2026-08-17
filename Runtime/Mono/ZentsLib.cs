@@ -68,18 +68,13 @@ namespace ZenTS
 
         private static string LoadZentsLibJs()
         {
-            string beside = Path.Combine(
-                Path.GetDirectoryName(typeof(ZentsLib).Assembly.Location) ?? string.Empty,
-                "..", "..", "..", "ZenTS~", "jslib", "zentslib.js");
-            beside = Path.GetFullPath(beside);
-            if (File.Exists(beside))
-            {
-                return File.ReadAllText(beside);
-            }
-
-            // Fallback: package path under Assets/Packages
+            // Prefer staged CoreLibs (Editor Ensure); then package-relative fallbacks.
             string[] candidates =
             {
+                Path.Combine(UnityEngine.Application.dataPath, "..", "Library", "ZenTS", "CoreLibs", "jslib", "zentslib.js"),
+                Path.Combine(
+                    Path.GetDirectoryName(typeof(ZentsLib).Assembly.Location) ?? string.Empty,
+                    "..", "..", "..", "ZenTS~", "jslib", "zentslib.js"),
                 Path.Combine(UnityEngine.Application.dataPath, "..", "Packages", "com.code-philosophy.zen-ts", "ZenTS~", "jslib", "zentslib.js"),
                 Path.GetFullPath("Packages/com.code-philosophy.zen-ts/ZenTS~/jslib/zentslib.js"),
             };

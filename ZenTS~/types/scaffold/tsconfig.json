@@ -1,5 +1,5 @@
 {
-  "extends": "../Packages/com.code-philosophy.zen-ts/ZenTS~/types/tsconfig.base.json",
+  "extends": "../Library/ZenTS/CoreLibs/types/tsconfig.base.json",
   "compilerOptions": {
     "outDir": "out",
     "noEmit": true
@@ -7,6 +7,6 @@
   "include": [
     "src/**/*.ts",
     "generated/**/*.d.ts",
-    "../Packages/com.code-philosophy.zen-ts/ZenTS~/types/zents.d.ts"
+    "../Library/ZenTS/CoreLibs/types/zents.d.ts"
   ]
 }

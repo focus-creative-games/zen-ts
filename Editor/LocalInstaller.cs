@@ -217,6 +217,8 @@ namespace ZenTS
                 throw new InvalidOperationException("[ZenTS] Installation failed: local tree incomplete.");
             }
 
+            CoreLibsEnsure.Ensure();
+
             RequiresEditorRestart = true;
             Debug.Log(
                 $"[ZenTS] Install succeeded. unity={Application.unityVersion} quickjs={qjsInfo.Id} "

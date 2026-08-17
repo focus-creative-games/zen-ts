@@ -31,6 +31,7 @@ namespace ZenTS.Editor.Typescript
     {
         public static void EnsureDependencies()
         {
+            CoreLibsEnsure.Ensure();
             EnsureProject();
             if (NodeCli.LocalBin(TsProjectPaths.TsProjectRoot, "tsc") != null &&
                 NodeCli.LocalBin(TsProjectPaths.TsProjectRoot, "esbuild") != null)
@@ -204,6 +205,7 @@ namespace ZenTS.Editor.Typescript
 
         private static void EnsureProject()
         {
+            CoreLibsEnsure.Ensure();
             if (!TsProjectPaths.Exists)
             {
                 throw new InvalidOperationException(

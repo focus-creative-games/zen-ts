@@ -29,6 +29,8 @@ namespace ZenTS.Editor.Typescript
     {
         public static void InitOrUpdate()
         {
+            CoreLibsEnsure.Ensure();
+
             string scaffold = CommonDirs.TypesScaffoldPathInPackage;
             if (!Directory.Exists(scaffold))
             {

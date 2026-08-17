@@ -22,7 +22,7 @@ using System;
 using System.Collections.Generic;
 using System.Xml;
 
-namespace ZTS
+namespace ZenTS
 {
     /// <summary>
     /// Loads and merges JsAlias XML files (spec 04-METHOD-OVERLOAD §5.4).
@@ -62,21 +62,21 @@ namespace ZTS
             catch (Exception ex)
             {
                 throw new JsAliasConfigurationException(
-                    "[ZTS] Failed to parse JsAlias XML '" + filePath + "': " + ex.Message, ex);
+                    "[ZenTS] Failed to parse JsAlias XML '" + filePath + "': " + ex.Message, ex);
             }
 
             XmlElement root = doc.DocumentElement;
             if (root == null || !string.Equals(root.Name, "JsAlias", StringComparison.Ordinal))
             {
                 throw new JsAliasConfigurationException(
-                    "[ZTS] JsAlias XML root must be <JsAlias>: " + filePath);
+                    "[ZenTS] JsAlias XML root must be <JsAlias>: " + filePath);
             }
 
             string version = root.GetAttribute("version");
             if (!string.Equals(version, "1", StringComparison.Ordinal))
             {
                 throw new JsAliasConfigurationException(
-                    "[ZTS] Unsupported JsAlias XML version '" + version + "' in " + filePath);
+                    "[ZenTS] Unsupported JsAlias XML version '" + version + "' in " + filePath);
             }
 
             foreach (XmlNode child in root.ChildNodes)
@@ -89,7 +89,7 @@ namespace ZTS
                 if (!string.Equals(assemblyEl.Name, "Assembly", StringComparison.Ordinal))
                 {
                     throw new JsAliasConfigurationException(
-                        "[ZTS] Unexpected element <" + assemblyEl.Name + "> under JsAlias in " + filePath);
+                        "[ZenTS] Unexpected element <" + assemblyEl.Name + "> under JsAlias in " + filePath);
                 }
 
                 string assemblyName = RequireAttr(assemblyEl, "name", filePath);
@@ -103,7 +103,7 @@ namespace ZTS
                     if (!string.Equals(typeEl.Name, "Type", StringComparison.Ordinal))
                     {
                         throw new JsAliasConfigurationException(
-                            "[ZTS] Unexpected element <" + typeEl.Name + "> under Assembly in " + filePath);
+                            "[ZenTS] Unexpected element <" + typeEl.Name + "> under Assembly in " + filePath);
                     }
 
                     ParseType(filePath, assemblyName, typeEl, rules, seen);
@@ -129,7 +129,7 @@ namespace ZTS
                 if (!string.Equals(el.Name, "Method", StringComparison.Ordinal))
                 {
                     throw new JsAliasConfigurationException(
-                        "[ZTS] Unexpected element <" + el.Name + "> under Type in JsAlias XML " + filePath
+                        "[ZenTS] Unexpected element <" + el.Name + "> under Type in JsAlias XML " + filePath
                         + "; only <Method alias=\"...\"> is allowed.");
                 }
 
@@ -139,7 +139,7 @@ namespace ZTS
                 if (string.IsNullOrWhiteSpace(alias))
                 {
                     throw new JsAliasConfigurationException(
-                        "[ZTS] Method/@alias must be non-empty in " + filePath);
+                        "[ZenTS] Method/@alias must be non-empty in " + filePath);
                 }
 
                 foreach (XmlNode nested in el.ChildNodes)
@@ -147,7 +147,7 @@ namespace ZTS
                     if (nested is XmlElement nestedEl)
                     {
                         throw new JsAliasConfigurationException(
-                            "[ZTS] JsAlias Method must not contain child elements (found <"
+                            "[ZenTS] JsAlias Method must not contain child elements (found <"
                             + nestedEl.Name + ">) in " + filePath);
                     }
                 }
@@ -166,7 +166,7 @@ namespace ZTS
                 if (seen.TryGetValue(key, out string previousPath))
                 {
                     throw new JsAliasConfigurationException(
-                        "[ZTS] Duplicate JsAlias XML rule for " + key
+                        "[ZenTS] Duplicate JsAlias XML rule for " + key
                         + "\n  first: " + previousPath
                         + "\n  again: " + filePath);
                 }
@@ -181,7 +181,7 @@ namespace ZTS
             if (!el.HasAttribute(attrName) || string.IsNullOrWhiteSpace(el.GetAttribute(attrName)))
             {
                 throw new JsAliasConfigurationException(
-                    "[ZTS] Missing or empty @" + attrName + " on <" + el.Name + "> in " + filePath);
+                    "[ZenTS] Missing or empty @" + attrName + " on <" + el.Name + "> in " + filePath);
             }
 
             return el.GetAttribute(attrName).Trim();

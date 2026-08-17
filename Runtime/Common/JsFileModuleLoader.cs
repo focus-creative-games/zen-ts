@@ -22,14 +22,14 @@ using System;
 using System.IO;
 using UnityEngine;
 
-namespace ZTS
+namespace ZenTS
 {
     /// <summary>
     /// File-backed ES module loader (Docs/spec/14-TYPESCRIPT.md §8).
     /// <c>csharp:</c> is handled by <see cref="JsAppDomain"/> before this loader runs.
-    /// Editor: <c>TsProject/out</c> then <c>StreamingAssets/ZTS</c>.
-    /// Standalone Player: <c>StreamingAssets/ZTS</c>.
-    /// Android / WebGL Player: <c>Resources/ZTS/**.js.txt</c> via <see cref="Resources.Load{T}(string)"/>.
+    /// Editor: <c>TsProject/out</c> then <c>StreamingAssets/ZenTS</c>.
+    /// Standalone Player: <c>StreamingAssets/ZenTS</c>.
+    /// Android / WebGL Player: <c>Resources/ZenTS/**.js.txt</c> via <see cref="Resources.Load{T}(string)"/>.
     /// Never reads <c>.ts</c>.
     /// </summary>
     public static class JsFileModuleLoader
@@ -43,7 +43,7 @@ namespace ZTS
             }
 
             string relativeJs = canonical.Replace('/', Path.DirectorySeparatorChar) + ".js";
-            string resourcePath = "ZTS/" + canonical.Replace('\\', '/') + ".js";
+            string resourcePath = "ZenTS/" + canonical.Replace('\\', '/') + ".js";
 
 #if UNITY_EDITOR
             string tsOut = GetTsProjectOutPath(relativeJs);
@@ -64,7 +64,7 @@ namespace ZTS
 
             return false;
 #else
-            string streaming = Path.Combine(Application.streamingAssetsPath, "ZTS", relativeJs);
+            string streaming = Path.Combine(Application.streamingAssetsPath, "ZenTS", relativeJs);
             if (File.Exists(streaming))
             {
                 source = File.ReadAllText(streaming);
@@ -80,12 +80,12 @@ namespace ZTS
             string canonical = JsModuleSpecifier.Canonicalize(specifier);
             if (string.IsNullOrEmpty(canonical))
             {
-                throw new JsScriptException("zts: empty module name");
+                throw new JsScriptException("zents: empty module name");
             }
 
             if (canonical.IndexOf("..", StringComparison.Ordinal) >= 0)
             {
-                throw new JsScriptException($"zts: module path escapes not allowed: '{specifier}'");
+                throw new JsScriptException($"zents: module path escapes not allowed: '{specifier}'");
             }
 
             if (TryLoadPublished(canonical, out string source))
@@ -94,7 +94,7 @@ namespace ZTS
             }
 
             throw new JsScriptException(
-                $"zts: unknown module '{canonical}' (missing TsProject/out, StreamingAssets/ZTS, or Resources/ZTS/{canonical}.js)");
+                $"zents: unknown module '{canonical}' (missing TsProject/out, StreamingAssets/ZenTS, or Resources/ZenTS/{canonical}.js)");
         }
 
         internal static string GetTsProjectOutPath(string relativeJs)

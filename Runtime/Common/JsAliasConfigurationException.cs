@@ -20,7 +20,7 @@
 
 using System;
 
-namespace ZTS
+namespace ZenTS
 {
     /// <summary>
     /// Configuration errors for JsAlias XML (spec 04-METHOD-OVERLOAD §5.4).

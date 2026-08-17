@@ -18,11 +18,11 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-namespace ZTS.Jvm
+namespace ZenTS.Jvm
 {
     internal static class QuickJsDllName
     {
         public const string QuickJs = "quickjs";
-        public const string MonoGate = "zts_mono_gate";
+        public const string MonoGate = "zents_mono_gate";
     }
 }

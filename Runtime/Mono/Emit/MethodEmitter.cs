@@ -26,12 +26,12 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Runtime.InteropServices;
-using ZTS.Jvm;
-using ZTS.Marshaling;
-using ZTS.Mt;
-using ZTS.Utils;
+using ZenTS.Jvm;
+using ZenTS.Marshaling;
+using ZenTS.Mt;
+using ZenTS.Utils;
 
-namespace ZTS.Emit
+namespace ZenTS.Emit
 {
     internal enum ConversionKind
     {
@@ -147,7 +147,7 @@ namespace ZTS.Emit
                 if (!IsStrictlyBetter(first, tied[i]) && !IsStrictlyBetter(tied[i], first))
                 {
                     throw new JsScriptException(
-                        $"zts: ambiguous overload; candidates: {FormatCandidates(tied)}");
+                        $"zents: ambiguous overload; candidates: {FormatCandidates(tied)}");
                 }
             }
 
@@ -678,7 +678,7 @@ namespace ZTS.Emit
                 return false;
             }
 
-            JSValue idVal = QuickJsDll.JS_GetPropertyStr(ctx, fn, "__zts_method_id");
+            JSValue idVal = QuickJsDll.JS_GetPropertyStr(ctx, fn, "__zents_method_id");
             try
             {
                 if (JsValueUtil.GetNormTag(idVal) != JsValueUtil.TagInt)
@@ -704,8 +704,8 @@ namespace ZTS.Emit
         private static void AttachTag(IntPtr ctx, JSValue fn, MethodClosureTag tag)
         {
             int id = MethodTagRegistry.Register(tag);
-            QuickJsDll.JS_SetPropertyStr(ctx, fn, "__zts_method_id", JsValueUtil.NewInt32(id));
-            QuickJsDll.JS_SetPropertyStr(ctx, fn, "__zts_direct", JsValueUtil.NewBool(tag.IsDirect));
+            QuickJsDll.JS_SetPropertyStr(ctx, fn, "__zents_method_id", JsValueUtil.NewInt32(id));
+            QuickJsDll.JS_SetPropertyStr(ctx, fn, "__zents_direct", JsValueUtil.NewBool(tag.IsDirect));
         }
 
         internal static Func<object, object[], object> EnsureCompiled(MethodInfo method)
@@ -962,7 +962,7 @@ namespace ZTS.Emit
             {
                 return JsCallbackGate.ReturnErrorSentinel(
                     ctx,
-                    $"zts: open generic method '{_method.Name}'; use zts.make_generic_method.");
+                    $"zents: open generic method '{_method.Name}'; use zents.make_generic_method.");
             }
         }
 
@@ -987,7 +987,7 @@ namespace ZTS.Emit
                     {
                         if (!ObjectRegistry.TryGetObject(ctx, thisVal, out target))
                         {
-                            return JsCallbackGate.ReturnErrorSentinel(ctx, "zts: invalid method target.");
+                            return JsCallbackGate.ReturnErrorSentinel(ctx, "zents: invalid method target.");
                         }
                     }
 
@@ -1099,7 +1099,7 @@ namespace ZTS.Emit
                     {
                         string methodName = _methods.Count > 0 ? _methods[0].Name : "?";
                         return JsCallbackGate.ReturnErrorSentinel(ctx,
-                            $"zts: no overload for {methodName} matching {argc} argument(s); candidates: {_methods.Count}.");
+                            $"zents: no overload for {methodName} matching {argc} argument(s); candidates: {_methods.Count}.");
                     }
 
                     bool isExtension = MethodOverloadDispatcher.IsExtensionMethod(method);
@@ -1108,7 +1108,7 @@ namespace ZTS.Emit
                     {
                         if (!ObjectRegistry.TryGetObject(ctx, thisVal, out target))
                         {
-                            return JsCallbackGate.ReturnErrorSentinel(ctx, "zts: invalid method target.");
+                            return JsCallbackGate.ReturnErrorSentinel(ctx, "zents: invalid method target.");
                         }
                     }
 
@@ -1202,7 +1202,7 @@ namespace ZTS.Emit
                     {
                         if (!ObjectRegistry.TryGetObject(ctx, thisVal, out target))
                         {
-                            return JsCallbackGate.ReturnErrorSentinel(ctx, "zts: invalid field target.");
+                            return JsCallbackGate.ReturnErrorSentinel(ctx, "zents: invalid field target.");
                         }
                     }
 
@@ -1231,7 +1231,7 @@ namespace ZTS.Emit
                     {
                         if (!ObjectRegistry.TryGetObject(ctx, thisVal, out target))
                         {
-                            return JsCallbackGate.ReturnErrorSentinel(ctx, "zts: invalid field target.");
+                            return JsCallbackGate.ReturnErrorSentinel(ctx, "zents: invalid field target.");
                         }
                     }
 
@@ -1276,7 +1276,7 @@ namespace ZTS.Emit
                     if (!_property.CanRead)
                     {
                         return JsCallbackGate.ReturnErrorSentinel(ctx,
-                            $"zts: property has no getter: {_property.DeclaringType?.FullName}.{_property.Name}");
+                            $"zents: property has no getter: {_property.DeclaringType?.FullName}.{_property.Name}");
                     }
 
                     object target = null;
@@ -1285,7 +1285,7 @@ namespace ZTS.Emit
                     {
                         if (!ObjectRegistry.TryGetObject(ctx, thisVal, out target))
                         {
-                            return JsCallbackGate.ReturnErrorSentinel(ctx, "zts: invalid property target.");
+                            return JsCallbackGate.ReturnErrorSentinel(ctx, "zents: invalid property target.");
                         }
                     }
 
@@ -1312,7 +1312,7 @@ namespace ZTS.Emit
                     if (!_property.CanWrite)
                     {
                         return JsCallbackGate.ReturnErrorSentinel(ctx,
-                            $"zts: property has no setter: {_property.DeclaringType?.FullName}.{_property.Name}");
+                            $"zents: property has no setter: {_property.DeclaringType?.FullName}.{_property.Name}");
                     }
 
                     object target = null;
@@ -1321,7 +1321,7 @@ namespace ZTS.Emit
                     {
                         if (!ObjectRegistry.TryGetObject(ctx, thisVal, out target))
                         {
-                            return JsCallbackGate.ReturnErrorSentinel(ctx, "zts: invalid property target.");
+                            return JsCallbackGate.ReturnErrorSentinel(ctx, "zents: invalid property target.");
                         }
                     }
 
@@ -1464,7 +1464,7 @@ namespace ZTS.Emit
                             return TypedMarshal.Push(ctx, def, _type);
                         }
 
-                        return JsCallbackGate.ReturnErrorSentinel(ctx, $"zts: no public constructor for {_type.FullName}.");
+                        return JsCallbackGate.ReturnErrorSentinel(ctx, $"zents: no public constructor for {_type.FullName}.");
                     }
 
                     var rough = new object[argc];
@@ -1480,7 +1480,7 @@ namespace ZTS.Emit
                     ConstructorInfo ctor = SelectCtorPublic(ctors, rough);
                     if (ctor == null)
                     {
-                        return JsCallbackGate.ReturnErrorSentinel(ctx, $"zts: no matching constructor for {_type.FullName}.");
+                        return JsCallbackGate.ReturnErrorSentinel(ctx, $"zents: no matching constructor for {_type.FullName}.");
                     }
 
                     ParameterInfo[] ps = ctor.GetParameters();
@@ -1607,7 +1607,7 @@ namespace ZTS.Emit
                     if (_underlyingType.IsEnum)
                     {
                         return JsCallbackGate.ReturnErrorSentinel(
-                            ctx, $"zts: Nullable<{_underlyingType.Name}> construct is not supported for enums.");
+                            ctx, $"zents: Nullable<{_underlyingType.Name}> construct is not supported for enums.");
                     }
 
                     if (_underlyingType.IsPrimitive || _underlyingType == typeof(string) ||
@@ -1616,7 +1616,7 @@ namespace ZTS.Emit
                         if (argc < 1)
                         {
                             return JsCallbackGate.ReturnErrorSentinel(
-                                ctx, $"zts: Nullable<{_underlyingType.Name}> requires one argument.");
+                                ctx, $"zents: Nullable<{_underlyingType.Name}> requires one argument.");
                         }
 
                         object value = TypedMarshal.Pop(ctx, ArgReader.Read(argv, 0), _underlyingType);
@@ -1633,7 +1633,7 @@ namespace ZTS.Emit
                         }
 
                         return JsCallbackGate.ReturnErrorSentinel(
-                            ctx, $"zts: no public constructor for Nullable<{_underlyingType.FullName}>.");
+                            ctx, $"zents: no public constructor for Nullable<{_underlyingType.FullName}>.");
                     }
 
                     var rough = new object[argc];
@@ -1650,7 +1650,7 @@ namespace ZTS.Emit
                     if (ctor == null)
                     {
                         return JsCallbackGate.ReturnErrorSentinel(
-                            ctx, $"zts: no matching constructor for Nullable<{_underlyingType.FullName}>.");
+                            ctx, $"zents: no matching constructor for Nullable<{_underlyingType.FullName}>.");
                     }
 
                     ParameterInfo[] ps = ctor.GetParameters();

@@ -23,7 +23,7 @@ using System.IO;
 using UnityEditor;
 using UnityEngine;
 
-namespace ZTS
+namespace ZenTS
 {
     /// <summary>
     /// Loads Settings jsExtensionXmlPaths into <see cref="JsExtensionXmlRegistry"/> for Editor Mono.
@@ -36,12 +36,12 @@ namespace ZTS
             TryLoad(logSuccess: false);
         }
 
-        [MenuItem("ZTS/Reload JsExtensions XML", priority = 522)]
+        [MenuItem("ZenTS/Reload JsExtensions XML", priority = 522)]
         private static void ReloadMenu()
         {
             string projectRoot = Path.GetDirectoryName(Application.dataPath);
             JsExtensionXmlRegistry.Load(Settings.Instance.jsExtensionXmlPaths, projectRoot);
-            Debug.Log("[ZTS] JsExtensions XML loaded: " + JsExtensionXmlRegistry.Rules.Count + " rule(s).");
+            Debug.Log("[ZenTS] JsExtensions XML loaded: " + JsExtensionXmlRegistry.Rules.Count + " rule(s).");
         }
 
         internal static void TryLoad(bool logSuccess)
@@ -52,12 +52,12 @@ namespace ZTS
                 JsExtensionXmlRegistry.Load(Settings.Instance.jsExtensionXmlPaths, projectRoot);
                 if (logSuccess)
                 {
-                    Debug.Log("[ZTS] JsExtensions XML loaded: " + JsExtensionXmlRegistry.Rules.Count + " rule(s).");
+                    Debug.Log("[ZenTS] JsExtensions XML loaded: " + JsExtensionXmlRegistry.Rules.Count + " rule(s).");
                 }
             }
             catch (Exception ex)
             {
-                Debug.LogError("[ZTS] JsExtensions XML load failed:\n" + ex.Message);
+                Debug.LogError("[ZenTS] JsExtensions XML load failed:\n" + ex.Message);
             }
         }
     }

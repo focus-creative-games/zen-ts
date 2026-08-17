@@ -21,11 +21,11 @@
 using System;
 using System.Runtime.CompilerServices;
 
-namespace ZTS
+namespace ZenTS
 {
     /// <summary>
     /// Holds a JS function ref for Il2Cpp closed-delegate bindings.
-    /// Field layout must match native <c>zts::JsMethod</c>.
+    /// Field layout must match native <c>zents::JsMethod</c>.
     /// </summary>
     public sealed class JsMethod : IDisposable
     {

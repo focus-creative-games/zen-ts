@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-namespace ZTS
+namespace ZenTS
 {
     /// <summary>
     /// One extension-class rule from external XML (spec 13-EXTENSION-METHODS §2.2).

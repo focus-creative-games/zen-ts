@@ -21,9 +21,9 @@
 using System;
 using UnityEditor;
 using UnityEngine;
-using ZTS.Editor.Typescript;
+using ZenTS.Editor.Typescript;
 
-namespace ZTS.Editor
+namespace ZenTS.Editor
 {
     /// <summary>
     /// Docs/spec/14-TYPESCRIPT.md §8.1: tsc --noEmit (and emit if stale) before Play.
@@ -56,11 +56,11 @@ namespace ZTS.Editor
             catch (Exception ex)
             {
                 EditorApplication.isPlaying = false;
-                Debug.LogError("[ZTS] TypeScript Play gate failed:\n" + ex.Message);
+                Debug.LogError("[ZenTS] TypeScript Play gate failed:\n" + ex.Message);
                 if (!Application.isBatchMode)
                 {
                     EditorUtility.DisplayDialog(
-                        "ZTS TypeScript",
+                        "ZenTS TypeScript",
                         "TypeScript check failed; Play was cancelled.\n\nSee Console for tsc output.",
                         "OK");
                 }

@@ -21,7 +21,7 @@
 
 using System.Text.RegularExpressions;
 
-namespace ZTS.Utils
+namespace ZenTS.Utils
 {
     public class UnityVersion
     {

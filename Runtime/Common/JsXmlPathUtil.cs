@@ -22,7 +22,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 
-namespace ZTS
+namespace ZenTS
 {
     /// <summary>
     /// Shared path expansion for MarshalAs / JsAlias / JsExtensions XML Settings lists.
@@ -63,7 +63,7 @@ namespace ZTS
                     if (!string.Equals(Path.GetExtension(path), ".xml", StringComparison.OrdinalIgnoreCase))
                     {
                         throw new InvalidOperationException(
-                            "[ZTS] " + pathLabel + " XML path is not an .xml file: " + path);
+                            "[ZenTS] " + pathLabel + " XML path is not an .xml file: " + path);
                     }
 
                     if (seenFiles.Add(path))
@@ -89,7 +89,7 @@ namespace ZTS
                 }
 
                 throw new InvalidOperationException(
-                    "[ZTS] " + pathLabel + " XML path not found: " + path);
+                    "[ZenTS] " + pathLabel + " XML path not found: " + path);
             }
 
             files.Sort(StringComparer.OrdinalIgnoreCase);

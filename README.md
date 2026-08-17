@@ -1,15 +1,15 @@
-# ZTS
+# ZenTS
 
-ZTS 是一个针对 Il2Cpp 优化的现代、简洁、易用的 Unity **TypeScript / JavaScript** 脚本方案，由 **QuickJS** 驱动，设计与 [ZLua](https://github.com/focus-creative-games/zlua) 对齐。
+ZenTS 是一个针对 Il2Cpp 优化的现代、简洁、易用的 Unity **TypeScript / JavaScript** 脚本方案，由 **QuickJS** 驱动，设计与 [ZLua](https://github.com/focus-creative-games/zlua) 对齐。
 
-- 文档：[zts.code-philosophy.com](https://zts.code-philosophy.com/)
+- 文档：[zents.code-philosophy.com](https://zents.code-philosophy.com/)
 - 对照产品（Lua）：[ZLua](https://doc.zlua.cn) / [zlua GitHub](https://github.com/focus-creative-games/zlua)
-- Unreal 版本（开发中）：[zts-ue](https://github.com/focus-creative-games/zts-ue)
+- Unreal 版本（开发中）：[zent-ts-ue](https://github.com/focus-creative-games/zent-ts-ue)
 - English：[README_EN.md](./README_EN.md)
 
 ---
 
-## 为什么选择 ZTS
+## 为什么选择 ZenTS
 
 相对 Puerts / xLua-JS 类方案，以及「自管 QuickJS + 手写绑定」：
 
@@ -25,19 +25,19 @@ ZTS 是一个针对 Il2Cpp 优化的现代、简洁、易用的 Unity **TypeScri
 
 ### 与 ZLua 的关系
 
-| | ZLua | ZTS |
+| | ZLua | ZenTS |
 |--|------|-----|
 | 脚本侧 | Lua（PUC-Rio / LuaJIT） | JavaScript（QuickJS）；可选 TypeScript → ES module |
 | 宿主门面 | `LuaAppDomain` | `JsAppDomain` |
 | 类型入口 | `CSharp[...]` | 同左；另支持 `import { T } from "csharp:…"` |
-| 标准库 | `zlua.*` | `zts.*` |
+| 标准库 | `zlua.*` | `zents.*` |
 | 属性 | `[LuaMarshalAs]` 等 | `[JsMarshalAs]` / `[JsAlias]` / `[JsExtension]` |
 
-业务侧 API 形态刻意对齐：会用 ZLua，即可很快上手 ZTS。
+业务侧 API 形态刻意对齐：会用 ZLua，即可很快上手 ZenTS。
 
-### 同族产品：Unreal（zts-ue）
+### 同族产品：Unreal（zent-ts-ue）
 
-面向 **Unreal Engine**、对 C++ 优化的现代 TypeScript 方案见 **[zts-ue](https://github.com/focus-creative-games/zts-ue)**。**目前仍在开发中**；本仓库与文档站仅覆盖 **Unity / 团结** 上的 ZTS，UE 用法与进度请跟进该仓库。
+面向 **Unreal Engine**、对 C++ 优化的现代 TypeScript 方案见 **[zent-ts-ue](https://github.com/focus-creative-games/zent-ts-ue)**。**目前仍在开发中**；本仓库与文档站仅覆盖 **Unity / 团结** 上的 ZenTS，UE 用法与进度请跟进该仓库。
 
 ---
 
@@ -45,8 +45,8 @@ ZTS 是一个针对 Il2Cpp 优化的现代、简洁、易用的 Unity **TypeScri
 
 - **零配置开箱**：无需为每个类型 Generate C# Wrap；`CSharp[assembly][typeFullName]` 懒绑定
 - **完备互操作**：字段 / 属性 / 方法 / 重载 / 扩展方法 / 泛型 / 委托 / 数组 / struct / enum / Nullable / ref·out·in / 指针
-- **双 Runtime**：Editor Mono（Expression Emit）+ Player Il2Cpp（C++ `zts-runtime`）
-- **TypeScript 工作流**：`ZTS/Init TypeScript Project` → `TsProject/`；`tsc --noEmit` 检查；esbuild 1:1 emit；Player 拷贝到 StreamingAssets
+- **双 Runtime**：Editor Mono（Expression Emit）+ Player Il2Cpp（C++ `zents-runtime`）
+- **TypeScript 工作流**：`ZenTS/Init TypeScript Project` → `TsProject/`；`tsc --noEmit` 检查；esbuild 1:1 emit；Player 拷贝到 StreamingAssets
 - **原生调试路径预留**：Editor 侧 Debugger Host 接口（持续完善）
 
 ### 平台与版本
@@ -54,7 +54,7 @@ ZTS 是一个针对 Il2Cpp 优化的现代、简洁、易用的 Unity **TypeScri
 | 类别 | 已支持 |
 |------|--------|
 | **引擎** | Unity **2021.3.x** / **2022.3.x** / **6000.0.x** / **6000.3.x** / **6000.5.x**；**团结引擎 1.x.y** |
-| **脚本 VM** | QuickJS（pin 见包内 `ZTS~/` / 文档） |
+| **脚本 VM** | QuickJS（pin 见包内 `ZenTS~/` / 文档） |
 | **运行时** | Editor **Mono** + Player **Il2Cpp** |
 | **平台（Editor）** | Windows x64、macOS（Apple Silicon / Intel） |
 | **平台（Player）** | Il2Cpp 支持的平台（含 Win64、Android、iOS、WebGL、微信小游戏、鸿蒙 / 车机等） |
@@ -73,9 +73,9 @@ ZTS 是一个针对 Il2Cpp 优化的现代、简洁、易用的 Unity **TypeScri
 using System.IO;
 using System.Text;
 using UnityEngine;
-using ZTS;
+using ZenTS;
 
-public static class ZtsBootstrap
+public static class ZentsBootstrap
 {
     static object LoadJsModule(string module)
     {
@@ -141,7 +141,7 @@ d.SetX(20);                  // 实例方法
 console.log(d.x);
 
 // 标准库
-const arr = zts.new_szarray_by_element_type(zts.types.int32, 2);
+const arr = zents.new_szarray_by_element_type(zents.types.int32, 2);
 ```
 
 手写回归 / 矩阵测试可继续放在 `StreamingAssets/Tests/Js`（纯 JS），**不强制**迁 TypeScript。
@@ -150,18 +150,18 @@ const arr = zts.new_szarray_by_element_type(zts.types.int32, 2);
 
 ## 用法二：TypeScript 工作流
 
-ZTS **已支持官方 TypeScript 工作流**：用 TS 写业务、生成 `csharp:` 声明、进 Play 前类型检查；**运行时仍只执行 emit 后的 JS**（不读 `.ts`）。
+ZenTS **已支持官方 TypeScript 工作流**：用 TS 写业务、生成 `csharp:` 声明、进 Play 前类型检查；**运行时仍只执行 emit 后的 JS**（不读 `.ts`）。
 
-完整契约：[TypeScript 工作流](https://zts.code-philosophy.com/)（对应 `Docs/spec/14-TYPESCRIPT.md`）。
+完整契约：[TypeScript 工作流](https://zents.code-philosophy.com/)（对应 `Docs/spec/14-TYPESCRIPT.md`）。
 
 ### 1. 初始化工程
 
 Unity 菜单：
 
-1. **`ZTS/Init TypeScript Project`** — 将包内脚手架复制到工程根 `TsProject/`
+1. **`ZenTS/Init TypeScript Project`** — 将包内脚手架复制到工程根 `TsProject/`
 2. 在 `TsProject/` 执行 `npm install`（devDependencies：`typescript`、`esbuild`）
-3. **`ZTS/Generate Typings`** — 生成 `TsProject/generated/csharp/**`（与 Il2Cpp Generate 类型集同源）
-4. **`ZTS/Compile TypeScript`** — `tsc --noEmit` + esbuild/tsc emit
+3. **`ZenTS/Generate Typings`** — 生成 `TsProject/generated/csharp/**`（与 Il2Cpp Generate 类型集同源）
+4. **`ZenTS/Compile TypeScript`** — `tsc --noEmit` + esbuild/tsc emit
 
 布局摘要：
 
@@ -171,7 +171,7 @@ Unity 菜单：
     src/           # 业务 .ts（入库）
     generated/     # csharp: 声明（入库）
     out/           # emit 的 .js（gitignore）
-  Assets/StreamingAssets/ZTS/   # Player 构建拷贝
+  Assets/StreamingAssets/ZenTS/   # Player 构建拷贝
 ```
 
 ### 2. 用 TS 写业务
@@ -209,9 +209,9 @@ var add = JsAppDomain.GetFunction<System.Func<int, int, int>>("game/logic", "add
 ```
 
 Editor：`moduleLoader` 读 `TsProject/out/{canonical}.js`。  
-Player：构建时拷贝 `out/**/*.js` → `StreamingAssets/ZTS/`，运行时 **只** 读 StreamingAssets。
+Player：构建时拷贝 `out/**/*.js` → `StreamingAssets/ZenTS/`，运行时 **只** 读 StreamingAssets。
 
-进 Play 前默认跑 `tsc --noEmit`（Settings 可关）。日常也可手动 **`ZTS/Compile TypeScript`**。
+进 Play 前默认跑 `tsc --noEmit`（Settings 可关）。日常也可手动 **`ZenTS/Compile TypeScript`**。
 
 ---
 
@@ -219,10 +219,10 @@ Player：构建时拷贝 `out/**/*.js` → `StreamingAssets/ZTS/`，运行时 **
 
 | 程序集 | 平台 | 说明 |
 |--------|------|------|
-| `ZTS.Common` | 全平台 | `JsAppDomain` 门面、属性、公共类型 |
-| `ZTS.Mono` | Editor | QuickJS P/Invoke + Mono Callback Gate + Emit |
-| `ZTS.Il2Cpp` | Player | Il2Cpp 宿主接线（实现于 `ZTS~/zts-runtime`） |
-| `ZTS.Editor` | Editor | Install / Export / TypeScript 工具链 / Settings |
+| `ZenTS.Common` | 全平台 | `JsAppDomain` 门面、属性、公共类型 |
+| `ZenTS.Mono` | Editor | QuickJS P/Invoke + Mono Callback Gate + Emit |
+| `ZenTS.Il2Cpp` | Player | Il2Cpp 宿主接线（实现于 `ZenTS~/zents-runtime`） |
+| `ZenTS.Editor` | Editor | Install / Export / TypeScript 工具链 / Settings |
 
 ---
 
@@ -231,24 +231,24 @@ Player：构建时拷贝 `out/**/*.js` → `StreamingAssets/ZTS/`，运行时 **
 ```text
 Plugins/quickjs/
   win32-x64/quickjs.dll          # QuickJS Win64（非 NAN boxing：JSValue = 16 字节）
-  zts_mono_gate.dll              # Editor-only JS→C# callback gate（Windows）
+  zents_mono_gate.dll              # Editor-only JS→C# callback gate（Windows）
   darwin-arm64/quickjs.dylib     # QuickJS macOS arm64
-  libzts_mono_gate.dylib         # Editor-only gate（macOS）
+  libzents_mono_gate.dylib         # Editor-only gate（macOS）
 ```
 
 构建（在包目录下）：
 
 ```bat
-ZTS~\mono-native\build_quickjs_msvc.bat
+ZenTS~\mono-native\build_quickjs_msvc.bat
 ```
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File ZTS~\mono-native\build_zts_mono_gate.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File ZenTS~\mono-native\build_zents_mono_gate.ps1
 ```
 
-macOS：`ZTS~/mono-native/build_quickjs_darwin.sh`、`build_zts_mono_gate_unix.sh`。
+macOS：`ZenTS~/mono-native/build_quickjs_darwin.sh`、`build_zents_mono_gate_unix.sh`。
 
-Il2Cpp：菜单 **ZTS / Install...** 将 `ZTS~/zts-runtime` 与 QuickJS 源装入 LocalIl2Cpp；Windows 上可用 **ZTS / Export Build-Win64...** 导出可 MSBuild 的 Player 工程。iOS 等目标按 Unity 导出 Xcode 后构建（见文档）。
+Il2Cpp：菜单 **ZenTS / Install...** 将 `ZenTS~/zents-runtime` 与 QuickJS 源装入 LocalIl2Cpp；Windows 上可用 **ZenTS / Export Build-Win64...** 导出可 MSBuild 的 Player 工程。iOS 等目标按 Unity 导出 Xcode 后构建（见文档）。
 
 ---
 
@@ -258,9 +258,9 @@ MIT。欢迎自由使用、修改和分发。
 
 ## 联系我们
 
-- 文档：[https://zts.code-philosophy.com/](https://zts.code-philosophy.com/)
-- 邮件：`zts@code-philosophy.com`
+- 文档：[https://zents.code-philosophy.com/](https://zents.code-philosophy.com/)
+- 邮件：`zen-ts@code-philosophy.com`
 - 产品站：[code-philosophy.com](https://code-philosophy.com)
-- QQ 群：`1095435513`（ZTS 交流群）
+- QQ 群：`1095435513`（ZenTS 交流群）
 - Discord：[https://discord.gg/5bT7w9aRMz](https://discord.gg/5bT7w9aRMz)
-- Unreal（开发中）：[zts-ue](https://github.com/focus-creative-games/zts-ue)
+- Unreal（开发中）：[zent-ts-ue](https://github.com/focus-creative-games/zent-ts-ue)

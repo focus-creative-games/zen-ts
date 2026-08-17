@@ -18,13 +18,13 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-using ZTS.DelegateImpl;
+using ZenTS.DelegateImpl;
 
-namespace ZTS.DelegateImpl
+namespace ZenTS.DelegateImpl
 {
     internal static class JsDelegateBinder
     {
-        public static System.Delegate GetFunction(ZTS.JsEnv env, System.Type delegateType, string jsModule, string jsExportName)
+        public static System.Delegate GetFunction(ZenTS.JsEnv env, System.Type delegateType, string jsModule, string jsExportName)
         {
             return DynamicBridgeFactory.CreateBinding(env, delegateType, jsModule, jsExportName);
         }

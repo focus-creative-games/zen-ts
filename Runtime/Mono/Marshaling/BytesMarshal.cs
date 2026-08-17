@@ -20,9 +20,9 @@
 
 using System;
 using System.Runtime.InteropServices;
-using ZTS.Jvm;
+using ZenTS.Jvm;
 
-namespace ZTS.Marshaling
+namespace ZenTS.Marshaling
 {
     /// <summary>[JsMarshalAs(Bytes)] : byte[] ↔ JS string (raw octets).</summary>
     internal static class BytesMarshal
@@ -47,12 +47,12 @@ namespace ZTS.Marshaling
 
             if (tag == JsValueUtil.TagUndefined)
             {
-                throw new JsScriptException("zts: undefined is not assignable to byte[] (Bytes).");
+                throw new JsScriptException("zents: undefined is not assignable to byte[] (Bytes).");
             }
 
             if (tag != JsValueUtil.TagString)
             {
-                throw new JsScriptException("zts: [JsMarshalAs(Bytes)] requires a JS string (raw octets).");
+                throw new JsScriptException("zents: [JsMarshalAs(Bytes)] requires a JS string (raw octets).");
             }
 
             IntPtr cstr = QuickJsDll.JS_ToCStringLen2(ctx, out UIntPtr len, jsValue, 0);

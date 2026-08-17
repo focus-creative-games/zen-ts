@@ -1,0 +1,274 @@
+globalThis.zents = globalThis.zents || {};
+
+/** console.* -> Unity log (Docs/spec/14-TYPESCRIPT.md). Host binds __zents_print(level, line). */
+(function installConsole() {
+  function stringify(v) {
+    if (v === null) {
+      return "null";
+    }
+    if (v === undefined) {
+      return "undefined";
+    }
+    try {
+      return String(v);
+    } catch (e) {
+      return "[unprintable]";
+    }
+  }
+
+  function write(level, args) {
+    var parts = [];
+    for (var i = 0; i < args.length; i++) {
+      parts.push(stringify(args[i]));
+    }
+    var line = parts.join(" ");
+    if (typeof globalThis.__zents_print === "function") {
+      globalThis.__zents_print(level, line);
+    }
+  }
+
+  if (typeof globalThis.console === "undefined") {
+    globalThis.console = {
+      log: function () {
+        write(0, arguments);
+      },
+      info: function () {
+        write(0, arguments);
+      },
+      warn: function () {
+        write(1, arguments);
+      },
+      error: function () {
+        write(2, arguments);
+      }
+    };
+  }
+})();
+
+zents.typeof = function (typeObject) {
+  return globalThis.__zents_typeof(typeObject);
+};
+
+zents.get_type_from_name = function (typeFullName) {
+  return globalThis.__zents_get_type_from_name(typeFullName);
+};
+
+zents.make_generic_type = function (genericType) {
+  var args = Array.prototype.slice.call(arguments, 1);
+  if (args.length === 1 && Array.isArray(args[0])) {
+    args = args[0];
+  }
+  return globalThis.__zents_make_generic_type(genericType, args);
+};
+
+zents.make_generic_method = function (genericMethodBase) {
+  var args = Array.prototype.slice.call(arguments, 1);
+  if (args.length === 1 && Array.isArray(args[0])) {
+    args = args[0];
+  }
+  return globalThis.__zents_make_generic_method(genericMethodBase, args);
+};
+
+zents.make_szarray_type = function (elementType) {
+  return globalThis.__zents_make_szarray_type(elementType);
+};
+
+zents.new_szarray_by_element_type = function (elementType, length) {
+  return globalThis.__zents_new_szarray_by_element_type(elementType, length);
+};
+
+zents.new_szarray_by_szarray_type = function (szarrayType, length) {
+  return globalThis.__zents_new_szarray_by_szarray_type(szarrayType, length);
+};
+
+zents.make_mdarray_type = function (elementType, rank) {
+  return globalThis.__zents_make_mdarray_type(elementType, rank);
+};
+
+zents.new_mdarray_by_spec = function (elementType, lowbounds, sizes) {
+  return globalThis.__zents_new_mdarray_by_spec(elementType, lowbounds, sizes);
+};
+
+zents.new_mdarray_by_mdarray_type = function (mdarrayType, lowbounds, sizes) {
+  return globalThis.__zents_new_mdarray_by_mdarray_type(mdarrayType, lowbounds, sizes);
+};
+
+zents.to_array = function (szarray) {
+  return globalThis.__zents_to_array(szarray);
+};
+
+zents.to_bytes = function (szarray) {
+  return globalThis.__zents_to_bytes(szarray);
+};
+
+zents.to_delegate = function (func, delegateType) {
+  return globalThis.__zents_to_delegate(func, delegateType);
+};
+
+zents.get_opaquevalue = function (opaqueHandle) {
+  return globalThis.__zents_get_opaquevalue(opaqueHandle);
+};
+
+zents.set_opaquevalue = function (opaqueHandle, newValue) {
+  return globalThis.__zents_set_opaquevalue(opaqueHandle, newValue);
+};
+
+zents.to_user_data = function (opaqueHandle) {
+  return globalThis.__zents_to_user_data(opaqueHandle);
+};
+
+zents.box = function (typeArg, value) {
+  return globalThis.__zents_box(typeArg, value);
+};
+
+zents.unbox = function (boxedValue) {
+  return globalThis.__zents_unbox(boxedValue);
+};
+
+zents.cast = function (obj, targetType) {
+  return globalThis.__zents_cast(obj, targetType);
+};
+
+zents.register_method = function (aliasName, methodOrClosure) {
+  return globalThis.__zents_register_method(aliasName, methodOrClosure);
+};
+
+zents.signature = function () {
+  var args = Array.prototype.slice.call(arguments);
+  if (args.length === 1 && Array.isArray(args[0])) {
+    args = args[0];
+  }
+  return globalThis.__zents_create_signature(args);
+};
+
+zents.types = {
+  void: "System.Void",
+  bool: "System.Boolean",
+  char: "System.Char",
+  byte: "System.Byte",
+  sbyte: "System.SByte",
+  short: "System.Int16",
+  ushort: "System.UInt16",
+  int: "System.Int32",
+  int32: "System.Int32",
+  uint: "System.UInt32",
+  long: "System.Int64",
+  ulong: "System.UInt64",
+  float: "System.Single",
+  float32: "System.Single",
+  double: "System.Double",
+  float64: "System.Double",
+  boolean: "System.Boolean",
+  decimal: "System.Decimal",
+  intptr: "System.IntPtr",
+  uintptr: "System.UIntPtr",
+  object: "System.Object",
+  string: "System.String"
+};
+
+(function installCSharpProxy() {
+  function makeTypeProxy(asmName) {
+    return new Proxy(
+      {},
+      {
+        get: function (target, prop) {
+          if (typeof prop !== "string") {
+            return undefined;
+          }
+          if (Object.prototype.hasOwnProperty.call(target, prop)) {
+            return target[prop];
+          }
+          var ty = globalThis.__zents_resolve_type(asmName, prop);
+          target[prop] = ty;
+          return ty;
+        }
+      }
+    );
+  }
+
+  globalThis.CSharp = new Proxy(
+    {},
+    {
+      get: function (target, prop) {
+        if (typeof prop !== "string") {
+          return undefined;
+        }
+        if (Object.prototype.hasOwnProperty.call(target, prop)) {
+          return target[prop];
+        }
+        globalThis.__zents_ensure_assembly(prop);
+        var asmProxy = makeTypeProxy(prop);
+        target[prop] = asmProxy;
+        return asmProxy;
+      }
+    }
+  );
+})();
+
+/** Strict member miss for STO / IEO (Docs/spec/metatable/02-INDEX). */
+globalThis.__zents_wrap_miss = function (target) {
+  if (!target || (typeof target !== "object" && typeof target !== "function")) {
+    return target;
+  }
+  return new Proxy(target, {
+    get: function (t, p, recv) {
+      if (typeof p === "symbol") {
+        return Reflect.get(t, p, recv);
+      }
+      var key = String(p);
+      if (
+        key === "prototype" ||
+        key === "constructor" ||
+        key === "name" ||
+        key === "length" ||
+        key.indexOf("__zents_") === 0
+      ) {
+        return Reflect.get(t, p, recv);
+      }
+      if (Reflect.has(t, p)) {
+        return Reflect.get(t, p, recv);
+      }
+      throw new Error("zents: member not found: " + key);
+    },
+    set: function (t, p, v, recv) {
+      if (typeof p === "symbol") {
+        return Reflect.set(t, p, v, recv);
+      }
+      var key = String(p);
+      if (Reflect.has(t, p)) {
+        if (!Reflect.set(t, p, v, recv)) {
+          throw new Error("zents: not writable: " + key);
+        }
+        return true;
+      }
+      throw new Error("zents: member not found: " + key);
+    }
+  });
+};
+
+/** CLR Delegate exotic [[Call]] → Invoke (Docs/spec/marshal/09-FUNCTION §3.2). */
+globalThis.__zents_wrap_delegate_call = function (del) {
+  if (!del || (typeof del !== "object" && typeof del !== "function")) {
+    return del;
+  }
+  var fn = function () {
+    return del.Invoke.apply(del, arguments);
+  };
+  return new Proxy(fn, {
+    apply: function (_t, _thisArg, args) {
+      return del.Invoke.apply(del, args);
+    },
+    get: function (_t, p, recv) {
+      if (p === "length" || p === "name" || p === "prototype") {
+        return Reflect.get(_t, p, recv);
+      }
+      return Reflect.get(del, p, recv);
+    },
+    has: function (_t, p) {
+      return Reflect.has(del, p);
+    },
+    set: function (_t, p, v, recv) {
+      return Reflect.set(del, p, v, recv);
+    }
+  });
+};

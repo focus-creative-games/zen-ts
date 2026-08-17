@@ -21,11 +21,11 @@
 using System;
 using System.Collections.Generic;
 using System.Reflection;
-using ZTS.Emit;
-using ZTS.Jvm;
-using ZTS.Utils;
+using ZenTS.Emit;
+using ZenTS.Jvm;
+using ZenTS.Utils;
 
-namespace ZTS.Mt
+namespace ZenTS.Mt
 {
     internal sealed class TypeBinding
     {

@@ -20,7 +20,7 @@
 
 using System;
 
-namespace ZTS
+namespace ZenTS
 {
     /// <summary>
     /// Configuration errors for JsExtensions XML / Attribute (spec 13-EXTENSION-METHODS).

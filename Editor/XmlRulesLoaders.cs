@@ -20,7 +20,7 @@
 
 using System.Xml.Linq;
 
-namespace ZTS.Editor
+namespace ZenTS.Editor
 {
     internal static class AliasRulesLoader
     {

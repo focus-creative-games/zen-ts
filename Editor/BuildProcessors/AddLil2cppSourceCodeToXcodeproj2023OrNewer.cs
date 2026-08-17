@@ -22,11 +22,11 @@ using System.IO;
 using UnityEditor;
 using UnityEditor.Callbacks;
 using UnityEngine;
-using ZTS.Utils;
+using ZenTS.Utils;
 
 #if UNITY_2023_1_OR_NEWER && (UNITY_IOS || UNITY_TVOS || UNITY_VISIONOS)
 
-namespace ZTS.BuildProcessors
+namespace ZenTS.BuildProcessors
 {
     public static class AddLil2cppSourceCodeToXcodeproj2023OrNewer
     {

@@ -24,7 +24,7 @@ using System.IO;
 using System.Text;
 using Debug = UnityEngine.Debug;
 
-namespace ZTS.Utils
+namespace ZenTS.Utils
 {
     /// <summary>
     /// Applies unified / git-format patches via GNU <c>patch</c> (bundled with Git for Windows when available).
@@ -71,7 +71,7 @@ namespace ZTS.Utils
                 string args = $"-p{stripComponents} --forward --batch -i \"{patchInput}\"";
                 RunPatch(patchExe, args, workingDirectory, dryRun: true);
                 RunPatch(patchExe, args, workingDirectory, dryRun: false);
-                Debug.Log($"[ZTS] Applied patch: {patchFile}");
+                Debug.Log($"[ZenTS] Applied patch: {patchFile}");
             }
             finally
             {
@@ -103,7 +103,7 @@ namespace ZTS.Utils
             }
 
             string text = Encoding.UTF8.GetString(bytes).Replace("\r\n", "\n").Replace("\r", "\n");
-            string temp = Path.Combine(Path.GetTempPath(), "zts-" + Path.GetFileName(patchFile) + ".lf.patch");
+            string temp = Path.Combine(Path.GetTempPath(), "zents-" + Path.GetFileName(patchFile) + ".lf.patch");
             File.WriteAllText(temp, text, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
             return temp;
         }
@@ -133,8 +133,8 @@ namespace ZTS.Utils
                 {
                     var sb = new StringBuilder();
                     sb.AppendLine(dryRun
-                        ? $"[ZTS] Patch dry-run failed (exit {proc.ExitCode})."
-                        : $"[ZTS] Patch apply failed (exit {proc.ExitCode}).");
+                        ? $"[ZenTS] Patch dry-run failed (exit {proc.ExitCode})."
+                        : $"[ZenTS] Patch apply failed (exit {proc.ExitCode}).");
                     sb.AppendLine($"  exe: {patchExe}");
                     sb.AppendLine($"  cwd: {workingDirectory}");
                     sb.AppendLine($"  args: {fullArgs}");
@@ -178,7 +178,7 @@ namespace ZTS.Utils
             }
 
             throw new InvalidOperationException(
-                "[ZTS] GNU patch not found. Install Git for Windows (includes usr\\bin\\patch.exe) or a patch utility.");
+                "[ZenTS] GNU patch not found. Install Git for Windows (includes usr\\bin\\patch.exe) or a patch utility.");
         }
     }
 }

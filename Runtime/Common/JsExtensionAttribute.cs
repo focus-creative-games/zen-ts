@@ -20,7 +20,7 @@
 
 using System;
 
-namespace ZTS
+namespace ZenTS
 {
     /// <summary>
     /// Marks an extended type with one or more extension classes.

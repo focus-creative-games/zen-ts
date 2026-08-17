@@ -21,13 +21,13 @@
 using System;
 using UnityEditor;
 using UnityEngine;
-using ZTS.Editor.Typescript;
+using ZenTS.Editor.Typescript;
 
-namespace ZTS
+namespace ZenTS
 {
     public static class Menus
     {
-        [MenuItem("ZTS/Install...", priority = 1)]
+        [MenuItem("ZenTS/Install...", priority = 1)]
         public static void Install()
         {
             var installer = new LocalInstaller();
@@ -35,38 +35,38 @@ namespace ZTS
             if (installer.RequiresEditorRestart)
             {
                 EditorUtility.DisplayDialog(
-                    "ZTS Install",
+                    "ZenTS Install",
                     "Install finished. Restart the Unity Editor if scripting defines changed.",
                     "OK");
             }
         }
 
-        [MenuItem("ZTS/Export Build-Win64...", priority = 20)]
+        [MenuItem("ZenTS/Export Build-Win64...", priority = 20)]
         public static void ExportBuildWin64()
         {
 #if UNITY_EDITOR_WIN
-            ZTS.Editor.ExportWin64Command.ExportSolution();
+            ZenTS.Editor.ExportWin64Command.ExportSolution();
 #else
             EditorUtility.DisplayDialog(
-                "ZTS",
+                "ZenTS",
                 "Export Build-Win64 is only available on Windows Editor.",
                 "OK");
 #endif
         }
 
-        [MenuItem("ZTS/Generate Xml Bindings", priority = 30)]
+        [MenuItem("ZenTS/Generate Xml Bindings", priority = 30)]
         public static void GenerateXmlBindings()
         {
-            Run("Generate Xml Bindings", () => ZTS.Editor.XmlBindingsGenerate.Generate());
+            Run("Generate Xml Bindings", () => ZenTS.Editor.XmlBindingsGenerate.Generate());
         }
 
-        [MenuItem("ZTS/Init TypeScript Project", priority = 40)]
+        [MenuItem("ZenTS/Init TypeScript Project", priority = 40)]
         public static void InitTypeScriptProject()
         {
             Run("Init TypeScript Project", () => TsScaffold.InitOrUpdate());
         }
 
-        [MenuItem("ZTS/Generate Typings", priority = 41)]
+        [MenuItem("ZenTS/Generate Typings", priority = 41)]
         public static void GenerateTypings()
         {
             Run("Generate Typings", () =>
@@ -74,14 +74,14 @@ namespace ZTS
                 if (!TsProjectPaths.Exists)
                 {
                     throw new InvalidOperationException(
-                        "TsProject not found. Run 'ZTS/Init TypeScript Project' first.");
+                        "TsProject not found. Run 'ZenTS/Init TypeScript Project' first.");
                 }
 
                 CsharpDtsGenerator.Generate();
             });
         }
 
-        [MenuItem("ZTS/Compile TypeScript", priority = 42)]
+        [MenuItem("ZenTS/Compile TypeScript", priority = 42)]
         public static void CompileTypeScript()
         {
             Run("Compile TypeScript", () =>
@@ -90,14 +90,14 @@ namespace ZTS
                 TypescriptToolchain.Emit();
                 var map = TsExportManifest.LoadIfNeeded();
                 int modules = map != null ? map.Count : 0;
-                Debug.Log($"[ZTS] Compile TypeScript OK ({modules} module(s) in js-exports.json)");
+                Debug.Log($"[ZenTS] Compile TypeScript OK ({modules} module(s) in js-exports.json)");
             });
         }
 
-        [MenuItem("ZTS/About", priority = 100)]
+        [MenuItem("ZenTS/About", priority = 100)]
         public static void About()
         {
-            Debug.Log("ZTS — Mono Editor + Il2Cpp Player (Install → Build-Win64). See Docs/spec.");
+            Debug.Log("ZenTS — Mono Editor + Il2Cpp Player (Install → Build-Win64). See Docs/spec.");
         }
 
         private static void Run(string title, Action action)
@@ -108,10 +108,10 @@ namespace ZTS
             }
             catch (Exception ex)
             {
-                Debug.LogError($"[ZTS] {title} failed:\n{ex.Message}");
+                Debug.LogError($"[ZenTS] {title} failed:\n{ex.Message}");
                 if (!Application.isBatchMode)
                 {
-                    EditorUtility.DisplayDialog("ZTS " + title, ex.Message, "OK");
+                    EditorUtility.DisplayDialog("ZenTS " + title, ex.Message, "OK");
                 }
             }
         }

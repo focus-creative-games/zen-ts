@@ -19,10 +19,10 @@
 // SOFTWARE.
 
 using System;
-using ZTS.DelegateImpl;
-using ZTS.Jvm;
+using ZenTS.DelegateImpl;
+using ZenTS.Jvm;
 
-namespace ZTS.Marshaling
+namespace ZenTS.Marshaling
 {
     internal static class DelegateMarshal
     {

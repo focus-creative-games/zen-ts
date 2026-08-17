@@ -25,7 +25,7 @@ using System.Text;
 using UnityEngine;
 using Debug = UnityEngine.Debug;
 
-namespace ZTS.Editor.Typescript
+namespace ZenTS.Editor.Typescript
 {
     internal static class NodeCli
     {
@@ -35,12 +35,12 @@ namespace ZTS.Editor.Typescript
             if (code != 0)
             {
                 throw new InvalidOperationException(
-                    $"[ZTS] '{fileName} {arguments}' failed (exit {code})\n{stdout}\n{stderr}");
+                    $"[ZenTS] '{fileName} {arguments}' failed (exit {code})\n{stdout}\n{stderr}");
             }
 
             if (!string.IsNullOrEmpty(stdout))
             {
-                Debug.Log($"[ZTS] {fileName}: {stdout.Trim()}");
+                Debug.Log($"[ZenTS] {fileName}: {stdout.Trim()}");
             }
         }
 
@@ -74,7 +74,7 @@ namespace ZTS.Editor.Typescript
                 if (proc == null)
                 {
                     throw new InvalidOperationException(
-                        "[ZTS] failed to start Node/npm. Install Node LTS and ensure it is on PATH.");
+                        "[ZenTS] failed to start Node/npm. Install Node LTS and ensure it is on PATH.");
                 }
 
                 stdout = proc.StandardOutput.ReadToEnd();

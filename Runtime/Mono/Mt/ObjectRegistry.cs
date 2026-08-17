@@ -20,10 +20,10 @@
 
 using System;
 using System.Collections.Generic;
-using ZTS.Jvm;
-using ZTS.Utils;
+using ZenTS.Jvm;
+using ZenTS.Utils;
 
-namespace ZTS.Mt
+namespace ZenTS.Mt
 {
     /// <summary>
     /// Strong-slot registry for CLR objects exposed to JS (ByObj handles).
@@ -126,7 +126,7 @@ namespace ZTS.Mt
                 return false;
             }
 
-            JSValue idVal = QuickJsDll.JS_GetPropertyStr(ctx, jsValue, "__zts_id");
+            JSValue idVal = QuickJsDll.JS_GetPropertyStr(ctx, jsValue, "__zents_id");
             if (JsValueUtil.GetNormTag(idVal) != JsValueUtil.TagInt)
             {
                 JsValueUtil.Free(ctx, idVal);
@@ -155,7 +155,7 @@ namespace ZTS.Mt
                 return false;
             }
 
-            JSValue idVal = QuickJsDll.JS_GetPropertyStr(ctx, jsValue, "__zts_id");
+            JSValue idVal = QuickJsDll.JS_GetPropertyStr(ctx, jsValue, "__zents_id");
             int id = unchecked((int)idVal.UInt64);
             JsValueUtil.Free(ctx, idVal);
             lock (Slots)
@@ -178,7 +178,7 @@ namespace ZTS.Mt
                 return false;
             }
 
-            JSValue idVal = QuickJsDll.JS_GetPropertyStr(ctx, jsValue, "__zts_id");
+            JSValue idVal = QuickJsDll.JS_GetPropertyStr(ctx, jsValue, "__zents_id");
             if (JsValueUtil.GetNormTag(idVal) != JsValueUtil.TagInt)
             {
                 JsValueUtil.Free(ctx, idVal);
@@ -221,10 +221,10 @@ namespace ZTS.Mt
             JSValue obj = JsValueUtil.GetNormTag(proto) == JsValueUtil.TagObject
                 ? QuickJsDll.JS_NewObjectProto(ctx, proto)
                 : QuickJsDll.JS_NewObject(ctx);
-            QuickJsDll.JS_SetPropertyStr(ctx, obj, "__zts_id", JsValueUtil.NewInt32(id));
+            QuickJsDll.JS_SetPropertyStr(ctx, obj, "__zents_id", JsValueUtil.NewInt32(id));
             if (!string.IsNullOrEmpty(udKind))
             {
-                QuickJsDll.JS_SetPropertyStr(ctx, obj, "__zts_ud_kind", QuickJsDll.NewString(ctx, udKind));
+                QuickJsDll.JS_SetPropertyStr(ctx, obj, "__zents_ud_kind", QuickJsDll.NewString(ctx, udKind));
             }
 
             return obj;

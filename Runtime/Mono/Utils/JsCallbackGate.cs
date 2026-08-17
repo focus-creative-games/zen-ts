@@ -21,17 +21,17 @@
 using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
-using ZTS.Jvm;
+using ZenTS.Jvm;
 
-namespace ZTS.Utils
+namespace ZenTS.Utils
 {
     internal static class JsCallbackBoundary
     {
         public static void ThrowError(IntPtr ctx, string message)
         {
-            string text = message != null && message.StartsWith("zts:", StringComparison.Ordinal)
+            string text = message != null && message.StartsWith("zents:", StringComparison.Ordinal)
                 ? message
-                : $"zts: {message}";
+                : $"zents: {message}";
             JSValue err = QuickJsDll.JS_NewError(ctx);
             JSValue msg = QuickJsDll.NewString(ctx, text);
             QuickJsDll.JS_SetPropertyStr(ctx, err, "message", msg);
@@ -55,25 +55,25 @@ namespace ZTS.Utils
     {
         public const int ErrorSentinelTag = JsValueUtil.CallbackErrorSentinelTag;
 
-        [DllImport(QuickJsDllName.MonoGate, CallingConvention = CallingConvention.Cdecl, EntryPoint = "zts_gate_init")]
+        [DllImport(QuickJsDllName.MonoGate, CallingConvention = CallingConvention.Cdecl, EntryPoint = "zents_gate_init")]
         private static extern void NativeGateInit(IntPtr jsThrowOut, int errorSentinelTag);
 
-        [DllImport(QuickJsDllName.MonoGate, CallingConvention = CallingConvention.Cdecl, EntryPoint = "zts_get_callback_gate")]
+        [DllImport(QuickJsDllName.MonoGate, CallingConvention = CallingConvention.Cdecl, EntryPoint = "zents_get_callback_gate")]
         private static extern IntPtr NativeGetCallbackGate();
 
-        [DllImport(QuickJsDllName.MonoGate, CallingConvention = CallingConvention.Cdecl, EntryPoint = "zts_register_callback")]
+        [DllImport(QuickJsDllName.MonoGate, CallingConvention = CallingConvention.Cdecl, EntryPoint = "zents_register_callback")]
         private static extern int NativeRegisterCallback(IntPtr fn);
 
-        [DllImport(QuickJsDllName.MonoGate, CallingConvention = CallingConvention.Cdecl, EntryPoint = "zts_set_pending_exception")]
+        [DllImport(QuickJsDllName.MonoGate, CallingConvention = CallingConvention.Cdecl, EntryPoint = "zents_set_pending_exception")]
         private static extern void NativeSetPendingException(ref JSValue value);
 
-        [DllImport(QuickJsDllName.MonoGate, CallingConvention = CallingConvention.Cdecl, EntryPoint = "zts_callback_error_sentinel")]
+        [DllImport(QuickJsDllName.MonoGate, CallingConvention = CallingConvention.Cdecl, EntryPoint = "zents_callback_error_sentinel")]
         private static extern int NativeErrorSentinel();
 
-        [DllImport(QuickJsDllName.MonoGate, CallingConvention = CallingConvention.Cdecl, EntryPoint = "zts_gate_reset")]
+        [DllImport(QuickJsDllName.MonoGate, CallingConvention = CallingConvention.Cdecl, EntryPoint = "zents_gate_reset")]
         private static extern void NativeGateReset();
 
-        [DllImport(QuickJsDllName.MonoGate, CallingConvention = CallingConvention.Cdecl, EntryPoint = "zts_take_pending_exception")]
+        [DllImport(QuickJsDllName.MonoGate, CallingConvention = CallingConvention.Cdecl, EntryPoint = "zents_take_pending_exception")]
         private static extern int NativeTakePendingException(out JSValue value);
 
         private static readonly List<Delegate> PinnedCallbacks = new List<Delegate>();
@@ -151,7 +151,7 @@ namespace ZTS.Utils
                 int slot = NativeRegisterCallback(fnPtr);
                 if (slot < 0)
                 {
-                    throw new JsScriptException("zts: callback gate registration failed.");
+                    throw new JsScriptException("zents: callback gate registration failed.");
                 }
 
                 return QuickJsDll.JS_NewCFunction2(
@@ -164,7 +164,7 @@ namespace ZTS.Utils
             }
 
             // Direct path is unsafe for 16-byte JSValue returns on Mono; require gate.
-            throw new JsScriptException("zts: zts_mono_gate is required on Editor Mono.");
+            throw new JsScriptException("zents: zents_mono_gate is required on Editor Mono.");
         }
 
         public static JSValue NewCFunctionMagic(IntPtr ctx, JsCFunctionMagic callback, string name, int length, int userMagic)
@@ -184,7 +184,7 @@ namespace ZTS.Utils
                 int slot = NativeRegisterCallback(fnPtr);
                 if (slot < 0)
                 {
-                    throw new JsScriptException("zts: callback gate registration failed.");
+                    throw new JsScriptException("zents: callback gate registration failed.");
                 }
 
                 return QuickJsDll.JS_NewCFunction2(
@@ -196,7 +196,7 @@ namespace ZTS.Utils
                     slot);
             }
 
-            throw new JsScriptException("zts: zts_mono_gate is required on Editor Mono.");
+            throw new JsScriptException("zents: zents_mono_gate is required on Editor Mono.");
         }
 
         public static JSValue ReturnErrorSentinel(IntPtr ctx, string message)
@@ -210,7 +210,7 @@ namespace ZTS.Utils
             try
             {
                 // Use pointer-ABI throw shim (not raw JS_Throw).
-                IntPtr throwPtr = NativeExport.Find("zts_JS_Throw");
+                IntPtr throwPtr = NativeExport.Find("zents_JS_Throw");
                 if (throwPtr == IntPtr.Zero)
                 {
                     return false;
@@ -223,7 +223,7 @@ namespace ZTS.Utils
             }
             catch (DllNotFoundException)
             {
-                JsPrintBuffer.Log("[ZTS] zts_mono_gate not found.");
+                JsPrintBuffer.Log("[ZenTS] zents_mono_gate not found.");
                 return false;
             }
         }

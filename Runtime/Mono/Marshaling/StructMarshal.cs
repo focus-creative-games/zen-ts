@@ -19,10 +19,10 @@
 // SOFTWARE.
 
 using System;
-using ZTS.Jvm;
-using ZTS.Mt;
+using ZenTS.Jvm;
+using ZenTS.Mt;
 
-namespace ZTS.Marshaling
+namespace ZenTS.Marshaling
 {
     internal static class StructMarshal
     {

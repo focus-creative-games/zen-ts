@@ -23,7 +23,7 @@ using System.IO;
 using UnityEditor;
 using UnityEngine;
 
-namespace ZTS.Editor.Typescript
+namespace ZenTS.Editor.Typescript
 {
     internal static class TsScaffold
     {
@@ -33,7 +33,7 @@ namespace ZTS.Editor.Typescript
             if (!Directory.Exists(scaffold))
             {
                 throw new InvalidOperationException(
-                    "[ZTS] package scaffold missing at " + scaffold);
+                    "[ZenTS] package scaffold missing at " + scaffold);
             }
 
             Directory.CreateDirectory(TsProjectPaths.TsProjectRoot);
@@ -62,14 +62,14 @@ namespace ZTS.Editor.Typescript
 
             AssetDatabase.Refresh();
             TypescriptToolchain.EnsureDependencies();
-            Debug.Log("[ZTS] TypeScript project ready at " + TsProjectPaths.TsProjectRoot);
+            Debug.Log("[ZenTS] TypeScript project ready at " + TsProjectPaths.TsProjectRoot);
         }
 
         private static void CopyIfMissing(string from, string to)
         {
             if (!File.Exists(from))
             {
-                Debug.LogWarning("[ZTS] scaffold file missing: " + from);
+                Debug.LogWarning("[ZenTS] scaffold file missing: " + from);
                 return;
             }
 

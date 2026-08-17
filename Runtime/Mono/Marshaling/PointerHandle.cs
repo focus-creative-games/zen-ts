@@ -20,7 +20,7 @@
 
 using System;
 
-namespace ZTS.Marshaling
+namespace ZenTS.Marshaling
 {
     /// <summary>Opaque token for non-managed pointer passthrough (spec marshal/10-POINTER).</summary>
     internal sealed class PointerHandle

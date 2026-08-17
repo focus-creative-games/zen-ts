@@ -23,7 +23,7 @@ using System.Collections.Generic;
 using System.Reflection;
 using System.Reflection.Emit;
 
-namespace ZTS.Marshaling
+namespace ZenTS.Marshaling
 {
     /// <summary>
     /// Invokes methods with pointer parameters/returns. Unity Mono's MethodInfo.Invoke
@@ -52,7 +52,7 @@ namespace ZTS.Marshaling
         private static Func<object, object[], object> Build(MethodInfo method)
         {
             var dm = new DynamicMethod(
-                "zts_ptr_" + method.Name,
+                "zents_ptr_" + method.Name,
                 typeof(object),
                 new[] { typeof(object), typeof(object[]) },
                 typeof(PointerAwareInvoker).Module,
@@ -73,7 +73,7 @@ namespace ZTS.Marshaling
                 if (pt.IsByRef)
                 {
                     throw new NotSupportedException(
-                        "zts: PointerAwareInvoker does not support by-ref parameters.");
+                        "zents: PointerAwareInvoker does not support by-ref parameters.");
                 }
 
                 il.Emit(OpCodes.Ldarg_1);

@@ -21,13 +21,13 @@
 using System;
 using System.Collections.Generic;
 using System.Reflection;
-using ZTS.Jvm;
-using ZTS.Utils;
+using ZenTS.Jvm;
+using ZenTS.Utils;
 
-namespace ZTS.Mt
+namespace ZenTS.Mt
 {
     /// <summary>
-    /// Lazy <c>CSharp[assembly][type]</c> resolution (Proxy installed by ztslib.js).
+    /// Lazy <c>CSharp[assembly][type]</c> resolution (Proxy installed by zentslib.js).
     /// </summary>
     internal static class AssemblyRegistry
     {
@@ -38,7 +38,7 @@ namespace ZTS.Mt
 
         public static void EnsureCSharpRoot(JsEnv env)
         {
-            // Proxy root is installed by ztslib.js after native hooks are bound.
+            // Proxy root is installed by zentslib.js after native hooks are bound.
             _installed = true;
         }
 
@@ -46,7 +46,7 @@ namespace ZTS.Mt
         {
             if (ResolveAssembly(assemblyName) == null)
             {
-                throw new JsScriptException($"zts: assembly not found: {assemblyName}");
+                throw new JsScriptException($"zents: assembly not found: {assemblyName}");
             }
         }
 
@@ -55,13 +55,13 @@ namespace ZTS.Mt
             Assembly assembly = ResolveAssembly(assemblyName);
             if (assembly == null)
             {
-                throw new JsScriptException($"zts: assembly not found: {assemblyName}");
+                throw new JsScriptException($"zents: assembly not found: {assemblyName}");
             }
 
             Type type = FindTypeInAssembly(assembly, typeName);
             if (type == null)
             {
-                throw new JsScriptException($"zts: type not found: {typeName}");
+                throw new JsScriptException($"zents: type not found: {typeName}");
             }
 
             return type;

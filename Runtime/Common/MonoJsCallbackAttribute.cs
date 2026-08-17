@@ -20,7 +20,7 @@
 
 using System;
 
-namespace ZTS
+namespace ZenTS
 {
     [AttributeUsage(AttributeTargets.Method, AllowMultiple = false)]
     public sealed class MonoJsCallbackAttribute : Attribute

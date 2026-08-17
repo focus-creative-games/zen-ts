@@ -21,9 +21,9 @@
 using System;
 using System.IO;
 using UnityEngine;
-using ZTS.CppCodeGen;
+using ZenTS.CppCodeGen;
 
-namespace ZTS.Editor
+namespace ZenTS.Editor
 {
     /// <summary>
     /// Build-time MarshalAs / JsAlias / JsExtensions XML → C++ binding tables.
@@ -46,10 +46,10 @@ namespace ZTS.Editor
             if (!installer.HasInstalledToLocal())
             {
                 throw new InvalidOperationException(
-                    "[ZTS] Local install not found. Run menu 'ZTS/Install...' before Generate Xml Bindings.");
+                    "[ZenTS] Local install not found. Run menu 'ZenTS/Install...' before Generate Xml Bindings.");
             }
 
-            string outDir = CommonDirs.GeneratedZtsPath;
+            string outDir = CommonDirs.GeneratedZentsPath;
             Directory.CreateDirectory(outDir);
 
             new MarshalAsCodegen(outDir).Generate();
@@ -58,9 +58,9 @@ namespace ZTS.Editor
 
             // LocalIl2Cpp is the build authority (ZLua parity). Do NOT write back into the
             // package tree — that invalidates InstallFingerprint and trips CheckLocalInstall.
-            CopyGeneratedFiles(outDir, CommonDirs.BuildWin64GeneratedZtsPath);
+            CopyGeneratedFiles(outDir, CommonDirs.BuildWin64GeneratedZentsPath);
 
-            Debug.Log("[ZTS] Generate Xml Bindings OK → " + outDir);
+            Debug.Log("[ZenTS] Generate Xml Bindings OK → " + outDir);
         }
 
         private static void CopyGeneratedFiles(string sourceDir, string destDir)

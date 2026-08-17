@@ -20,7 +20,7 @@
 
 using System;
 
-namespace ZTS.Utils
+namespace ZenTS.Utils
 {
     internal static class NestedJsCallPendingError
     {

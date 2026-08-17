@@ -26,16 +26,16 @@ using System.Text;
 using UnityEditor;
 using UnityEditor.Callbacks;
 using UnityEngine;
-using ZTS.Utils;
+using ZenTS.Utils;
 
 #if (UNITY_2020 || UNITY_2021) && (UNITY_IOS || UNITY_TVOS)
 using UnityEditor.iOS.Xcode;
 
-namespace ZTS.BuildProcessors
+namespace ZenTS.BuildProcessors
 {
     /// <summary>
     /// Unity 2020/2021 iOS ships a prebuilt <c>libil2cpp.a</c>. Replace it with Local Il2Cpp
-    /// sources (lumps) so ZTS C++ and icalls are linked.
+    /// sources (lumps) so ZenTS C++ and icalls are linked.
     /// </summary>
     public static class AddLil2cppSourceCodeToXcodeproj2020Or2021
     {
@@ -62,7 +62,7 @@ namespace ZTS.BuildProcessors
             if (!Directory.Exists(srcLibil2cppDir))
             {
                 throw new InvalidOperationException(
-                    $"[ZTS] Local libil2cpp missing at '{srcLibil2cppDir}'. Run ZTS Install first.");
+                    $"[ZenTS] Local libil2cpp missing at '{srcLibil2cppDir}'. Run ZenTS Install first.");
             }
 
             CopyLibil2cppToXcodeProj(srcLibil2cppDir, dstLibil2cppDir);
@@ -185,7 +185,7 @@ namespace ZTS.BuildProcessors
             if (!Directory.Exists(srcExternalDir))
             {
                 throw new InvalidOperationException(
-                    $"[ZTS] Local il2cpp external missing at '{srcExternalDir}'. Run ZTS Install first.");
+                    $"[ZenTS] Local il2cpp external missing at '{srcExternalDir}'. Run ZenTS Install first.");
             }
 
             DirectoryUtil.RemoveDir(dstExternalDir);

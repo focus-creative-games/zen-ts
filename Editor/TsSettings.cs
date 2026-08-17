@@ -20,10 +20,10 @@
 
 using UnityEngine;
 
-namespace ZTS.Editor
+namespace ZenTS.Editor
 {
     /// <summary>
-    /// Editor settings stub for ZTS package configuration.
+    /// Editor settings stub for ZenTS package configuration.
     /// </summary>
     public sealed class TsSettings : ScriptableObject
     {

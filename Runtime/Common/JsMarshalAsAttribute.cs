@@ -20,7 +20,7 @@
 
 using System;
 
-namespace ZTS
+namespace ZenTS
 {
     public enum JsMarshalType
     {

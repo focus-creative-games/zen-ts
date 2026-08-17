@@ -21,7 +21,7 @@
 using UnityEditor.Build;
 using UnityEditor.Build.Reporting;
 
-namespace ZTS.BuildProcessors
+namespace ZenTS.BuildProcessors
 {
     internal sealed class CheckLocalInstall : IPreprocessBuildWithReport
     {
@@ -38,13 +38,13 @@ namespace ZTS.BuildProcessors
             if (!installer.HasInstalledToLocal())
             {
                 throw new BuildFailedException(
-                    "[ZTS] Local install not found. Run menu 'ZTS/Install...' before building.");
+                    "[ZenTS] Local install not found. Run menu 'ZenTS/Install...' before building.");
             }
 
             if (installer.NeedReinstallAfterUpdatePackage())
             {
                 throw new BuildFailedException(
-                    "[ZTS] Local install is outdated. Re-run 'ZTS/Install...' before building.");
+                    "[ZenTS] Local install is outdated. Re-run 'ZenTS/Install...' before building.");
             }
         }
     }

@@ -19,10 +19,10 @@
 // SOFTWARE.
 
 using System;
-using ZTS.Jvm;
-using ZTS.Mt;
+using ZenTS.Jvm;
+using ZenTS.Mt;
 
-namespace ZTS.Marshaling
+namespace ZenTS.Marshaling
 {
     /// <summary>
     /// OpaqueValue handles for ref/in/out default marshal.
@@ -66,8 +66,8 @@ namespace ZTS.Marshaling
             var opaque = new OpaqueValue(target) { Generation = _generation };
             JSValue handle = QuickJsDll.JS_NewObject(ctx);
             int slot = ObjectRegistry.Register(opaque);
-            QuickJsDll.JS_SetPropertyStr(ctx, handle, "__zts_id", JsValueUtil.NewInt32(slot));
-            QuickJsDll.JS_SetPropertyStr(ctx, handle, "__zts_opaque", JsValueUtil.NewBool(true));
+            QuickJsDll.JS_SetPropertyStr(ctx, handle, "__zents_id", JsValueUtil.NewInt32(slot));
+            QuickJsDll.JS_SetPropertyStr(ctx, handle, "__zents_opaque", JsValueUtil.NewBool(true));
             opaque.JsValue = handle;
             return handle;
         }
@@ -98,7 +98,7 @@ namespace ZTS.Marshaling
                 return true;
             }
 
-            JSValue flag = QuickJsDll.JS_GetPropertyStr(ctx, jsValue, "__zts_opaque");
+            JSValue flag = QuickJsDll.JS_GetPropertyStr(ctx, jsValue, "__zents_opaque");
             bool isOpaque = JsValueUtil.GetNormTag(flag) == JsValueUtil.TagBool && flag.UInt64 != 0;
             JsValueUtil.Free(ctx, flag);
             if (!isOpaque)
@@ -120,12 +120,12 @@ namespace ZTS.Marshaling
         {
             if (opaque == null)
             {
-                throw new JsScriptException("zts: invalid opaque parameter handle.");
+                throw new JsScriptException("zents: invalid opaque parameter handle.");
             }
 
             if (opaque.Generation != _generation)
             {
-                throw new JsScriptException("zts: invalid opaque parameter handle (expired).");
+                throw new JsScriptException("zents: invalid opaque parameter handle (expired).");
             }
         }
     }

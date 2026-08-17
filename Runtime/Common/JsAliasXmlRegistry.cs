@@ -22,7 +22,7 @@ using System;
 using System.Collections.Generic;
 using System.Reflection;
 
-namespace ZTS
+namespace ZenTS
 {
     /// <summary>
     /// JsAlias XML registry: load by assembly name; bind lazily to MethodInfo metadata token.
@@ -110,7 +110,7 @@ namespace ZTS
                     if (assembly == null)
                     {
                         throw new JsAliasConfigurationException(
-                            "[ZTS] JsAlias XML Assembly '" + pair.Key + "' not loaded (validation).");
+                            "[ZenTS] JsAlias XML Assembly '" + pair.Key + "' not loaded (validation).");
                     }
 
                     EnsureBoundUnlocked(assembly);
@@ -258,14 +258,14 @@ namespace ZTS
             if (type == null)
             {
                 throw new JsAliasConfigurationException(
-                    "[ZTS] JsAlias XML Type '" + rule.TypeFullName + "' not found in assembly '"
+                    "[ZenTS] JsAlias XML Type '" + rule.TypeFullName + "' not found in assembly '"
                     + expectedAssembly.GetName().Name + "' (" + rule.SourcePath + ")");
             }
 
             if (type.IsGenericType && !type.IsGenericTypeDefinition)
             {
                 throw new JsAliasConfigurationException(
-                    "[ZTS] JsAlias XML Type must be an open generic definition or non-generic type: "
+                    "[ZenTS] JsAlias XML Type must be an open generic definition or non-generic type: "
                     + rule.TypeFullName + " in " + rule.SourcePath);
             }
 
@@ -274,7 +274,7 @@ namespace ZTS
             if (map.ContainsKey(token))
             {
                 throw new JsAliasConfigurationException(
-                    "[ZTS] JsAlias XML duplicate method token 0x" + token.ToString("X8")
+                    "[ZenTS] JsAlias XML duplicate method token 0x" + token.ToString("X8")
                     + " while binding " + rule.SourcePath);
             }
 
@@ -315,7 +315,7 @@ namespace ZTS
             }
 
             throw new JsAliasConfigurationException(
-                "[ZTS] JsAlias XML Method '" + methodName + signature + "' not found on "
+                "[ZenTS] JsAlias XML Method '" + methodName + signature + "' not found on "
                 + type.FullName + " in " + sourcePath);
         }
 

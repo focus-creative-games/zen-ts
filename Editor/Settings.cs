@@ -21,16 +21,16 @@
 using UnityEditor;
 using UnityEngine;
 
-namespace ZTS
+namespace ZenTS
 {
-    [FilePath("ProjectSettings/ZTS.asset", FilePathAttribute.Location.ProjectFolder)]
+    [FilePath("ProjectSettings/ZenTS.asset", FilePathAttribute.Location.ProjectFolder)]
     public class Settings : ScriptableSingleton<Settings>, ISerializationCallbackReceiver
     {
         [SerializeField] int settingsVersion;
 
         [System.NonSerialized] bool _needsSaveAfterMigrate;
 
-        [Tooltip("Enable ZTS Il2Cpp install/build hooks")]
+        [Tooltip("Enable ZenTS Il2Cpp install/build hooks")]
         public bool enable = true;
 
         [Tooltip("QuickJS pin id, e.g. quickjs-2026-06-04. Empty = default.")]
@@ -40,12 +40,12 @@ namespace ZTS
         public bool enableTsPlayGate = true;
 
         [Tooltip("Assemblies whose public types are emitted as csharp: .d.ts (same set as Il2Cpp Generate).")]
-        public string[] typescriptBindingAssemblies = { "Assembly-CSharp", "ZTS.Tests" };
+        public string[] typescriptBindingAssemblies = { "Assembly-CSharp", "ZenTS.Tests" };
 
         [Tooltip("Editor Mono JS debugger host. Default off.")]
         public bool enableJsDebugger = false;
 
-        [Tooltip("IZtsJsDebuggerHost implementation type (assembly-qualified).")]
+        [Tooltip("IZentsJsDebuggerHost implementation type (assembly-qualified).")]
         public string debuggerHostTypeName = "";
 
         public int debuggerPort = 9230;
@@ -55,7 +55,7 @@ namespace ZTS
         [Tooltip("Extra source search paths for the JS debugger (in addition to TsProject/src).")]
         public string[] debuggerSourcePaths = { };
 
-        [Tooltip("MarshalAs XML files or directories (relative to project root or absolute). Root element ZTSMarshalAs. See Docs/spec/marshal/02-MARSHAL-AS §9.")]
+        [Tooltip("MarshalAs XML files or directories (relative to project root or absolute). Root element ZenTSMarshalAs. See Docs/spec/marshal/02-MARSHAL-AS §9.")]
         public string[] marshalAsXmlPaths = { "Assets/CustomJsMarshalAsRules.xml" };
 
         [Tooltip("JsAlias XML files or directories (relative to project root or absolute). Root element JsAlias. See Docs/spec/04-METHOD-OVERLOAD §5.4.")]
@@ -93,13 +93,13 @@ namespace ZTS
 
         public void OnAfterDeserialize()
         {
-            // Existing ProjectSettings/ZTS.asset lacks new fields → Unity zeros them.
+            // Existing ProjectSettings/ZenTS.asset lacks new fields → Unity zeros them.
             if (settingsVersion < 1)
             {
                 enableTsPlayGate = true;
                 if (typescriptBindingAssemblies == null || typescriptBindingAssemblies.Length == 0)
                 {
-                    typescriptBindingAssemblies = new[] { "Assembly-CSharp", "ZTS.Tests" };
+                    typescriptBindingAssemblies = new[] { "Assembly-CSharp", "ZenTS.Tests" };
                 }
 
                 if (debuggerPort <= 0)

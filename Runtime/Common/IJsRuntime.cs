@@ -20,7 +20,7 @@
 
 using System;
 
-namespace ZTS
+namespace ZenTS
 {
     /// <summary>
     /// Backend contract for <see cref="JsAppDomain"/>. Implemented by nested

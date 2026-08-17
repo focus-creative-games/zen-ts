@@ -23,7 +23,7 @@ using System.IO;
 using UnityEditor;
 using UnityEngine;
 
-namespace ZTS
+namespace ZenTS
 {
     /// <summary>
     /// Loads Settings marshalAsXmlPaths into <see cref="JsMarshalAsXmlRegistry"/> for Editor Mono.
@@ -36,12 +36,12 @@ namespace ZTS
             TryLoad(logSuccess: false);
         }
 
-        [MenuItem("ZTS/Reload MarshalAs XML", priority = 520)]
+        [MenuItem("ZenTS/Reload MarshalAs XML", priority = 520)]
         private static void ReloadMenu()
         {
             string projectRoot = Path.GetDirectoryName(Application.dataPath);
             JsMarshalAsXmlRegistry.Load(Settings.Instance.marshalAsXmlPaths, projectRoot);
-            Debug.Log("[ZTS] MarshalAs XML loaded: " + JsMarshalAsXmlRegistry.Rules.Count + " rule(s).");
+            Debug.Log("[ZenTS] MarshalAs XML loaded: " + JsMarshalAsXmlRegistry.Rules.Count + " rule(s).");
         }
 
         internal static void TryLoad(bool logSuccess)
@@ -52,13 +52,13 @@ namespace ZTS
                 JsMarshalAsXmlRegistry.Load(Settings.Instance.marshalAsXmlPaths, projectRoot);
                 if (logSuccess)
                 {
-                    Debug.Log("[ZTS] MarshalAs XML loaded: " + JsMarshalAsXmlRegistry.Rules.Count + " rule(s).");
+                    Debug.Log("[ZenTS] MarshalAs XML loaded: " + JsMarshalAsXmlRegistry.Rules.Count + " rule(s).");
                 }
             }
             catch (Exception ex)
             {
                 // Do not rethrow from InitializeOnLoad — keep Editor usable; Generate/menu still fail hard.
-                Debug.LogError("[ZTS] MarshalAs XML load failed:\n" + ex.Message);
+                Debug.LogError("[ZenTS] MarshalAs XML load failed:\n" + ex.Message);
             }
         }
     }

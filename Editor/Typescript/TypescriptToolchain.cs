@@ -22,10 +22,10 @@ using System;
 using System.IO;
 using UnityEngine;
 
-namespace ZTS.Editor.Typescript
+namespace ZenTS.Editor.Typescript
 {
     /// <summary>
-    /// tsc check + esbuild 1:1 emit + copy to StreamingAssets/ZTS (Docs/spec/14-TYPESCRIPT.md §7–§8).
+    /// tsc check + esbuild 1:1 emit + copy to StreamingAssets/ZenTS (Docs/spec/14-TYPESCRIPT.md §7–§8).
     /// </summary>
     public static class TypescriptToolchain
     {
@@ -42,7 +42,7 @@ namespace ZTS.Editor.Typescript
             if (NodeCli.LocalBin(TsProjectPaths.TsProjectRoot, "tsc") == null)
             {
                 throw new InvalidOperationException(
-                    "[ZTS] npm install did not produce node_modules/.bin/tsc. Install Node LTS and retry.");
+                    "[ZenTS] npm install did not produce node_modules/.bin/tsc. Install Node LTS and retry.");
             }
         }
 
@@ -53,7 +53,7 @@ namespace ZTS.Editor.Typescript
             if (tsc == null)
             {
                 throw new InvalidOperationException(
-                    "[ZTS] TypeScript is not installed in TsProject. Run menu 'ZTS/Init TypeScript Project' (npm install).");
+                    "[ZenTS] TypeScript is not installed in TsProject. Run menu 'ZenTS/Init TypeScript Project' (npm install).");
             }
 
             NodeCli.RunOrThrow(TsProjectPaths.TsProjectRoot, tsc, "--noEmit -p tsconfig.json");
@@ -66,7 +66,7 @@ namespace ZTS.Editor.Typescript
             if (!File.Exists(emitJs))
             {
                 throw new InvalidOperationException(
-                    "[ZTS] missing TsProject/scripts/emit.mjs. Run menu ZTS/Init TypeScript Project.");
+                    "[ZenTS] missing TsProject/scripts/emit.mjs. Run menu ZenTS/Init TypeScript Project.");
             }
 
             NodeCli.RunOrThrow(TsProjectPaths.TsProjectRoot, "node", QuotePath(emitJs));
@@ -82,13 +82,13 @@ namespace ZTS.Editor.Typescript
         {
             if (target == UnityEditor.BuildTarget.Android || target == UnityEditor.BuildTarget.WebGL)
             {
-                ClearDirectory(TsProjectPaths.StreamingZtsDir);
+                ClearDirectory(TsProjectPaths.StreamingZentsDir);
                 CopyOutToResources();
             }
             else
             {
-                ClearDirectory(TsProjectPaths.ResourcesZtsDir);
-                DeleteEmptyParents(TsProjectPaths.ResourcesZtsDir);
+                ClearDirectory(TsProjectPaths.ResourcesZentsDir);
+                DeleteEmptyParents(TsProjectPaths.ResourcesZentsDir);
                 CopyOutToStreamingAssets();
             }
         }
@@ -117,29 +117,29 @@ namespace ZTS.Editor.Typescript
                 return;
             }
 
-            Directory.CreateDirectory(TsProjectPaths.StreamingZtsDir);
-            CopyDirectory(TsProjectPaths.OutDir, TsProjectPaths.StreamingZtsDir);
+            Directory.CreateDirectory(TsProjectPaths.StreamingZentsDir);
+            CopyDirectory(TsProjectPaths.OutDir, TsProjectPaths.StreamingZentsDir);
         }
 
         /// <summary>
-        /// Copy <c>out/**/*.js</c> → <c>Assets/Resources/ZTS/**/*.js.txt</c> for Android/WebGL.
+        /// Copy <c>out/**/*.js</c> → <c>Assets/Resources/ZenTS/**/*.js.txt</c> for Android/WebGL.
         /// </summary>
         public static void CopyOutToResources()
         {
             if (!Directory.Exists(TsProjectPaths.OutDir))
             {
-                Debug.LogWarning("[ZTS] TsProject/out missing; skip Resources JS publish.");
+                Debug.LogWarning("[ZenTS] TsProject/out missing; skip Resources JS publish.");
                 return;
             }
 
-            ClearDirectory(TsProjectPaths.ResourcesZtsDir);
-            Directory.CreateDirectory(TsProjectPaths.ResourcesZtsDir);
+            ClearDirectory(TsProjectPaths.ResourcesZentsDir);
+            Directory.CreateDirectory(TsProjectPaths.ResourcesZentsDir);
 
             foreach (string src in Directory.GetFiles(TsProjectPaths.OutDir, "*.js", SearchOption.AllDirectories))
             {
                 string rel = src.Substring(TsProjectPaths.OutDir.Length)
                     .TrimStart(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
-                string dest = Path.Combine(TsProjectPaths.ResourcesZtsDir, rel + ".txt");
+                string dest = Path.Combine(TsProjectPaths.ResourcesZentsDir, rel + ".txt");
                 string destDir = Path.GetDirectoryName(dest);
                 if (!string.IsNullOrEmpty(destDir))
                 {
@@ -150,7 +150,7 @@ namespace ZTS.Editor.Typescript
             }
 
             UnityEditor.AssetDatabase.Refresh();
-            Debug.Log($"[ZTS] Published TsProject/out → Resources/ZTS (*.js.txt)");
+            Debug.Log($"[ZenTS] Published TsProject/out → Resources/ZenTS (*.js.txt)");
         }
 
         private static void ClearDirectory(string dir)
@@ -170,7 +170,7 @@ namespace ZTS.Editor.Typescript
 
         private static void DeleteEmptyParents(string leafDir)
         {
-            // Remove Resources/ZTS then empty Resources if empty.
+            // Remove Resources/ZenTS then empty Resources if empty.
             string resourcesRoot = Path.Combine(Application.dataPath, "Resources");
             if (Directory.Exists(resourcesRoot) &&
                 Directory.GetFileSystemEntries(resourcesRoot).Length == 0)
@@ -207,7 +207,7 @@ namespace ZTS.Editor.Typescript
             if (!TsProjectPaths.Exists)
             {
                 throw new InvalidOperationException(
-                    "[ZTS] TsProject not found. Run menu 'ZTS/Init TypeScript Project'.");
+                    "[ZenTS] TsProject not found. Run menu 'ZenTS/Init TypeScript Project'.");
             }
         }
 

@@ -23,7 +23,7 @@ using System.Collections.Generic;
 using System.Reflection;
 using System.Text;
 
-namespace ZTS
+namespace ZenTS
 {
     /// <summary>
     /// Synthesizes <c>csharp:</c> ES modules as source that re-exports
@@ -47,18 +47,18 @@ namespace ZTS
         {
             if (!JsModuleSpecifier.IsCsharp(specifier))
             {
-                throw new JsScriptException($"zts: invalid csharp module specifier: {specifier}");
+                throw new JsScriptException($"zents: invalid csharp module specifier: {specifier}");
             }
 
             string rest = specifier.Substring(JsModuleSpecifier.CsharpScheme.Length);
             if (string.IsNullOrEmpty(rest) || rest[0] == '/')
             {
-                throw new JsScriptException($"zts: invalid csharp module specifier: {specifier}");
+                throw new JsScriptException($"zents: invalid csharp module specifier: {specifier}");
             }
 
             if (rest.IndexOf('/') != rest.LastIndexOf('/'))
             {
-                throw new JsScriptException($"zts: invalid csharp module specifier: {specifier}");
+                throw new JsScriptException($"zents: invalid csharp module specifier: {specifier}");
             }
 
             string assemblyName;
@@ -77,13 +77,13 @@ namespace ZTS
 
             if (string.IsNullOrEmpty(assemblyName))
             {
-                throw new JsScriptException($"zts: invalid csharp module specifier: {specifier}");
+                throw new JsScriptException($"zents: invalid csharp module specifier: {specifier}");
             }
 
             Assembly asm = FindAssembly(assemblyName);
             if (asm == null)
             {
-                throw new JsScriptException($"zts: assembly not found: {assemblyName}");
+                throw new JsScriptException($"zents: assembly not found: {assemblyName}");
             }
 
             bool nestedModule = path.EndsWith("+", StringComparison.Ordinal);
@@ -100,7 +100,7 @@ namespace ZTS
                 Type declaring = asm.GetType(path) ?? FindTypeByFullName(types, path);
                 if (declaring == null)
                 {
-                    throw new JsScriptException($"zts: type not found: {path}");
+                    throw new JsScriptException($"zents: type not found: {path}");
                 }
 
                 foreach (Type nested in declaring.GetNestedTypes(BindingFlags.Public))
@@ -148,7 +148,7 @@ namespace ZTS
                 if (!seen.Add(exportName))
                 {
                     throw new JsScriptException(
-                        $"zts: csharp export name conflict: {exportName} in {specifier}");
+                        $"zents: csharp export name conflict: {exportName} in {specifier}");
                 }
 
                 sb.Append("export const ");

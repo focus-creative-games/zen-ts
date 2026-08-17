@@ -20,10 +20,10 @@
 
 using System;
 using System.Reflection;
-using ZTS.Jvm;
-using ZTS.Mt;
+using ZenTS.Jvm;
+using ZenTS.Mt;
 
-namespace ZTS.Marshaling
+namespace ZenTS.Marshaling
 {
     internal static unsafe class PointerMarshal
     {
@@ -38,8 +38,8 @@ namespace ZTS.Marshaling
             var handle = new PointerHandle(addr, pointerType);
             int id = ObjectRegistry.Register(handle, pointerType);
             JSValue obj = QuickJsDll.JS_NewObject(ctx);
-            QuickJsDll.JS_SetPropertyStr(ctx, obj, "__zts_id", JsValueUtil.NewInt32(id));
-            QuickJsDll.JS_SetPropertyStr(ctx, obj, "__zts_pointer", JsValueUtil.NewBool(true));
+            QuickJsDll.JS_SetPropertyStr(ctx, obj, "__zents_id", JsValueUtil.NewInt32(id));
+            QuickJsDll.JS_SetPropertyStr(ctx, obj, "__zents_pointer", JsValueUtil.NewBool(true));
             return obj;
         }
 
@@ -54,20 +54,20 @@ namespace ZTS.Marshaling
             if (tag == JsValueUtil.TagUndefined)
             {
                 throw new JsScriptException(
-                    $"zts: undefined is not assignable to {expectedPointerType.FullName} (use null for null pointer).");
+                    $"zents: undefined is not assignable to {expectedPointerType.FullName} (use null for null pointer).");
             }
 
             if (tag != JsValueUtil.TagObject)
             {
-                throw new JsScriptException($"zts: expected Pointer handle for {expectedPointerType.FullName}.");
+                throw new JsScriptException($"zents: expected Pointer handle for {expectedPointerType.FullName}.");
             }
 
-            JSValue ptrFlag = QuickJsDll.JS_GetPropertyStr(ctx, jsValue, "__zts_pointer");
+            JSValue ptrFlag = QuickJsDll.JS_GetPropertyStr(ctx, jsValue, "__zents_pointer");
             try
             {
                 if (JsValueUtil.GetNormTag(ptrFlag) != JsValueUtil.TagBool || ptrFlag.UInt64 == 0)
                 {
-                    throw new JsScriptException($"zts: expected Pointer handle for {expectedPointerType.FullName}.");
+                    throw new JsScriptException($"zents: expected Pointer handle for {expectedPointerType.FullName}.");
                 }
             }
             finally
@@ -77,13 +77,13 @@ namespace ZTS.Marshaling
 
             if (!ObjectRegistry.TryGetObject(ctx, jsValue, out object obj) || !(obj is PointerHandle handle))
             {
-                throw new JsScriptException($"zts: expected Pointer handle for {expectedPointerType.FullName}.");
+                throw new JsScriptException($"zents: expected Pointer handle for {expectedPointerType.FullName}.");
             }
 
             if (!PointerTypesMatch(handle.PointerType, expectedPointerType))
             {
                 throw new JsScriptException(
-                    $"zts: Pointer type mismatch: expected {expectedPointerType.FullName}, got {handle.PointerType.FullName}.");
+                    $"zents: Pointer type mismatch: expected {expectedPointerType.FullName}, got {handle.PointerType.FullName}.");
             }
 
             return BoxPointer(handle.Address, expectedPointerType);

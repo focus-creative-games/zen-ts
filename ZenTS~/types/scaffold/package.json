@@ -1,0 +1,14 @@
+{
+  "name": "zents-tsproject",
+  "private": true,
+  "type": "module",
+  "description": "ZenTS TypeScript project (Docs/spec/14-TYPESCRIPT.md)",
+  "scripts": {
+    "check": "tsc --noEmit -p tsconfig.json",
+    "build": "node scripts/emit.mjs && node scripts/copy-streaming.mjs"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.0",
+    "typescript": "^5.8.0"
+  }
+}

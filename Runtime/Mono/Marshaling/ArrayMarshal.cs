@@ -20,9 +20,9 @@
 
 using System;
 using System.Collections.Generic;
-using ZTS.Jvm;
+using ZenTS.Jvm;
 
-namespace ZTS.Marshaling
+namespace ZenTS.Marshaling
 {
     internal static class ArrayMarshal
     {

@@ -25,13 +25,13 @@ using UnityEditor;
 using UnityEditor.Build;
 using UnityEditor.Build.Reporting;
 using UnityEngine;
-using ZTS;
+using ZenTS;
 
-namespace ZTS.Editor
+namespace ZenTS.Editor
 {
     /// <summary>
     /// Export StandaloneWindows64 Il2Cpp as a VS/Il2Cpp solution under Build-Win64
-    /// for fast native iteration (edit zts under Il2CppOutputProject, then sync back).
+    /// for fast native iteration (edit zents under Il2CppOutputProject, then sync back).
     /// </summary>
     public static class ExportWin64Command
     {
@@ -43,13 +43,13 @@ namespace ZTS.Editor
             if (!installer.HasInstalledToLocal())
             {
                 throw new InvalidOperationException(
-                    "[ZTS] Run ZTS/Install... before exporting Build-Win64.");
+                    "[ZenTS] Run ZenTS/Install... before exporting Build-Win64.");
             }
 
             string scene = FindFirstEnabledScene();
             if (string.IsNullOrEmpty(scene))
             {
-                throw new InvalidOperationException("[ZTS] No enabled scene in Build Settings.");
+                throw new InvalidOperationException("[ZenTS] No enabled scene in Build Settings.");
             }
 
             PlayerSettings.SetScriptingBackend(NamedBuildTarget.Standalone, ScriptingImplementation.IL2CPP);
@@ -60,7 +60,7 @@ namespace ZTS.Editor
             Directory.CreateDirectory(outDir);
             string outPath = Path.Combine(outDir, PlayerSettings.productName + ".exe");
 
-            Debug.Log($"[ZTS] Export Build-Win64 start out={outPath} scene={scene}");
+            Debug.Log($"[ZenTS] Export Build-Win64 start out={outPath} scene={scene}");
 
             var opts = new BuildPlayerOptions
             {
@@ -72,15 +72,15 @@ namespace ZTS.Editor
 
             BuildReport report = BuildPipeline.BuildPlayer(opts);
             BuildSummary s = report.summary;
-            Debug.Log($"[ZTS] Export Build-Win64 result={s.result} errors={s.totalErrors}");
+            Debug.Log($"[ZenTS] Export Build-Win64 result={s.result} errors={s.totalErrors}");
             if (s.result != BuildResult.Succeeded)
             {
                 throw new Exception($"Build-Win64 export failed: {s.result}");
             }
 
             Debug.Log(
-                "[ZTS] Export OK. Edit C++ under Build-Win64/Il2CppOutputProject/IL2CPP/libil2cpp/zts ; "
-                + "sync back with sync-runtime-zts.bat");
+                "[ZenTS] Export OK. Edit C++ under Build-Win64/Il2CppOutputProject/IL2CPP/libil2cpp/zents ; "
+                + "sync back with sync-runtime-zents.bat");
         }
 
         private static string FindFirstEnabledScene()

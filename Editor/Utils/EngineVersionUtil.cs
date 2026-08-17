@@ -22,10 +22,10 @@ using System.Reflection;
 using System.Text.RegularExpressions;
 using UnityEngine;
 
-namespace ZTS.Utils
+namespace ZenTS.Utils
 {
     /// <summary>
-    /// Unity / Tuanjie version encoding for <c>ZTSConf.inc</c> (spec 11-MULTI-VERSION §12).
+    /// Unity / Tuanjie version encoding for <c>ZenTSConf.inc</c> (spec 11-MULTI-VERSION §12).
     /// </summary>
     public static class EngineVersionUtil
     {

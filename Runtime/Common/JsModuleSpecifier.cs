@@ -20,7 +20,7 @@
 
 using System;
 
-namespace ZTS
+namespace ZenTS
 {
     /// <summary>
     /// Canonical ES module specifiers (Docs/spec/14-TYPESCRIPT.md §4).

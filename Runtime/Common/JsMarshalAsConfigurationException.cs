@@ -20,7 +20,7 @@
 
 using System;
 
-namespace ZTS
+namespace ZenTS
 {
     /// <summary>
     /// Raised when a <see cref="JsMarshalAsAttribute"/> or MarshalAs XML configuration is invalid.

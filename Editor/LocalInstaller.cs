@@ -31,17 +31,17 @@ using System.Text;
 using UnityEditor;
 using UnityEditor.Build;
 using UnityEngine;
-using ZTS.Utils;
+using ZenTS.Utils;
 using Debug = UnityEngine.Debug;
 
-namespace ZTS
+namespace ZenTS
 {
     public class LocalInstaller
     {
-        private static readonly string[] s_ztsDefinePrefixes =
+        private static readonly string[] s_zentsDefinePrefixes =
         {
-            "ZTS_QUICKJS",
-            "ZTS_QUICKJS_VERSION_",
+            "ZENTS_QUICKJS",
+            "ZENTS_QUICKJS_VERSION_",
         };
 
         private readonly UnityVersion _curVersion;
@@ -83,7 +83,7 @@ namespace ZTS
             }
             catch (Exception ex)
             {
-                Debug.LogError($"[ZTS] Install failed:\n{ex}");
+                Debug.LogError($"[ZenTS] Install failed:\n{ex}");
                 throw;
             }
         }
@@ -91,7 +91,7 @@ namespace ZTS
         public bool HasInstalledToLocal()
         {
             return Directory.Exists(CommonDirs.LocalLibil2cppPath)
-                   && Directory.Exists(CommonDirs.LocalZtsPath)
+                   && Directory.Exists(CommonDirs.LocalZentsPath)
                    && Directory.Exists(CommonDirs.LocalQuickJsSrcPath);
         }
 
@@ -125,10 +125,10 @@ namespace ZTS
                 throw new InvalidOperationException($"Editor il2cpp path not found: {editorIl2cppPath}");
             }
 
-            if (!Directory.Exists(CommonDirs.ZtsRuntimePathInPackage))
+            if (!Directory.Exists(CommonDirs.ZentsRuntimePathInPackage))
             {
                 throw new InvalidOperationException(
-                    $"zts-runtime missing: {CommonDirs.ZtsRuntimePathInPackage}");
+                    $"zents-runtime missing: {CommonDirs.ZentsRuntimePathInPackage}");
             }
 
             QuickJsVersionInfo qjsInfo = QuickJsVersionUtil.FromVendoredIl2CppTree();
@@ -137,7 +137,7 @@ namespace ZTS
             {
                 Settings.Instance.quickjsVersionId = qjsInfo.Id;
                 Settings.Save();
-                Debug.Log($"[ZTS] Settings.quickjsVersionId synced to vendored {qjsInfo.Id}");
+                Debug.Log($"[ZenTS] Settings.quickjsVersionId synced to vendored {qjsInfo.Id}");
             }
 
             WarnIfEditorPluginMissing();
@@ -171,30 +171,30 @@ namespace ZTS
             {
                 string series = UnityIl2CppPatchUtil.GetSeriesKey(Application.unityVersion);
                 throw new InvalidOperationException(
-                    $"[ZTS] No libil2cpp patch for Unity {Application.unityVersion}. "
+                    $"[ZenTS] No libil2cpp patch for Unity {Application.unityVersion}. "
                     + $"Expected a floor patch under "
                     + Path.Combine(CommonDirs.Libil2cppPatchesPathInPackage, series ?? "?"));
             }
 
-            Debug.Log($"[ZTS] Applying libil2cpp patch {il2cppPatchKey}: {il2cppPatchFile}");
+            Debug.Log($"[ZenTS] Applying libil2cpp patch {il2cppPatchKey}: {il2cppPatchFile}");
             PatchApplier.Apply(il2cppPatchFile, CommonDirs.LocalIl2CppPath, stripComponents: 1);
 
-            DirectoryUtil.CopyDir(CommonDirs.ZtsRuntimePathInPackage, CommonDirs.LocalZtsPath, true);
+            DirectoryUtil.CopyDir(CommonDirs.ZentsRuntimePathInPackage, CommonDirs.LocalZentsPath, true);
 
             const string quickjsSourceKey = "vendored";
             InstallQuickJsSources(qjsInfo);
 
             string defines = ApplyScriptingDefines();
-            ZTSConfWriter.WriteLocal(qjsInfo, Application.unityVersion);
+            ZenTSConfWriter.WriteLocal(qjsInfo, Application.unityVersion);
             EnsureMinimalGeneratedStubs();
             try
             {
-                ZTS.Editor.XmlBindingsGenerate.Generate();
+                ZenTS.Editor.XmlBindingsGenerate.Generate();
             }
             catch (Exception ex)
             {
                 Debug.LogWarning(
-                    "[ZTS] XmlBindingsGenerate after Install failed (stubs remain until Generate Xml Bindings):\n"
+                    "[ZenTS] XmlBindingsGenerate after Install failed (stubs remain until Generate Xml Bindings):\n"
                     + ex.Message);
             }
             ValidateLocalTree();
@@ -214,18 +214,18 @@ namespace ZTS
 
             if (!HasInstalledToLocal())
             {
-                throw new InvalidOperationException("[ZTS] Installation failed: local tree incomplete.");
+                throw new InvalidOperationException("[ZenTS] Installation failed: local tree incomplete.");
             }
 
             RequiresEditorRestart = true;
             Debug.Log(
-                $"[ZTS] Install succeeded. unity={Application.unityVersion} quickjs={qjsInfo.Id} "
+                $"[ZenTS] Install succeeded. unity={Application.unityVersion} quickjs={qjsInfo.Id} "
                 + $"libil2cppPatch={il2cppPatchKey} quickjsSource={quickjsSourceKey} defines={defines}. "
                 + "Restart the Unity Editor if scripting defines changed.");
         }
 
         /// <summary>
-        /// Copy vendored <c>ZTS~/quickjs-il2cpp</c> as-is. No Install-time QuickJS patches.
+        /// Copy vendored <c>ZenTS~/quickjs-il2cpp</c> as-is. No Install-time QuickJS patches.
         /// </summary>
         private static void InstallQuickJsSources(QuickJsVersionInfo qjsInfo)
         {
@@ -233,7 +233,7 @@ namespace ZTS
             string dest = CommonDirs.LocalQuickJsSrcPath;
             if (!Directory.Exists(src))
             {
-                throw new InvalidOperationException($"[ZTS] Vendored QuickJS missing: {src}");
+                throw new InvalidOperationException($"[ZenTS] Vendored QuickJS missing: {src}");
             }
 
             DirectoryUtil.CopyDir(src, dest, true);
@@ -259,46 +259,46 @@ namespace ZTS
             }
 
             if (!File.Exists(Path.Combine(dest, "quickjs.c"))
-                || !File.Exists(Path.Combine(dest, "zts_qjs_std_stubs.c")))
+                || !File.Exists(Path.Combine(dest, "zents_qjs_std_stubs.c")))
             {
                 throw new InvalidOperationException(
-                    "[ZTS] Vendored QuickJS incomplete after copy (need quickjs.c + zts_qjs_std_stubs.c).");
+                    "[ZenTS] Vendored QuickJS incomplete after copy (need quickjs.c + zents_qjs_std_stubs.c).");
             }
 
-            Debug.Log($"[ZTS] Installed vendored QuickJS {qjsInfo.Id} ? {dest}");
+            Debug.Log($"[ZenTS] Installed vendored QuickJS {qjsInfo.Id} ? {dest}");
         }
 
         private static void EnsureMinimalGeneratedStubs()
         {
-            string dir = CommonDirs.GeneratedZtsPath;
+            string dir = CommonDirs.GeneratedZentsPath;
             Directory.CreateDirectory(dir);
 
             WriteIfMissing(Path.Combine(dir, "BuiltinScripts.inc"),
                 "/* M0 stub � Generate/All will replace. */\n");
             WriteIfMissing(Path.Combine(dir, "MethodBridgeStub.h"),
-                "#pragma once\nnamespace zts { void MethodBridge_Initialize(); }\n");
+                "#pragma once\nnamespace zents { void MethodBridge_Initialize(); }\n");
             WriteIfMissing(Path.Combine(dir, "MethodBridgeStub.cpp"),
-                "#include \"MethodBridgeStub.h\"\nnamespace zts { void MethodBridge_Initialize() {} }\n");
+                "#include \"MethodBridgeStub.h\"\nnamespace zents { void MethodBridge_Initialize() {} }\n");
             WriteIfMissing(Path.Combine(dir, "PropertyBridgeStub.h"),
-                "#pragma once\nnamespace zts { void PropertyBridge_Initialize(); }\n");
+                "#pragma once\nnamespace zents { void PropertyBridge_Initialize(); }\n");
             WriteIfMissing(Path.Combine(dir, "PropertyBridgeStub.cpp"),
-                "#include \"PropertyBridgeStub.h\"\nnamespace zts { void PropertyBridge_Initialize() {} }\n");
+                "#include \"PropertyBridgeStub.h\"\nnamespace zents { void PropertyBridge_Initialize() {} }\n");
             WriteIfMissing(Path.Combine(dir, "DelegateBridgeStub.h"),
-                "#pragma once\nnamespace zts { void DelegateBridge_Initialize(); }\n");
+                "#pragma once\nnamespace zents { void DelegateBridge_Initialize(); }\n");
             WriteIfMissing(Path.Combine(dir, "DelegateBridgeStub.cpp"),
-                "#include \"DelegateBridgeStub.h\"\nnamespace zts { void DelegateBridge_Initialize() {} }\n");
+                "#include \"DelegateBridgeStub.h\"\nnamespace zents { void DelegateBridge_Initialize() {} }\n");
             WriteIfMissing(Path.Combine(dir, "MarshalBindings.h"),
-                "// Generated by MarshalAsCodegen. Do not edit.\n#pragma once\n\n#define ZTS_HAS_MARSHAL_BINDINGS 1\n\nnamespace zts\n{\n    void RegisterMarshalBindingTables();\n}\n");
+                "// Generated by MarshalAsCodegen. Do not edit.\n#pragma once\n\n#define ZENTS_HAS_MARSHAL_BINDINGS 1\n\nnamespace zents\n{\n    void RegisterMarshalBindingTables();\n}\n");
             WriteIfMissing(Path.Combine(dir, "MarshalBindings.cpp"),
-                "// Generated by MarshalAsCodegen. Do not edit.\n#include \"MarshalBindings.h\"\n#include \"../marshal/MarshalAsXmlTable.h\"\n\nnamespace zts\n{\nnamespace marshal_as_bindings\n{\n} // namespace marshal_as_bindings\n\nvoid RegisterMarshalBindingTables()\n{\n    MarshalAsXmlTable::Clear();\n}\n} // namespace zts\n");
+                "// Generated by MarshalAsCodegen. Do not edit.\n#include \"MarshalBindings.h\"\n#include \"../marshal/MarshalAsXmlTable.h\"\n\nnamespace zents\n{\nnamespace marshal_as_bindings\n{\n} // namespace marshal_as_bindings\n\nvoid RegisterMarshalBindingTables()\n{\n    MarshalAsXmlTable::Clear();\n}\n} // namespace zents\n");
             WriteIfMissing(Path.Combine(dir, "AliasBindings.h"),
-                "#pragma once\nnamespace zts { void RegisterAliasBindingTables(); }\n");
+                "#pragma once\nnamespace zents { void RegisterAliasBindingTables(); }\n");
             WriteIfMissing(Path.Combine(dir, "AliasBindings.cpp"),
-                "#include \"AliasBindings.h\"\nnamespace zts { void RegisterAliasBindingTables() {} }\n");
+                "#include \"AliasBindings.h\"\nnamespace zents { void RegisterAliasBindingTables() {} }\n");
             WriteIfMissing(Path.Combine(dir, "ExtensionBindings.h"),
-                "#pragma once\nnamespace zts { void RegisterExtensionBindingTables(); }\n");
+                "#pragma once\nnamespace zents { void RegisterExtensionBindingTables(); }\n");
             WriteIfMissing(Path.Combine(dir, "ExtensionBindings.cpp"),
-                "#include \"ExtensionBindings.h\"\nnamespace zts { void RegisterExtensionBindingTables() {} }\n");
+                "#include \"ExtensionBindings.h\"\nnamespace zents { void RegisterExtensionBindingTables() {} }\n");
         }
 
         private static void WriteIfMissing(string path, string contents)
@@ -313,22 +313,22 @@ namespace ZTS
         {
             if (!File.Exists(Path.Combine(CommonDirs.LocalQuickJsSrcPath, "quickjs.c")))
             {
-                throw new InvalidOperationException("[ZTS] quickjs.c missing after Install.");
+                throw new InvalidOperationException("[ZenTS] quickjs.c missing after Install.");
             }
 
-            if (!File.Exists(Path.Combine(CommonDirs.LocalQuickJsSrcPath, "zts_qjs_std_stubs.c")))
+            if (!File.Exists(Path.Combine(CommonDirs.LocalQuickJsSrcPath, "zents_qjs_std_stubs.c")))
             {
-                throw new InvalidOperationException("[ZTS] zts_qjs_std_stubs.c missing after Install.");
+                throw new InvalidOperationException("[ZenTS] zents_qjs_std_stubs.c missing after Install.");
             }
 
-            if (!File.Exists(Path.Combine(CommonDirs.LocalZtsPath, "ZTSCommon.h")))
+            if (!File.Exists(Path.Combine(CommonDirs.LocalZentsPath, "ZenTSCommon.h")))
             {
-                throw new InvalidOperationException("[ZTS] ZTSCommon.h missing after Install.");
+                throw new InvalidOperationException("[ZenTS] ZenTSCommon.h missing after Install.");
             }
 
-            if (!File.Exists(ZTSConfWriter.LocalConfPath))
+            if (!File.Exists(ZenTSConfWriter.LocalConfPath))
             {
-                throw new InvalidOperationException("[ZTS] ZTSConf.inc missing after Install.");
+                throw new InvalidOperationException("[ZenTS] ZenTSConf.inc missing after Install.");
             }
         }
 
@@ -343,19 +343,19 @@ namespace ZTS
 
             if (!File.Exists(qjs))
             {
-                Debug.LogWarning($"[ZTS] Editor QuickJS plugin missing (non-fatal for Install): {qjs}");
+                Debug.LogWarning($"[ZenTS] Editor QuickJS plugin missing (non-fatal for Install): {qjs}");
             }
 
-            string gate = Path.Combine(CommonDirs.PackagePluginsRoot, "quickjs", "libzts_mono_gate.dylib");
+            string gate = Path.Combine(CommonDirs.PackagePluginsRoot, "quickjs", "libzents_mono_gate.dylib");
             if (!File.Exists(gate))
             {
-                Debug.LogWarning($"[ZTS] Editor zts_mono_gate missing (non-fatal for Install): {gate}");
+                Debug.LogWarning($"[ZenTS] Editor zents_mono_gate missing (non-fatal for Install): {gate}");
             }
 #else
             string dll = Path.Combine(CommonDirs.PackagePluginsRoot, "quickjs", "win32-x64", "quickjs.dll");
             if (!File.Exists(dll))
             {
-                Debug.LogWarning($"[ZTS] Editor QuickJS plugin missing (non-fatal for Install): {dll}");
+                Debug.LogWarning($"[ZenTS] Editor QuickJS plugin missing (non-fatal for Install): {dll}");
             }
 #endif
         }
@@ -370,7 +370,7 @@ namespace ZTS
                 NamedBuildTarget.WebGL,
             };
 
-            const string define = "ZTS_QUICKJS";
+            const string define = "ZENTS_QUICKJS";
             foreach (NamedBuildTarget t in targets)
             {
                 try
@@ -379,10 +379,10 @@ namespace ZTS
                     var parts = new HashSet<string>(
                         current.Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries),
                         StringComparer.Ordinal);
-                    foreach (string p in parts.Where(x => s_ztsDefinePrefixes.Any(pref => x.StartsWith(pref, StringComparison.Ordinal))).ToList())
+                    foreach (string p in parts.Where(x => s_zentsDefinePrefixes.Any(pref => x.StartsWith(pref, StringComparison.Ordinal))).ToList())
                     {
-                        // keep ZTS_QUICKJS; strip version macros we don't use yet
-                        if (p != "ZTS_QUICKJS")
+                        // keep ZENTS_QUICKJS; strip version macros we don't use yet
+                        if (p != "ZENTS_QUICKJS")
                         {
                             parts.Remove(p);
                         }
@@ -393,7 +393,7 @@ namespace ZTS
                 }
                 catch (Exception ex)
                 {
-                    Debug.LogWarning($"[ZTS] Skip scripting defines for {t}: {ex.Message}");
+                    Debug.LogWarning($"[ZenTS] Skip scripting defines for {t}: {ex.Message}");
                 }
             }
 
@@ -402,7 +402,7 @@ namespace ZTS
 
         private static string ComputePackageContentStamp()
         {
-            string runtime = CommonDirs.ZtsRuntimePathInPackage;
+            string runtime = CommonDirs.ZentsRuntimePathInPackage;
             string patches = CommonDirs.Libil2cppPatchesPathInPackage;
             string quickjs = CommonDirs.QuickJsIl2CppPathInPackage;
             long max = 0;

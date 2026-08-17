@@ -1,0 +1,19 @@
+{
+    "name": "ZenTS.Editor",
+    "rootNamespace": "ZenTS.Editor",
+    "references": [
+        "GUID:b39d01fc50a14249b2a9fa98eff81e8b"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": true,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
+

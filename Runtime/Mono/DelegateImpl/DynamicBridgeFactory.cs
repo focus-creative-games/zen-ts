@@ -24,11 +24,11 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
-using ZTS.Jvm;
-using ZTS.Marshaling;
-using ZTS.Utils;
+using ZenTS.Jvm;
+using ZenTS.Marshaling;
+using ZenTS.Utils;
 
-namespace ZTS.DelegateImpl
+namespace ZenTS.DelegateImpl
 {
     internal static class DynamicBridgeFactory
     {
@@ -63,18 +63,18 @@ namespace ZTS.DelegateImpl
         {
             if (!typeof(MulticastDelegate).IsAssignableFrom(delegateType))
             {
-                throw new JsScriptException($"zts: {delegateType.FullName} is not a delegate type.");
+                throw new JsScriptException($"zents: {delegateType.FullName} is not a delegate type.");
             }
 
             MethodInfo invoke = delegateType.GetMethod("Invoke");
             if (invoke == null)
             {
-                throw new JsScriptException($"zts: delegate {delegateType.FullName} has no Invoke.");
+                throw new JsScriptException($"zents: delegate {delegateType.FullName} has no Invoke.");
             }
 
             if (invoke.GetParameters().Any(p => p.GetCustomAttributes(typeof(ParamArrayAttribute), false).Length > 0))
             {
-                throw new JsScriptException("zts: GetFunction does not support params arrays.");
+                throw new JsScriptException("zents: GetFunction does not support params arrays.");
             }
 
             // Reuse identity so event remove_ with the same JS function matches add_.
@@ -179,7 +179,7 @@ namespace ZTS.DelegateImpl
         {
             if (!env.IsAlive || boundGen != env.Generation)
             {
-                throw new InvalidOperationException("zts: JS runtime was reset; re-bind GetFunction delegates.");
+                throw new InvalidOperationException("zents: JS runtime was reset; re-bind GetFunction delegates.");
             }
 
             IntPtr ctx = env.Context;
@@ -224,7 +224,7 @@ namespace ZTS.DelegateImpl
                     JSValue ex = QuickJsDll.JS_GetException(ctx);
                     string msg = JsEnv.FormatJsValue(ctx, ex);
                     JsValueUtil.Free(ctx, ex);
-                    throw new JsScriptException($"zts: {msg}");
+                    throw new JsScriptException($"zents: {msg}");
                 }
 
                 // Write back by-ref via Opaque

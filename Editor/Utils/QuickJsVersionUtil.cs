@@ -23,13 +23,13 @@ using System.IO;
 using System.Text.RegularExpressions;
 using UnityEngine;
 
-namespace ZTS.Utils
+namespace ZenTS.Utils
 {
     public sealed class QuickJsVersionInfo
     {
         public string Id { get; set; }
         public string VersionDate { get; set; }
-        /// <summary>Il2Cpp vendored tree under ZTS~/quickjs-il2cpp (or legacy cache).</summary>
+        /// <summary>Il2Cpp vendored tree under ZenTS~/quickjs-il2cpp (or legacy cache).</summary>
         public string SourceDir { get; set; }
     }
 
@@ -90,28 +90,28 @@ namespace ZTS.Utils
             if (!Directory.Exists(dir))
             {
                 throw new InvalidOperationException(
-                    $"[ZTS] Vendored QuickJS missing: {dir}");
+                    $"[ZenTS] Vendored QuickJS missing: {dir}");
             }
 
             string versionFile = Path.Combine(dir, "VERSION");
             if (!File.Exists(versionFile))
             {
                 throw new InvalidOperationException(
-                    $"[ZTS] Vendored QuickJS missing VERSION: {versionFile}");
+                    $"[ZenTS] Vendored QuickJS missing VERSION: {versionFile}");
             }
 
             string date = File.ReadAllText(versionFile).Trim();
             if (!Regex.IsMatch(date, @"^\d{4}-\d{2}-\d{2}$"))
             {
                 throw new InvalidOperationException(
-                    $"[ZTS] Invalid VERSION in vendored QuickJS: '{date}'");
+                    $"[ZenTS] Invalid VERSION in vendored QuickJS: '{date}'");
             }
 
             string quickjsC = Path.Combine(dir, "quickjs.c");
             if (!File.Exists(quickjsC))
             {
                 throw new InvalidOperationException(
-                    $"[ZTS] Vendored QuickJS missing quickjs.c: {quickjsC}");
+                    $"[ZenTS] Vendored QuickJS missing quickjs.c: {quickjsC}");
             }
 
             return new QuickJsVersionInfo
@@ -132,27 +132,27 @@ namespace ZTS.Utils
             if (!Directory.Exists(info.SourceDir))
             {
                 throw new InvalidOperationException(
-                    $"[ZTS] QuickJS source missing: {info.SourceDir}");
+                    $"[ZenTS] QuickJS source missing: {info.SourceDir}");
             }
 
             string versionFile = Path.Combine(info.SourceDir, "VERSION");
             if (!File.Exists(versionFile))
             {
                 throw new InvalidOperationException(
-                    $"[ZTS] QuickJS missing VERSION file: {versionFile}");
+                    $"[ZenTS] QuickJS missing VERSION file: {versionFile}");
             }
 
             string actual = File.ReadAllText(versionFile).Trim();
             if (!string.Equals(actual, info.VersionDate, StringComparison.Ordinal))
             {
                 throw new InvalidOperationException(
-                    $"[ZTS] QuickJS VERSION mismatch: expected '{info.VersionDate}', got '{actual}' in {info.SourceDir}");
+                    $"[ZenTS] QuickJS VERSION mismatch: expected '{info.VersionDate}', got '{actual}' in {info.SourceDir}");
             }
 
             if (!File.Exists(Path.Combine(info.SourceDir, "quickjs.c")))
             {
                 throw new InvalidOperationException(
-                    $"[ZTS] QuickJS missing quickjs.c in {info.SourceDir}");
+                    $"[ZenTS] QuickJS missing quickjs.c in {info.SourceDir}");
             }
         }
     }

@@ -21,7 +21,7 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace ZTS.CppCodeGen
+namespace ZenTS.CppCodeGen
 {
     public class CodeWriter
     {

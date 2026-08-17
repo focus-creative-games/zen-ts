@@ -22,10 +22,10 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Reflection;
-using ZTS.Jvm;
-using ZTS.Mt;
+using ZenTS.Jvm;
+using ZenTS.Mt;
 
-namespace ZTS.Marshaling
+namespace ZenTS.Marshaling
 {
     /// <summary>
     /// Typed Push/Pop with undefined≠null and default marshal matrix.
@@ -56,7 +56,7 @@ namespace ZTS.Marshaling
                         return BytesMarshal.Push(ctx, bytes);
                     }
 
-                    throw new JsScriptException("zts: [JsMarshalAs(Bytes)] push requires byte[].");
+                    throw new JsScriptException("zents: [JsMarshalAs(Bytes)] push requires byte[].");
                 }
 
                 if (marshalAs.JsMarshalType == JsMarshalType.Table ||
@@ -132,11 +132,11 @@ namespace ZTS.Marshaling
                 case TypeCode.Double:
                     return JsValueUtil.NewFloat64(Convert.ToDouble(value, CultureInfo.InvariantCulture));
                 case TypeCode.Decimal:
-                    throw new JsScriptException("zts: System.Decimal marshal is not supported.");
+                    throw new JsScriptException("zents: System.Decimal marshal is not supported.");
                 case TypeCode.String:
                     return QuickJsDll.NewString(ctx, (string)value);
                 case TypeCode.DateTime:
-                    throw new JsScriptException("zts: System.DateTime marshal is not supported.");
+                    throw new JsScriptException("zents: System.DateTime marshal is not supported.");
             }
 
             if (underlying == typeof(IntPtr))
@@ -161,7 +161,7 @@ namespace ZTS.Marshaling
                 return JsValueUtil.NewFloat64(bits);
             }
 
-            // Spec: T[] / arrays push as ByObj exotic (not JS Array). Use zts.to_array to convert.
+            // Spec: T[] / arrays push as ByObj exotic (not JS Array). Use zents.to_array to convert.
             if (value is Array && !(value is string))
             {
                 Type arrView = underlying.IsArray ? underlying : runtimeType;
@@ -225,7 +225,7 @@ namespace ZTS.Marshaling
                         return BytesMarshal.Pop(ctx, jsValue);
                     }
 
-                    throw new JsScriptException("zts: [JsMarshalAs(Bytes)] pop requires byte[].");
+                    throw new JsScriptException("zents: [JsMarshalAs(Bytes)] pop requires byte[].");
                 }
             }
 
@@ -241,7 +241,7 @@ namespace ZTS.Marshaling
                 if (nullable && !expectedType.IsValueType)
                 {
                     // Optional / missing — treat as error for required ref unless OptionalAttribute (v1: throw)
-                    throw new JsScriptException($"zts: undefined is not assignable to {expectedType.FullName} (use null for CLR null).");
+                    throw new JsScriptException($"zents: undefined is not assignable to {expectedType.FullName} (use null for CLR null).");
                 }
 
                 if (Nullable.GetUnderlyingType(expectedType) != null)
@@ -249,14 +249,14 @@ namespace ZTS.Marshaling
                     return null;
                 }
 
-                throw new JsScriptException($"zts: undefined is not assignable to {expectedType.FullName}.");
+                throw new JsScriptException($"zents: undefined is not assignable to {expectedType.FullName}.");
             }
 
             if (tag == JsValueUtil.TagNull)
             {
                 if (!nullable && expectedType.IsValueType && Nullable.GetUnderlyingType(expectedType) == null)
                 {
-                    throw new JsScriptException($"zts: null is not assignable to {expectedType.FullName}.");
+                    throw new JsScriptException($"zents: null is not assignable to {expectedType.FullName}.");
                 }
 
                 return null;
@@ -301,7 +301,7 @@ namespace ZTS.Marshaling
                     return CoerceArray((object[])arr, underlying.GetElementType());
                 }
 
-                throw new JsScriptException($"zts: expected CLR array or JS Array for {underlying.FullName}.");
+                throw new JsScriptException($"zents: expected CLR array or JS Array for {underlying.FullName}.");
             }
 
             if (underlying.IsValueType && !underlying.IsPrimitive && !underlying.IsEnum)
@@ -323,7 +323,7 @@ namespace ZTS.Marshaling
             object raw = PrimitiveMarshal.Pop(ctx, jsValue);
             if (ReferenceEquals(raw, DBNull.Value))
             {
-                throw new JsScriptException($"zts: undefined is not assignable to {expectedType.FullName}.");
+                throw new JsScriptException($"zents: undefined is not assignable to {expectedType.FullName}.");
             }
 
             return Coerce(raw, underlying);
@@ -334,7 +334,7 @@ namespace ZTS.Marshaling
             int tag = JsValueUtil.GetNormTag(jsValue);
             if (tag == JsValueUtil.TagUndefined)
             {
-                throw new JsScriptException("zts: undefined is not assignable to System.Object (use null for CLR null).");
+                throw new JsScriptException("zents: undefined is not assignable to System.Object (use null for CLR null).");
             }
 
             if (tag == JsValueUtil.TagNull)
@@ -347,7 +347,7 @@ namespace ZTS.Marshaling
                 return obj;
             }
 
-            throw new JsScriptException("zts: [JsMarshalAs(Object)] requires a CLR object handle.");
+            throw new JsScriptException("zents: [JsMarshalAs(Object)] requires a CLR object handle.");
         }
 
         private static object Coerce(object value, Type target)
@@ -393,7 +393,7 @@ namespace ZTS.Marshaling
             }
             catch (Exception ex)
             {
-                throw new JsScriptException($"zts: cannot convert {value.GetType().FullName} to {target.FullName}: {ex.Message}");
+                throw new JsScriptException($"zents: cannot convert {value.GetType().FullName} to {target.FullName}: {ex.Message}");
             }
         }
 

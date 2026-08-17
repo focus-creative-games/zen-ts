@@ -22,7 +22,7 @@ using System;
 using System.Collections.Generic;
 using System.Xml;
 
-namespace ZTS
+namespace ZenTS
 {
     /// <summary>
     /// Loads and merges JsExtensions XML files (spec 13-EXTENSION-METHODS §2.2).
@@ -64,21 +64,21 @@ namespace ZTS
             catch (Exception ex)
             {
                 throw new JsExtensionConfigurationException(
-                    "[ZTS] Failed to parse JsExtensions XML '" + filePath + "': " + ex.Message, ex);
+                    "[ZenTS] Failed to parse JsExtensions XML '" + filePath + "': " + ex.Message, ex);
             }
 
             XmlElement root = doc.DocumentElement;
             if (root == null || !string.Equals(root.Name, "JsExtensions", StringComparison.Ordinal))
             {
                 throw new JsExtensionConfigurationException(
-                    "[ZTS] JsExtensions XML root must be <JsExtensions>: " + filePath);
+                    "[ZenTS] JsExtensions XML root must be <JsExtensions>: " + filePath);
             }
 
             string version = root.GetAttribute("version");
             if (!string.Equals(version, "1", StringComparison.Ordinal))
             {
                 throw new JsExtensionConfigurationException(
-                    "[ZTS] Unsupported JsExtensions XML version '" + version + "' in " + filePath);
+                    "[ZenTS] Unsupported JsExtensions XML version '" + version + "' in " + filePath);
             }
 
             foreach (XmlNode child in root.ChildNodes)
@@ -91,7 +91,7 @@ namespace ZTS
                 if (!string.Equals(assemblyEl.Name, "Assembly", StringComparison.Ordinal))
                 {
                     throw new JsExtensionConfigurationException(
-                        "[ZTS] Unexpected element <" + assemblyEl.Name + "> under JsExtensions in " + filePath);
+                        "[ZenTS] Unexpected element <" + assemblyEl.Name + "> under JsExtensions in " + filePath);
                 }
 
                 string assemblyName = RequireAttr(assemblyEl, "name", filePath);
@@ -105,7 +105,7 @@ namespace ZTS
                     if (!string.Equals(typeEl.Name, "Type", StringComparison.Ordinal))
                     {
                         throw new JsExtensionConfigurationException(
-                            "[ZTS] Unexpected element <" + typeEl.Name + "> under Assembly in " + filePath);
+                            "[ZenTS] Unexpected element <" + typeEl.Name + "> under Assembly in " + filePath);
                     }
 
                     ParseType(filePath, assemblyName, typeEl, rules, seen);
@@ -131,7 +131,7 @@ namespace ZTS
                 if (!string.Equals(el.Name, "Extension", StringComparison.Ordinal))
                 {
                     throw new JsExtensionConfigurationException(
-                        "[ZTS] Unexpected element <" + el.Name + "> under Type in JsExtensions XML " + filePath
+                        "[ZenTS] Unexpected element <" + el.Name + "> under Type in JsExtensions XML " + filePath
                         + "; only <Extension assembly=\"...\" fullName=\"...\"> is allowed.");
                 }
 
@@ -143,7 +143,7 @@ namespace ZTS
                     if (nested is XmlElement nestedEl)
                     {
                         throw new JsExtensionConfigurationException(
-                            "[ZTS] JsExtensions Extension must not contain child elements (found <"
+                            "[ZenTS] JsExtensions Extension must not contain child elements (found <"
                             + nestedEl.Name + ">) in " + filePath);
                     }
                 }
@@ -161,7 +161,7 @@ namespace ZTS
                 if (seen.TryGetValue(key, out string previousPath))
                 {
                     throw new JsExtensionConfigurationException(
-                        "[ZTS] Duplicate JsExtensions XML rule for " + key
+                        "[ZenTS] Duplicate JsExtensions XML rule for " + key
                         + "\n  first: " + previousPath
                         + "\n  again: " + filePath);
                 }
@@ -176,7 +176,7 @@ namespace ZTS
             if (!el.HasAttribute(attrName) || string.IsNullOrWhiteSpace(el.GetAttribute(attrName)))
             {
                 throw new JsExtensionConfigurationException(
-                    "[ZTS] Missing or empty @" + attrName + " on <" + el.Name + "> in " + filePath);
+                    "[ZenTS] Missing or empty @" + attrName + " on <" + el.Name + "> in " + filePath);
             }
 
             return el.GetAttribute(attrName).Trim();

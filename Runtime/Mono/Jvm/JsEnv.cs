@@ -22,10 +22,10 @@ using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Text;
-using ZTS.Jvm;
-using ZTS.Utils;
+using ZenTS.Jvm;
+using ZenTS.Utils;
 
-namespace ZTS
+namespace ZenTS
 {
     /// <summary>
     /// QuickJS runtime wrapper for Editor Mono backend.
@@ -59,7 +59,7 @@ namespace ZTS
             _runtime = QuickJsDll.JS_NewRuntime();
             if (_runtime == IntPtr.Zero)
             {
-                throw new JsScriptException("zts: JS_NewRuntime failed.");
+                throw new JsScriptException("zents: JS_NewRuntime failed.");
             }
 
             QuickJsDll.js_std_init_handlers(_runtime);
@@ -69,7 +69,7 @@ namespace ZTS
             {
                 QuickJsDll.JS_FreeRuntime(_runtime);
                 _runtime = IntPtr.Zero;
-                throw new JsScriptException("zts: JS_NewContext failed.");
+                throw new JsScriptException("zents: JS_NewContext failed.");
             }
 
             QuickJsDll.JS_SetContextOpaque(_context, GCHandle.ToIntPtr(GCHandle.Alloc(this)));
@@ -152,7 +152,7 @@ namespace ZTS
                 int state = QuickJsDll.JS_PromiseState(_context, promise);
                 if (state == QuickJsDll.JsPromisePending)
                 {
-                    throw new JsScriptException($"zts: module '{moduleName}' promise still pending after draining jobs.");
+                    throw new JsScriptException($"zents: module '{moduleName}' promise still pending after draining jobs.");
                 }
 
                 JSValue ns = QuickJsDll.JS_PromiseResult(_context, promise);
@@ -181,7 +181,7 @@ namespace ZTS
                     }
 
                     JsValueUtil.Free(_context, ns);
-                    throw new JsScriptException($"zts: module '{moduleName}' rejected (tag={tag}): {message}");
+                    throw new JsScriptException($"zents: module '{moduleName}' rejected (tag={tag}): {message}");
                 }
 
                 if (JsValueUtil.IsException(ns))
@@ -219,7 +219,7 @@ namespace ZTS
                     JSValue ex = QuickJsDll.JS_GetException(errCtx);
                     string message = FormatJsValue(errCtx, ex);
                     JsValueUtil.Free(errCtx, ex);
-                    throw new JsScriptException($"zts: pending job failed: {message}");
+                    throw new JsScriptException($"zents: pending job failed: {message}");
                 }
             }
         }
@@ -238,7 +238,7 @@ namespace ZTS
                 if (QuickJsDll.JS_IsFunction(_context, export) == 0)
                 {
                     JsValueUtil.Free(_context, export);
-                    throw new JsScriptException($"zts: export '{moduleName}.{exportName}' is not callable.");
+                    throw new JsScriptException($"zents: export '{moduleName}.{exportName}' is not callable.");
                 }
 
                 return export;
@@ -254,7 +254,7 @@ namespace ZTS
             JSValue ex = QuickJsDll.JS_GetException(_context);
             string message = FormatJsValue(_context, ex);
             JsValueUtil.Free(_context, ex);
-            throw new JsScriptException($"zts: {message}");
+            throw new JsScriptException($"zents: {message}");
         }
 
         internal static string FormatJsValue(IntPtr ctx, JSValue val)

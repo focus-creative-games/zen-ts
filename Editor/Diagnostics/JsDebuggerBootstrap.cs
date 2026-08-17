@@ -23,17 +23,17 @@ using System.Collections.Generic;
 using System.IO;
 using UnityEditor;
 using UnityEngine;
-using ZTS.Editor.Typescript;
+using ZenTS.Editor.Typescript;
 
-namespace ZTS.Editor.Diagnostics
+namespace ZenTS.Editor.Diagnostics
 {
     /// <summary>
-    /// Reflects an <see cref="IZtsJsDebuggerHost"/> from Settings and installs it
+    /// Reflects an <see cref="IZentsJsDebuggerHost"/> from Settings and installs it
     /// after JsMonoAppDomain has finished core init. Missing host → log and skip.
     /// </summary>
     public static class JsDebuggerBootstrap
     {
-        private static IZtsJsDebuggerHost s_active;
+        private static IZentsJsDebuggerHost s_active;
         private static bool s_tickHooked;
 
         public static void TryStart(IntPtr runtime, IntPtr context)
@@ -50,7 +50,7 @@ namespace ZTS.Editor.Diagnostics
             if (string.IsNullOrEmpty(typeName))
             {
                 Debug.LogError(
-                    "[ZTS] enableJsDebugger is on but debuggerHostTypeName is empty. Skipping debugger.");
+                    "[ZenTS] enableJsDebugger is on but debuggerHostTypeName is empty. Skipping debugger.");
                 return;
             }
 
@@ -58,25 +58,25 @@ namespace ZTS.Editor.Diagnostics
             if (hostType == null)
             {
                 Debug.LogError(
-                    $"[ZTS] debugger host type not found: '{typeName}'. Skipping debugger.");
+                    $"[ZenTS] debugger host type not found: '{typeName}'. Skipping debugger.");
                 return;
             }
 
-            if (!typeof(IZtsJsDebuggerHost).IsAssignableFrom(hostType))
+            if (!typeof(IZentsJsDebuggerHost).IsAssignableFrom(hostType))
             {
                 Debug.LogError(
-                    $"[ZTS] '{typeName}' does not implement IZtsJsDebuggerHost. Skipping debugger.");
+                    $"[ZenTS] '{typeName}' does not implement IZentsJsDebuggerHost. Skipping debugger.");
                 return;
             }
 
-            IZtsJsDebuggerHost host;
+            IZentsJsDebuggerHost host;
             try
             {
-                host = (IZtsJsDebuggerHost)Activator.CreateInstance(hostType);
+                host = (IZentsJsDebuggerHost)Activator.CreateInstance(hostType);
             }
             catch (Exception ex)
             {
-                Debug.LogError("[ZTS] failed to create debugger host: " + ex.Message);
+                Debug.LogError("[ZenTS] failed to create debugger host: " + ex.Message);
                 return;
             }
 
@@ -89,7 +89,7 @@ namespace ZTS.Editor.Diagnostics
             }
             catch (Exception ex)
             {
-                Debug.LogError("[ZTS] debugger host Install failed: " + ex.Message);
+                Debug.LogError("[ZenTS] debugger host Install failed: " + ex.Message);
                 return;
             }
 
@@ -110,7 +110,7 @@ namespace ZTS.Editor.Diagnostics
             }
             catch (Exception ex)
             {
-                Debug.LogWarning("[ZTS] debugger host Uninstall: " + ex.Message);
+                Debug.LogWarning("[ZenTS] debugger host Uninstall: " + ex.Message);
             }
 
             s_active = null;
@@ -135,7 +135,7 @@ namespace ZTS.Editor.Diagnostics
             }
             catch (Exception ex)
             {
-                Debug.LogWarning("[ZTS] debugger host Tick: " + ex.Message);
+                Debug.LogWarning("[ZenTS] debugger host Tick: " + ex.Message);
             }
         }
 

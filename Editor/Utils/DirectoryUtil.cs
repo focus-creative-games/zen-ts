@@ -22,7 +22,7 @@ using System;
 using System.IO;
 using System.Threading;
 
-namespace ZTS.Utils
+namespace ZenTS.Utils
 {
     public static class DirectoryUtil
     {
@@ -59,7 +59,7 @@ namespace ZTS.Utils
                 }
                 catch (Exception e)
                 {
-                    UnityEngine.Debug.LogError($"[ZTS] RemoveDir:{dir} with exception:{e}. try count:{i}");
+                    UnityEngine.Debug.LogError($"[ZenTS] RemoveDir:{dir} with exception:{e}. try count:{i}");
                     Thread.Sleep(100);
                 }
             }

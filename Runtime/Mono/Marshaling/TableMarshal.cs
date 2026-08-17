@@ -20,9 +20,9 @@
 
 using System;
 using System.Reflection;
-using ZTS.Jvm;
+using ZenTS.Jvm;
 
-namespace ZTS.Marshaling
+namespace ZenTS.Marshaling
 {
     internal static class TableMarshal
     {
@@ -59,7 +59,7 @@ namespace ZTS.Marshaling
         {
             if (marshalAs == null || marshalAs.Members == null || marshalAs.Members.Length == 0)
             {
-                throw new JsScriptException("zts: Table/UnpackedValues push requires Members.");
+                throw new JsScriptException("zents: Table/UnpackedValues push requires Members.");
             }
 
             if (value == null)
@@ -78,7 +78,7 @@ namespace ZTS.Marshaling
                 return PushUnpacked(ctx, value, underlying, marshalAs.Members);
             }
 
-            throw new JsScriptException($"zts: unsupported TableMarshal push kind {marshalAs.JsMarshalType}.");
+            throw new JsScriptException($"zents: unsupported TableMarshal push kind {marshalAs.JsMarshalType}.");
         }
 
         private static JSValue PushTable(IntPtr ctx, object value, Type underlying, string[] members)
@@ -104,7 +104,7 @@ namespace ZTS.Marshaling
                 string spec = members[i];
                 if (spec != null && spec.EndsWith("?", StringComparison.Ordinal))
                 {
-                    throw new JsScriptException("zts: UnpackedValues does not support optional member '?'.");
+                    throw new JsScriptException("zents: UnpackedValues does not support optional member '?'.");
                 }
 
                 MemberAccessor accessor = ResolveMember(underlying, spec);
@@ -129,20 +129,20 @@ namespace ZTS.Marshaling
                 marshalAs.Members == null ||
                 marshalAs.Members.Length == 0)
             {
-                throw new JsScriptException("zts: UnpackedValues requires Members.");
+                throw new JsScriptException("zents: UnpackedValues requires Members.");
             }
 
             string[] members = marshalAs.Members;
             if (jsStartIndex + members.Length > argc)
             {
                 throw new JsScriptException(
-                    $"zts: UnpackedValues requires {members.Length} argument(s) for {expectedType.FullName}.");
+                    $"zents: UnpackedValues requires {members.Length} argument(s) for {expectedType.FullName}.");
             }
 
             Type underlying = Nullable.GetUnderlyingType(expectedType) ?? expectedType;
             if (!underlying.IsValueType || underlying.IsPrimitive || underlying.IsEnum)
             {
-                throw new JsScriptException($"zts: UnpackedValues requires struct type, not {expectedType.FullName}.");
+                throw new JsScriptException($"zents: UnpackedValues requires struct type, not {expectedType.FullName}.");
             }
 
             object boxed = Activator.CreateInstance(underlying);
@@ -151,10 +151,10 @@ namespace ZTS.Marshaling
                 string spec = members[i];
                 if (spec != null && spec.EndsWith("?", StringComparison.Ordinal))
                 {
-                    throw new JsScriptException("zts: UnpackedValues does not support optional member '?'.");
+                    throw new JsScriptException("zents: UnpackedValues does not support optional member '?'.");
                 }
 
-                string memberName = spec ?? throw new JsScriptException("zts: UnpackedValues member name is null.");
+                string memberName = spec ?? throw new JsScriptException("zents: UnpackedValues member name is null.");
                 MemberAccessor accessor = ResolveMember(underlying, memberName);
                 JSValue jsArg = ArgReader.Read(argvPtr, jsStartIndex + i);
                 object value = TypedMarshal.Pop(ctx, jsArg, accessor.MemberType);
@@ -179,7 +179,7 @@ namespace ZTS.Marshaling
         {
             if (members == null || members.Length == 0)
             {
-                throw new JsScriptException("zts: Table marshal requires Members.");
+                throw new JsScriptException("zents: Table marshal requires Members.");
             }
 
             Type nullableUnderlying = Nullable.GetUnderlyingType(expectedType);
@@ -188,7 +188,7 @@ namespace ZTS.Marshaling
 
             if (!underlying.IsValueType || underlying.IsPrimitive || underlying.IsEnum)
             {
-                throw new JsScriptException($"zts: Table marshal requires struct type, not {expectedType.FullName}.");
+                throw new JsScriptException($"zents: Table marshal requires struct type, not {expectedType.FullName}.");
             }
 
             int tag = JsValueUtil.GetNormTag(jsValue);
@@ -199,12 +199,12 @@ namespace ZTS.Marshaling
                     return null;
                 }
 
-                throw new JsScriptException($"zts: null is not assignable to {expectedType.FullName}.");
+                throw new JsScriptException($"zents: null is not assignable to {expectedType.FullName}.");
             }
 
             if (tag != JsValueUtil.TagObject)
             {
-                throw new JsScriptException($"zts: Table marshal requires plain object for {expectedType.FullName}.");
+                throw new JsScriptException($"zents: Table marshal requires plain object for {expectedType.FullName}.");
             }
 
             RejectClrExotic(ctx, jsValue, expectedType);
@@ -226,7 +226,7 @@ namespace ZTS.Marshaling
                         }
 
                         throw new JsScriptException(
-                            $"zts: Table marshal missing required member '{memberName}' for {expectedType.FullName}.");
+                            $"zents: Table marshal missing required member '{memberName}' for {expectedType.FullName}.");
                     }
 
                     object value = TypedMarshal.Pop(ctx, propVal, accessor.MemberType);
@@ -243,13 +243,13 @@ namespace ZTS.Marshaling
 
         private static void RejectClrExotic(IntPtr ctx, JSValue jsValue, Type expectedType)
         {
-            JSValue ptrFlag = QuickJsDll.JS_GetPropertyStr(ctx, jsValue, "__zts_pointer");
+            JSValue ptrFlag = QuickJsDll.JS_GetPropertyStr(ctx, jsValue, "__zents_pointer");
             try
             {
                 if (JsValueUtil.GetNormTag(ptrFlag) == JsValueUtil.TagBool && ptrFlag.UInt64 != 0)
                 {
                     throw new JsScriptException(
-                        $"zts: Table marshal requires plain object for {expectedType.FullName}, not Pointer handle.");
+                        $"zents: Table marshal requires plain object for {expectedType.FullName}, not Pointer handle.");
                 }
             }
             finally
@@ -257,13 +257,13 @@ namespace ZTS.Marshaling
                 JsValueUtil.Free(ctx, ptrFlag);
             }
 
-            JSValue idVal = QuickJsDll.JS_GetPropertyStr(ctx, jsValue, "__zts_id");
+            JSValue idVal = QuickJsDll.JS_GetPropertyStr(ctx, jsValue, "__zents_id");
             try
             {
                 if (JsValueUtil.GetNormTag(idVal) == JsValueUtil.TagInt)
                 {
                     throw new JsScriptException(
-                        $"zts: Table marshal requires plain object for {expectedType.FullName}, not CLR handle.");
+                        $"zents: Table marshal requires plain object for {expectedType.FullName}, not CLR handle.");
                 }
             }
             finally
@@ -276,7 +276,7 @@ namespace ZTS.Marshaling
         {
             if (string.IsNullOrEmpty(spec))
             {
-                throw new JsScriptException("zts: Table/UnpackedValues member name is empty.");
+                throw new JsScriptException("zents: Table/UnpackedValues member name is empty.");
             }
 
             if (spec.EndsWith("?", StringComparison.Ordinal))
@@ -307,7 +307,7 @@ namespace ZTS.Marshaling
             }
 
             throw new JsScriptException(
-                $"zts: struct {structType.FullName} has no public field or property '{memberName}'.");
+                $"zents: struct {structType.FullName} has no public field or property '{memberName}'.");
         }
 
         private readonly struct MemberAccessor
@@ -327,7 +327,7 @@ namespace ZTS.Marshaling
             {
                 if (_set == null)
                 {
-                    throw new JsScriptException($"zts: member is read-only.");
+                    throw new JsScriptException($"zents: member is read-only.");
                 }
 
                 _set(target, value);

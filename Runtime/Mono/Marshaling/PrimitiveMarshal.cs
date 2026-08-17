@@ -19,10 +19,10 @@
 // SOFTWARE.
 
 using System;
-using ZTS.Jvm;
-using ZTS.Mt;
+using ZenTS.Jvm;
+using ZenTS.Mt;
 
-namespace ZTS.Marshaling
+namespace ZenTS.Marshaling
 {
     internal static class PrimitiveMarshal
     {
@@ -122,7 +122,7 @@ namespace ZTS.Marshaling
                         }
                     }
 
-                    throw new JsScriptException($"zts: unsupported JS value tag {tag}.");
+                    throw new JsScriptException($"zents: unsupported JS value tag {tag}.");
             }
         }
 
@@ -131,7 +131,7 @@ namespace ZTS.Marshaling
             if (JsValueUtil.GetTag(jsValue) == JsValueUtil.TagBigInt ||
                 JsValueUtil.GetTag(jsValue) == JsValueUtil.TagFirst)
             {
-                throw new JsScriptException("zts: BigInt marshal is not supported.");
+                throw new JsScriptException("zents: BigInt marshal is not supported.");
             }
         }
     }

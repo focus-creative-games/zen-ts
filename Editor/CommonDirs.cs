@@ -21,35 +21,35 @@
 using System.IO;
 using UnityEngine;
 
-namespace ZTS
+namespace ZenTS
 {
     public static class CommonDirs
     {
-        public static string PackageName => "com.code-philosophy.zts";
+        public static string PackageName => "com.code-philosophy.zen-ts";
 
-        public static string InstallRootDir => Path.GetFullPath("Library/ZTS");
+        public static string InstallRootDir => Path.GetFullPath("Library/ZenTS");
 
-        public static string ZtsDataPathInPackage => $"Packages/{PackageName}/ZTS~";
+        public static string ZentsDataPathInPackage => $"Packages/{PackageName}/ZenTS~";
 
-        public static string JsLibPathInPackage => $"{ZtsDataPathInPackage}/jslib";
+        public static string JsLibPathInPackage => $"{ZentsDataPathInPackage}/jslib";
 
         public static string GetJsLibScriptPath(string fileName) =>
             Path.GetFullPath(Path.Combine(JsLibPathInPackage, fileName));
 
-        public static string ZtsRuntimePathInPackage =>
-            Path.GetFullPath(Path.Combine(ZtsDataPathInPackage, "zts-runtime"));
+        public static string ZentsRuntimePathInPackage =>
+            Path.GetFullPath(Path.Combine(ZentsDataPathInPackage, "zents-runtime"));
 
         /// <summary>
         /// Vendored QuickJS sources for Il2Cpp (no Install-time patching).
         /// </summary>
         public static string QuickJsIl2CppPathInPackage =>
-            Path.GetFullPath(Path.Combine(ZtsDataPathInPackage, "quickjs-il2cpp"));
+            Path.GetFullPath(Path.Combine(ZentsDataPathInPackage, "quickjs-il2cpp"));
 
         public static string QuickJsSrcCacheDir =>
             Path.GetFullPath(Path.Combine(InstallRootDir, "QuickJsSrcCache"));
 
         public static string Libil2cppPatchesPathInPackage =>
-            Path.GetFullPath(Path.Combine(ZtsDataPathInPackage, "patches", "libil2cpp"));
+            Path.GetFullPath(Path.Combine(ZentsDataPathInPackage, "patches", "libil2cpp"));
 
         public static string LocalIl2CppDataPath => $"{InstallRootDir}/LocalIl2CppData-{Application.platform}";
 
@@ -59,38 +59,38 @@ namespace ZTS
 
         public static string LocalQuickJsSrcPath => $"{LocalLibil2cppPath}/quickjs";
 
-        public static string LocalZtsPath => Path.Combine(LocalLibil2cppPath, "zts");
+        public static string LocalZentsPath => Path.Combine(LocalLibil2cppPath, "zents");
 
         public static string TypesPathInPackage =>
-            Path.GetFullPath(Path.Combine(ZtsDataPathInPackage, "types"));
+            Path.GetFullPath(Path.Combine(ZentsDataPathInPackage, "types"));
 
         public static string TypesScaffoldPathInPackage =>
             Path.GetFullPath(Path.Combine(TypesPathInPackage, "scaffold"));
 
-        public static string GeneratedZtsPath =>
-            Path.GetFullPath(Path.Combine(LocalZtsPath, "generated"));
+        public static string GeneratedZentsPath =>
+            Path.GetFullPath(Path.Combine(LocalZentsPath, "generated"));
 
-        public static string PackageGeneratedZtsPath =>
-            Path.GetFullPath(Path.Combine(ZtsRuntimePathInPackage, "generated"));
+        public static string PackageGeneratedZentsPath =>
+            Path.GetFullPath(Path.Combine(ZentsRuntimePathInPackage, "generated"));
 
-        public static string BuildWin64GeneratedZtsPath =>
+        public static string BuildWin64GeneratedZentsPath =>
             Path.GetFullPath(Path.Combine(
                 Directory.GetCurrentDirectory(),
                 "Build-Win64",
                 "Il2CppOutputProject",
                 "IL2CPP",
                 "libil2cpp",
-                "zts",
+                "zents",
                 "generated"));
 
-        public static string BuildWin64ZtsPath =>
+        public static string BuildWin64ZentsPath =>
             Path.GetFullPath(Path.Combine(
                 Directory.GetCurrentDirectory(),
                 "Build-Win64",
                 "Il2CppOutputProject",
                 "IL2CPP",
                 "libil2cpp",
-                "zts"));
+                "zents"));
 
         public static string GetManagedStrippedDuplicatePath(UnityEditor.BuildTarget buildTarget) =>
             $"{InstallRootDir}/ManagedStripped/{buildTarget}";

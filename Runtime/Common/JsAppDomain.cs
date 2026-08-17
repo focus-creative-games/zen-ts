@@ -21,11 +21,11 @@
 using System;
 using System.Reflection;
 
-namespace ZTS
+namespace ZenTS
 {
     /// <summary>
     /// Host-facing facade. Concrete work is performed by an <see cref="IJsRuntime"/>
-    /// created on demand from <c>ZTS.Mono</c> (Editor) or <c>ZTS.Il2Cpp</c> (Player).
+    /// created on demand from <c>ZenTS.Mono</c> (Editor) or <c>ZenTS.Il2Cpp</c> (Player).
     /// </summary>
     public static class JsAppDomain
     {
@@ -91,7 +91,7 @@ namespace ZTS
             if (JsModuleSpecifier.IsCsharp(jsModule))
             {
                 throw new JsScriptException(
-                    "zts: GetFunction must not use csharp: type modules; exports are type objects.");
+                    "zents: GetFunction must not use csharp: type modules; exports are type objects.");
             }
 
             TsExportManifest.WarnIfUnknown(jsModule, jsExportName);
@@ -137,11 +137,11 @@ namespace ZTS
             }
 
 #if UNITY_EDITOR
-            const string typeName = "ZTS.JsMonoAppDomain";
-            const string assemblyName = "ZTS.Mono";
+            const string typeName = "ZenTS.JsMonoAppDomain";
+            const string assemblyName = "ZenTS.Mono";
 #else
-            const string typeName = "ZTS.JsIl2CppAppDomain";
-            const string assemblyName = "ZTS.Il2Cpp";
+            const string typeName = "ZenTS.JsIl2CppAppDomain";
+            const string assemblyName = "ZenTS.Il2Cpp";
 #endif
             string hostTypeName = typeName + ", " + assemblyName;
             Type hostType = Type.GetType(hostTypeName);
@@ -166,14 +166,14 @@ namespace ZTS
             if (hostType == null)
             {
                 throw new InvalidOperationException(
-                    $"ZTS backend type not found: '{hostTypeName}'. Ensure the matching package assembly is loaded.");
+                    $"ZenTS backend type not found: '{hostTypeName}'. Ensure the matching package assembly is loaded.");
             }
 
             Type runtimeType = hostType.GetNestedType("Runtime", BindingFlags.NonPublic);
             if (runtimeType == null || !typeof(IJsRuntime).IsAssignableFrom(runtimeType))
             {
                 throw new InvalidOperationException(
-                    $"ZTS backend '{hostTypeName}' is missing a non-public nested Runtime : IJsRuntime.");
+                    $"ZenTS backend '{hostTypeName}' is missing a non-public nested Runtime : IJsRuntime.");
             }
 
             s_runtime = (IJsRuntime)Activator.CreateInstance(runtimeType, nonPublic: true);

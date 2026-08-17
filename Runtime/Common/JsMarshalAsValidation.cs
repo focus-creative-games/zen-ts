@@ -20,7 +20,7 @@
 
 using System;
 
-namespace ZTS
+namespace ZenTS
 {
     /// <summary>
     /// Validates <see cref="JsMarshalAsAttribute"/> combinations (Editor Mono).
@@ -38,7 +38,7 @@ namespace ZTS
             if (kind == JsMarshalType.Bytes && clrType != typeof(byte[]))
             {
                 UnityEngine.Debug.LogWarning(
-                    $"zts: [JsMarshalAs(Bytes)] on {memberName} requires byte[]; falling back to Default.");
+                    $"zents: [JsMarshalAs(Bytes)] on {memberName} requires byte[]; falling back to Default.");
                 return JsMarshalType.Default;
             }
 

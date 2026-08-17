@@ -21,7 +21,7 @@
 using System.IO;
 using UnityEngine;
 
-namespace ZTS.Editor.Typescript
+namespace ZenTS.Editor.Typescript
 {
     internal static class TsProjectPaths
     {
@@ -44,15 +44,15 @@ namespace ZTS.Editor.Typescript
 
         public static string PackageJsonPath => Path.Combine(TsProjectRoot, "package.json");
 
-        public static string StreamingZtsDir =>
-            Path.Combine(Application.dataPath, "StreamingAssets", "ZTS");
+        public static string StreamingZentsDir =>
+            Path.Combine(Application.dataPath, "StreamingAssets", "ZenTS");
 
         /// <summary>
-        /// Android/WebGL TextAsset root: <c>Assets/Resources/ZTS/**/*.js.txt</c>
-        /// loads as <c>Resources.Load("ZTS/…/*.js")</c>.
+        /// Android/WebGL TextAsset root: <c>Assets/Resources/ZenTS/**/*.js.txt</c>
+        /// loads as <c>Resources.Load("ZenTS/…/*.js")</c>.
         /// </summary>
-        public static string ResourcesZtsDir =>
-            Path.Combine(Application.dataPath, "Resources", "ZTS");
+        public static string ResourcesZentsDir =>
+            Path.Combine(Application.dataPath, "Resources", "ZenTS");
 
         public static bool Exists => File.Exists(TsconfigPath) && Directory.Exists(SrcDir);
     }

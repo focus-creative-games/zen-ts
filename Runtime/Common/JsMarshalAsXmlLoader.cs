@@ -22,7 +22,7 @@ using System;
 using System.Collections.Generic;
 using System.Xml;
 
-namespace ZTS
+namespace ZenTS
 {
     /// <summary>
     /// Loads and merges MarshalAs XML files (spec marshal/02-MARSHAL-AS §9).
@@ -62,21 +62,21 @@ namespace ZTS
             catch (Exception ex)
             {
                 throw new JsMarshalAsConfigurationException(
-                    "[ZTS] Failed to parse MarshalAs XML '" + filePath + "': " + ex.Message, ex);
+                    "[ZenTS] Failed to parse MarshalAs XML '" + filePath + "': " + ex.Message, ex);
             }
 
             XmlElement root = doc.DocumentElement;
-            if (root == null || !string.Equals(root.Name, "ZTSMarshalAs", StringComparison.Ordinal))
+            if (root == null || !string.Equals(root.Name, "ZenTSMarshalAs", StringComparison.Ordinal))
             {
                 throw new JsMarshalAsConfigurationException(
-                    "[ZTS] MarshalAs XML root must be <ZTSMarshalAs>: " + filePath);
+                    "[ZenTS] MarshalAs XML root must be <ZenTSMarshalAs>: " + filePath);
             }
 
             string version = root.GetAttribute("version");
             if (!string.Equals(version, "1", StringComparison.Ordinal))
             {
                 throw new JsMarshalAsConfigurationException(
-                    "[ZTS] Unsupported MarshalAs XML version '" + version + "' in " + filePath);
+                    "[ZenTS] Unsupported MarshalAs XML version '" + version + "' in " + filePath);
             }
 
             foreach (XmlNode child in root.ChildNodes)
@@ -89,7 +89,7 @@ namespace ZTS
                 if (!string.Equals(assemblyEl.Name, "Assembly", StringComparison.Ordinal))
                 {
                     throw new JsMarshalAsConfigurationException(
-                        "[ZTS] Unexpected element <" + assemblyEl.Name + "> under ZTSMarshalAs in " + filePath);
+                        "[ZenTS] Unexpected element <" + assemblyEl.Name + "> under ZenTSMarshalAs in " + filePath);
                 }
 
                 string assemblyName = RequireAttr(assemblyEl, "name", filePath);
@@ -103,7 +103,7 @@ namespace ZTS
                     if (!string.Equals(typeEl.Name, "Type", StringComparison.Ordinal))
                     {
                         throw new JsMarshalAsConfigurationException(
-                            "[ZTS] Unexpected element <" + typeEl.Name + "> under Assembly in " + filePath);
+                            "[ZenTS] Unexpected element <" + typeEl.Name + "> under Assembly in " + filePath);
                     }
 
                     ParseType(filePath, assemblyName, typeEl, rules, seen);
@@ -150,7 +150,7 @@ namespace ZTS
                         break;
                     default:
                         throw new JsMarshalAsConfigurationException(
-                            "[ZTS] Unexpected element <" + el.Name + "> under Type in " + filePath);
+                            "[ZenTS] Unexpected element <" + el.Name + "> under Type in " + filePath);
                 }
             }
         }
@@ -174,7 +174,7 @@ namespace ZTS
                 }
 
                 throw new JsMarshalAsConfigurationException(
-                    "[ZTS] Unsupported Method attribute '@" + attr.Name + "' in " + filePath);
+                    "[ZenTS] Unsupported Method attribute '@" + attr.Name + "' in " + filePath);
             }
 
             foreach (XmlNode child in methodEl.ChildNodes)
@@ -191,7 +191,7 @@ namespace ZTS
                         if (el.HasAttribute("name"))
                         {
                             throw new JsMarshalAsConfigurationException(
-                                "[ZTS] Param must use @index (not @name) in " + filePath);
+                                "[ZenTS] Param must use @index (not @name) in " + filePath);
                         }
 
                         if (!el.HasAttribute("index")
@@ -199,7 +199,7 @@ namespace ZTS
                             || index < 0)
                         {
                             throw new JsMarshalAsConfigurationException(
-                                "[ZTS] Param/@index must be a non-negative integer in " + filePath);
+                                "[ZenTS] Param/@index must be a non-negative integer in " + filePath);
                         }
 
                         AddRule(rules, seen, BuildRule(
@@ -216,10 +216,10 @@ namespace ZTS
                         break;
                     case "MarshalAs":
                         throw new JsMarshalAsConfigurationException(
-                            "[ZTS] Method-level MarshalAs is not allowed; use Param/Return in " + filePath);
+                            "[ZenTS] Method-level MarshalAs is not allowed; use Param/Return in " + filePath);
                     default:
                         throw new JsMarshalAsConfigurationException(
-                            "[ZTS] Unexpected element <" + el.Name + "> under Method in " + filePath);
+                            "[ZenTS] Unexpected element <" + el.Name + "> under Method in " + filePath);
                 }
             }
         }
@@ -237,13 +237,13 @@ namespace ZTS
                 if (!string.Equals(el.Name, "MarshalAs", StringComparison.Ordinal))
                 {
                     throw new JsMarshalAsConfigurationException(
-                        "[ZTS] Unexpected element <" + el.Name + "> under <" + parent.Name + "> in " + filePath);
+                        "[ZenTS] Unexpected element <" + el.Name + "> under <" + parent.Name + "> in " + filePath);
                 }
 
                 if (found != null)
                 {
                     throw new JsMarshalAsConfigurationException(
-                        "[ZTS] Duplicate <MarshalAs> under <" + parent.Name + "> in " + filePath);
+                        "[ZenTS] Duplicate <MarshalAs> under <" + parent.Name + "> in " + filePath);
                 }
 
                 found = el;
@@ -252,7 +252,7 @@ namespace ZTS
             if (found == null)
             {
                 throw new JsMarshalAsConfigurationException(
-                    "[ZTS] Missing <MarshalAs> under <" + parent.Name + "> in " + filePath);
+                    "[ZenTS] Missing <MarshalAs> under <" + parent.Name + "> in " + filePath);
             }
 
             return found;
@@ -273,28 +273,28 @@ namespace ZTS
             if (string.Equals(typeName, "UserData", StringComparison.Ordinal))
             {
                 throw new JsMarshalAsConfigurationException(
-                    "[ZTS] MarshalAs type 'UserData' is not valid in " + filePath
+                    "[ZenTS] MarshalAs type 'UserData' is not valid in " + filePath
                     + "; use 'Object'.");
             }
 
             if (string.Equals(typeName, "OpaqueLightUserData", StringComparison.Ordinal))
             {
                 throw new JsMarshalAsConfigurationException(
-                    "[ZTS] Obsolete MarshalAs type 'OpaqueLightUserData' in " + filePath
+                    "[ZenTS] Obsolete MarshalAs type 'OpaqueLightUserData' in " + filePath
                     + "; use 'OpaqueValue'.");
             }
 
             if (string.Equals(typeName, "ParamsTable", StringComparison.Ordinal))
             {
                 throw new JsMarshalAsConfigurationException(
-                    "[ZTS] Removed MarshalAs type 'ParamsTable' in " + filePath
+                    "[ZenTS] Removed MarshalAs type 'ParamsTable' in " + filePath
                     + "; params T[] uses default szarray rules.");
             }
 
             if (!Enum.TryParse(typeName, ignoreCase: false, out JsMarshalType marshalType))
             {
                 throw new JsMarshalAsConfigurationException(
-                    "[ZTS] Unknown MarshalAs type '" + typeName + "' in " + filePath);
+                    "[ZenTS] Unknown MarshalAs type '" + typeName + "' in " + filePath);
             }
 
             string membersAttr = marshalAsEl.HasAttribute("members") ? marshalAsEl.GetAttribute("members") : null;
@@ -303,7 +303,7 @@ namespace ZTS
                 && (members == null || members.Length == 0))
             {
                 throw new JsMarshalAsConfigurationException(
-                    "[ZTS] MarshalAs type '" + marshalType + "' requires @members in " + filePath);
+                    "[ZenTS] MarshalAs type '" + marshalType + "' requires @members in " + filePath);
             }
 
             return new JsMarshalAsXmlRule
@@ -346,7 +346,7 @@ namespace ZTS
             if (seen.TryGetValue(key, out string previousPath))
             {
                 throw new JsMarshalAsConfigurationException(
-                    "[ZTS] Duplicate MarshalAs XML rule for key '" + key + "'.\n"
+                    "[ZenTS] Duplicate MarshalAs XML rule for key '" + key + "'.\n"
                     + "  first: " + previousPath + "\n"
                     + "  conflict: " + rule.SourcePath);
             }
@@ -361,7 +361,7 @@ namespace ZTS
             if (string.IsNullOrWhiteSpace(value))
             {
                 throw new JsMarshalAsConfigurationException(
-                    "[ZTS] Missing @" + name + " on <" + el.Name + "> in " + filePath);
+                    "[ZenTS] Missing @" + name + " on <" + el.Name + "> in " + filePath);
             }
 
             return value.Trim();

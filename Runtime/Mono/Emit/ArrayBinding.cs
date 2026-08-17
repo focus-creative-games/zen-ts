@@ -20,12 +20,12 @@
 
 using System;
 using System.Collections.Generic;
-using ZTS.Jvm;
-using ZTS.Marshaling;
-using ZTS.Mt;
-using ZTS.Utils;
+using ZenTS.Jvm;
+using ZenTS.Marshaling;
+using ZenTS.Mt;
+using ZenTS.Utils;
 
-namespace ZTS.Emit
+namespace ZenTS.Emit
 {
     /// <summary>
     /// Szarray ByObj IEO: <c>get</c>/<c>set</c>/<c>length</c> per Docs/spec/02-TYPE-SYSTEM §7.
@@ -116,7 +116,7 @@ namespace ZTS.Emit
             {
                 if (!ObjectRegistry.TryGetObject(ctx, thisVal, out object obj) || !(obj is Array arr))
                 {
-                    return JsCallbackGate.ReturnErrorSentinel(ctx, "zts: length: not an array.");
+                    return JsCallbackGate.ReturnErrorSentinel(ctx, "zents: length: not an array.");
                 }
 
                 return JsValueUtil.NewInt32(arr.Length);
@@ -130,7 +130,7 @@ namespace ZTS.Emit
 
         private static JSValue ArrayLengthSet(IntPtr ctx, JSValue thisVal, int argc, IntPtr argv)
         {
-            return JsCallbackGate.ReturnErrorSentinel(ctx, "zts: array length is read-only.");
+            return JsCallbackGate.ReturnErrorSentinel(ctx, "zents: array length is read-only.");
         }
 
         private static JSValue ArrayGet(IntPtr ctx, JSValue thisVal, int argc, IntPtr argv, Type elementType, int rank)
@@ -139,12 +139,12 @@ namespace ZTS.Emit
             {
                 if (!ObjectRegistry.TryGetObject(ctx, thisVal, out object obj) || !(obj is Array arr))
                 {
-                    return JsCallbackGate.ReturnErrorSentinel(ctx, "zts: get: not an array.");
+                    return JsCallbackGate.ReturnErrorSentinel(ctx, "zents: get: not an array.");
                 }
 
                 if (argc < rank)
                 {
-                    return JsCallbackGate.ReturnErrorSentinel(ctx, $"zts: get expects {rank} index argument(s).");
+                    return JsCallbackGate.ReturnErrorSentinel(ctx, $"zents: get expects {rank} index argument(s).");
                 }
 
                 int[] indices = ReadIndices(ctx, argv, rank);
@@ -164,12 +164,12 @@ namespace ZTS.Emit
             {
                 if (!ObjectRegistry.TryGetObject(ctx, thisVal, out object obj) || !(obj is Array arr))
                 {
-                    return JsCallbackGate.ReturnErrorSentinel(ctx, "zts: set: not an array.");
+                    return JsCallbackGate.ReturnErrorSentinel(ctx, "zents: set: not an array.");
                 }
 
                 if (argc < rank + 1)
                 {
-                    return JsCallbackGate.ReturnErrorSentinel(ctx, $"zts: set expects {rank} index(es) and a value.");
+                    return JsCallbackGate.ReturnErrorSentinel(ctx, $"zents: set expects {rank} index(es) and a value.");
                 }
 
                 int[] indices = ReadIndices(ctx, argv, rank);

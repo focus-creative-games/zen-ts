@@ -1,15 +1,15 @@
-# ZTS
+# ZenTS
 
-ZTS is a modern, concise, and easy-to-use Unity **TypeScript / JavaScript** scripting solution powered by **QuickJS**, with strong Il2Cpp optimization. Its design parallels [ZLua](https://github.com/focus-creative-games/zlua).
+ZenTS is a modern, concise, and easy-to-use Unity **TypeScript / JavaScript** scripting solution powered by **QuickJS**, with strong Il2Cpp optimization. Its design parallels [ZLua](https://github.com/focus-creative-games/zlua).
 
-- Documentation: [zts.code-philosophy.com](https://zts.code-philosophy.com/)
+- Documentation: [zents.code-philosophy.com](https://zents.code-philosophy.com/)
 - Sister product (Lua): [ZLua](https://doc.zlua.cn) / [zlua GitHub](https://github.com/focus-creative-games/zlua)
-- Unreal edition (WIP): [zts-ue](https://github.com/focus-creative-games/zts-ue)
+- Unreal edition (WIP): [zent-ts-ue](https://github.com/focus-creative-games/zent-ts-ue)
 - 中文：[README.md](./README.md)
 
 ---
 
-## Why ZTS
+## Why ZenTS
 
 Compared with Puerts / xLua-style JS bridges, or “hand-rolled QuickJS + custom bindings”:
 
@@ -25,19 +25,19 @@ Compared with Puerts / xLua-style JS bridges, or “hand-rolled QuickJS + custom
 
 ### Relation to ZLua
 
-| | ZLua | ZTS |
+| | ZLua | ZenTS |
 |--|------|-----|
 | Script side | Lua (PUC-Rio / LuaJIT) | JavaScript (QuickJS); optional TypeScript → ES modules |
 | Host façade | `LuaAppDomain` | `JsAppDomain` |
 | Type entry | `CSharp[...]` | Same; plus `import { T } from "csharp:…"` |
-| Stdlib | `zlua.*` | `zts.*` |
+| Stdlib | `zlua.*` | `zents.*` |
 | Attributes | `[LuaMarshalAs]`, etc. | `[JsMarshalAs]` / `[JsAlias]` / `[JsExtension]` |
 
-Host APIs are intentionally aligned: if you know ZLua, ZTS feels familiar.
+Host APIs are intentionally aligned: if you know ZLua, ZenTS feels familiar.
 
-### Sister product: Unreal (zts-ue)
+### Sister product: Unreal (zent-ts-ue)
 
-For a modern TypeScript solution on **Unreal Engine** (aggressively optimized for C++), see **[zts-ue](https://github.com/focus-creative-games/zts-ue)**. It is **still under development**. This package and docs site cover **Unity / Tuanjie** only; follow that repo for UE progress and usage.
+For a modern TypeScript solution on **Unreal Engine** (aggressively optimized for C++), see **[zent-ts-ue](https://github.com/focus-creative-games/zent-ts-ue)**. It is **still under development**. This package and docs site cover **Unity / Tuanjie** only; follow that repo for UE progress and usage.
 
 ---
 
@@ -45,8 +45,8 @@ For a modern TypeScript solution on **Unreal Engine** (aggressively optimized fo
 
 - **Zero config**: no per-type C# Wrap generate; lazy `CSharp[assembly][typeFullName]`
 - **Complete interop**: fields / properties / methods / overloads / extensions / generics / delegates / arrays / struct / enum / Nullable / ref·out·in / pointers
-- **Dual runtime**: Editor Mono (Expression Emit) + Player Il2Cpp (`ZTS~/zts-runtime` C++)
-- **TypeScript workflow**: `ZTS/Init TypeScript Project` → `TsProject/`; `tsc --noEmit`; esbuild 1:1 emit; copy to StreamingAssets for Player
+- **Dual runtime**: Editor Mono (Expression Emit) + Player Il2Cpp (`ZenTS~/zents-runtime` C++)
+- **TypeScript workflow**: `ZenTS/Init TypeScript Project` → `TsProject/`; `tsc --noEmit`; esbuild 1:1 emit; copy to StreamingAssets for Player
 - **Debugger hooks**: Editor Debugger Host interface (work in progress)
 
 ### Platforms and versions
@@ -54,7 +54,7 @@ For a modern TypeScript solution on **Unreal Engine** (aggressively optimized fo
 | Category | Supported |
 |----------|-----------|
 | **Engine** | Unity **2021.3.x** / **2022.3.x** / **6000.0.x** / **6000.3.x** / **6000.5.x**; **Tuanjie Engine 1.x.y** |
-| **VM** | QuickJS (see pin under `ZTS~/` / docs) |
+| **VM** | QuickJS (see pin under `ZenTS~/` / docs) |
 | **Runtime** | Editor **Mono** + Player **Il2Cpp** |
 | **Editor platforms** | Windows x64, macOS (Apple Silicon / Intel) |
 | **Player platforms** | Platforms supported by Il2Cpp (including Win64, Android, iOS, WebGL, WeChat Mini Games, HarmonyOS / automotive, etc.) |
@@ -65,7 +65,7 @@ For a modern TypeScript solution on **Unreal Engine** (aggressively optimized fo
 
 The runtime loads **ES modules only** (QuickJS). Module names use a **canonical specifier** (logical path **without** `.js`).
 
-Contracts: [docs site](https://zts.code-philosophy.com/) and `Docs/spec/01-HOST-API.md`, `02-TYPE-SYSTEM.md`.
+Contracts: [docs site](https://zents.code-philosophy.com/) and `Docs/spec/01-HOST-API.md`, `02-TYPE-SYSTEM.md`.
 
 ### 1. Initialize (loader only)
 
@@ -73,9 +73,9 @@ Contracts: [docs site](https://zts.code-philosophy.com/) and `Docs/spec/01-HOST-
 using System.IO;
 using System.Text;
 using UnityEngine;
-using ZTS;
+using ZenTS;
 
-public static class ZtsBootstrap
+public static class ZentsBootstrap
 {
     static object LoadJsModule(string module)
     {
@@ -141,7 +141,7 @@ d.SetX(20);                  // instance method
 console.log(d.x);
 
 // stdlib
-const arr = zts.new_szarray_by_element_type(zts.types.int32, 2);
+const arr = zents.new_szarray_by_element_type(zents.types.int32, 2);
 ```
 
 Hand-written regression / matrix tests can stay under `StreamingAssets/Tests/Js` (plain JS). Migrating to TypeScript is **optional**.
@@ -150,18 +150,18 @@ Hand-written regression / matrix tests can stay under `StreamingAssets/Tests/Js`
 
 ## Usage B: TypeScript workflow
 
-ZTS ships an **official TypeScript workflow**: author in TS, generate `csharp:` declarations, type-check before Play; the runtime **still executes emitted JS only** (never `.ts`).
+ZenTS ships an **official TypeScript workflow**: author in TS, generate `csharp:` declarations, type-check before Play; the runtime **still executes emitted JS only** (never `.ts`).
 
-Full contract: [TypeScript workflow](https://zts.code-philosophy.com/) (`Docs/spec/14-TYPESCRIPT.md`).
+Full contract: [TypeScript workflow](https://zents.code-philosophy.com/) (`Docs/spec/14-TYPESCRIPT.md`).
 
 ### 1. Scaffold the project
 
 Unity menus:
 
-1. **`ZTS/Init TypeScript Project`** — copy package scaffold to project-root `TsProject/`
+1. **`ZenTS/Init TypeScript Project`** — copy package scaffold to project-root `TsProject/`
 2. Run `npm install` under `TsProject/` (`typescript`, `esbuild` as devDependencies)
-3. **`ZTS/Generate Typings`** — emit `TsProject/generated/csharp/**` (same type set as Il2Cpp Generate)
-4. **`ZTS/Compile TypeScript`** — `tsc --noEmit` + esbuild/tsc emit
+3. **`ZenTS/Generate Typings`** — emit `TsProject/generated/csharp/**` (same type set as Il2Cpp Generate)
+4. **`ZenTS/Compile TypeScript`** — `tsc --noEmit` + esbuild/tsc emit
 
 Layout:
 
@@ -171,7 +171,7 @@ Layout:
     src/           # business .ts (versioned)
     generated/     # csharp: decls (versioned)
     out/           # emitted .js (gitignore)
-  Assets/StreamingAssets/ZTS/   # Player build copy
+  Assets/StreamingAssets/ZenTS/   # Player build copy
 ```
 
 ### 2. Author in TypeScript
@@ -209,9 +209,9 @@ var add = JsAppDomain.GetFunction<System.Func<int, int, int>>("game/logic", "add
 ```
 
 Editor: `moduleLoader` reads `TsProject/out/{canonical}.js`.  
-Player: build copies `out/**/*.js` → `StreamingAssets/ZTS/`; runtime reads **only** StreamingAssets.
+Player: build copies `out/**/*.js` → `StreamingAssets/ZenTS/`; runtime reads **only** StreamingAssets.
 
-Play mode runs `tsc --noEmit` by default. You can also run **`ZTS/Compile TypeScript`** manually.
+Play mode runs `tsc --noEmit` by default. You can also run **`ZenTS/Compile TypeScript`** manually.
 
 ---
 
@@ -219,10 +219,10 @@ Play mode runs `tsc --noEmit` by default. You can also run **`ZTS/Compile TypeSc
 
 | Assembly | Platform | Role |
 |----------|----------|------|
-| `ZTS.Common` | All | `JsAppDomain` façade, attributes, shared types |
-| `ZTS.Mono` | Editor | QuickJS P/Invoke + Mono callback gate + Emit |
-| `ZTS.Il2Cpp` | Player | Il2Cpp host wiring (`ZTS~/zts-runtime`) |
-| `ZTS.Editor` | Editor | Install / Export / TypeScript toolchain / Settings |
+| `ZenTS.Common` | All | `JsAppDomain` façade, attributes, shared types |
+| `ZenTS.Mono` | Editor | QuickJS P/Invoke + Mono callback gate + Emit |
+| `ZenTS.Il2Cpp` | Player | Il2Cpp host wiring (`ZenTS~/zents-runtime`) |
+| `ZenTS.Editor` | Editor | Install / Export / TypeScript toolchain / Settings |
 
 ---
 
@@ -231,24 +231,24 @@ Play mode runs `tsc --noEmit` by default. You can also run **`ZTS/Compile TypeSc
 ```text
 Plugins/quickjs/
   win32-x64/quickjs.dll          # QuickJS Win64 (no NAN boxing: JSValue = 16 bytes)
-  zts_mono_gate.dll              # Editor-only JS→C# callback gate (Windows)
+  zents_mono_gate.dll              # Editor-only JS→C# callback gate (Windows)
   darwin-arm64/quickjs.dylib     # QuickJS macOS arm64
-  libzts_mono_gate.dylib         # Editor-only gate (macOS)
+  libzents_mono_gate.dylib         # Editor-only gate (macOS)
 ```
 
 Build (from the package root):
 
 ```bat
-ZTS~\mono-native\build_quickjs_msvc.bat
+ZenTS~\mono-native\build_quickjs_msvc.bat
 ```
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File ZTS~\mono-native\build_zts_mono_gate.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File ZenTS~\mono-native\build_zents_mono_gate.ps1
 ```
 
-macOS: `ZTS~/mono-native/build_quickjs_darwin.sh`, `build_zts_mono_gate_unix.sh`.
+macOS: `ZenTS~/mono-native/build_quickjs_darwin.sh`, `build_zents_mono_gate_unix.sh`.
 
-Il2Cpp: menu **ZTS / Install...** installs `ZTS~/zts-runtime` + QuickJS into LocalIl2Cpp; on Windows, **ZTS / Export Build-Win64...** exports an MSBuildable Player solution. For iOS and other targets, follow Unity’s export + native toolchain (see docs).
+Il2Cpp: menu **ZenTS / Install...** installs `ZenTS~/zents-runtime` + QuickJS into LocalIl2Cpp; on Windows, **ZenTS / Export Build-Win64...** exports an MSBuildable Player solution. For iOS and other targets, follow Unity’s export + native toolchain (see docs).
 
 ---
 
@@ -258,9 +258,9 @@ MIT. Free to use, modify, and distribute.
 
 ## Contact
 
-- Docs: [https://zts.code-philosophy.com/](https://zts.code-philosophy.com/)
-- Email: `zts@code-philosophy.com`
+- Docs: [https://zents.code-philosophy.com/](https://zents.code-philosophy.com/)
+- Email: `zen-ts@code-philosophy.com`
 - Site: [code-philosophy.com](https://code-philosophy.com)
-- QQ group: `1095435513` (ZTS community)
+- QQ group: `1095435513` (ZenTS community)
 - Discord: [https://discord.gg/5bT7w9aRMz](https://discord.gg/5bT7w9aRMz)
-- Unreal (WIP): [zts-ue](https://github.com/focus-creative-games/zts-ue)
+- Unreal (WIP): [zent-ts-ue](https://github.com/focus-creative-games/zent-ts-ue)

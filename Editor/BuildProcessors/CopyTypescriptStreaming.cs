@@ -21,9 +21,9 @@
 using System;
 using UnityEditor.Build;
 using UnityEditor.Build.Reporting;
-using ZTS.Editor.Typescript;
+using ZenTS.Editor.Typescript;
 
-namespace ZTS.BuildProcessors
+namespace ZenTS.BuildProcessors
 {
     /// <summary>
     /// Docs/spec/14-TYPESCRIPT.md §8.3: tsc check, emit, publish to StreamingAssets or Resources
@@ -40,11 +40,11 @@ namespace ZTS.BuildProcessors
                 return;
             }
 
-            string skip = Environment.GetEnvironmentVariable("ZTS_SKIP_TYPESCRIPT");
+            string skip = Environment.GetEnvironmentVariable("ZENTS_SKIP_TYPESCRIPT");
             if (!string.IsNullOrEmpty(skip)
                 && (skip == "1" || skip.Equals("true", StringComparison.OrdinalIgnoreCase)))
             {
-                UnityEngine.Debug.Log("[ZTS] Skipping TypeScript build step (ZTS_SKIP_TYPESCRIPT).");
+                UnityEngine.Debug.Log("[ZenTS] Skipping TypeScript build step (ZENTS_SKIP_TYPESCRIPT).");
                 return;
             }
 
@@ -56,7 +56,7 @@ namespace ZTS.BuildProcessors
             }
             catch (Exception ex)
             {
-                throw new BuildFailedException("[ZTS] TypeScript build step failed:\n" + ex.Message);
+                throw new BuildFailedException("[ZenTS] TypeScript build step failed:\n" + ex.Message);
             }
         }
     }

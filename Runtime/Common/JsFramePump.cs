@@ -21,7 +21,7 @@
 using System.Collections;
 using UnityEngine;
 
-namespace ZTS
+namespace ZenTS
 {
     /// <summary>
     /// Main-thread frame pump: pending JS registry unrefs (LateUpdate) and
@@ -47,7 +47,7 @@ namespace ZTS
             }
 #endif
 
-            var gameObject = new GameObject("[ZTS] FramePump");
+            var gameObject = new GameObject("[ZenTS] FramePump");
             gameObject.hideFlags = HideFlags.HideAndDontSave;
             DontDestroyOnLoad(gameObject);
             _instance = gameObject.AddComponent<JsFramePump>();

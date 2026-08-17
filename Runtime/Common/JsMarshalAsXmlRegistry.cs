@@ -22,7 +22,7 @@ using System;
 using System.Collections.Generic;
 using System.Reflection;
 
-namespace ZTS
+namespace ZenTS
 {
     /// <summary>
     /// MarshalAs XML: load stores rules by assembly name; first query per Assembly
@@ -159,7 +159,7 @@ namespace ZTS
                     if (assembly == null)
                     {
                         throw new JsMarshalAsConfigurationException(
-                            "[ZTS] MarshalAs XML Assembly '" + pair.Key + "' not loaded (validation).");
+                            "[ZenTS] MarshalAs XML Assembly '" + pair.Key + "' not loaded (validation).");
                     }
 
                     EnsureBoundUnlocked(assembly);
@@ -507,7 +507,7 @@ namespace ZTS
             if (type.IsGenericType && !type.IsGenericTypeDefinition)
             {
                 throw new JsMarshalAsConfigurationException(
-                    "[ZTS] MarshalAs XML Type must be an open generic definition or non-generic type, not a closed instance: "
+                    "[ZenTS] MarshalAs XML Type must be an open generic definition or non-generic type, not a closed instance: "
                     + rule.TypeFullName + " in " + rule.SourcePath);
             }
 
@@ -517,7 +517,7 @@ namespace ZTS
                     if (type.IsGenericTypeDefinition || type.IsGenericType)
                     {
                         throw new JsMarshalAsConfigurationException(
-                            "[ZTS] MarshalAs XML type-level rule cannot target a generic type: "
+                            "[ZenTS] MarshalAs XML type-level rule cannot target a generic type: "
                             + rule.TypeFullName + " in " + rule.SourcePath);
                     }
 
@@ -532,7 +532,7 @@ namespace ZTS
                     if (field == null)
                     {
                         throw new JsMarshalAsConfigurationException(
-                            "[ZTS] MarshalAs XML Field '" + rule.MemberName + "' not found on "
+                            "[ZenTS] MarshalAs XML Field '" + rule.MemberName + "' not found on "
                             + type.FullName + " in " + rule.SourcePath);
                     }
 
@@ -549,7 +549,7 @@ namespace ZTS
                     if (property == null)
                     {
                         throw new JsMarshalAsConfigurationException(
-                            "[ZTS] MarshalAs XML Property '" + rule.MemberName + "' not found on "
+                            "[ZenTS] MarshalAs XML Property '" + rule.MemberName + "' not found on "
                             + type.FullName + " in " + rule.SourcePath);
                     }
 
@@ -566,7 +566,7 @@ namespace ZTS
                     if (index < 0 || index >= parameters.Length)
                     {
                         throw new JsMarshalAsConfigurationException(
-                            "[ZTS] MarshalAs XML Param index " + index + " out of range for "
+                            "[ZenTS] MarshalAs XML Param index " + index + " out of range for "
                             + type.FullName + "." + rule.MethodName + rule.Signature
                             + " in " + rule.SourcePath);
                     }
@@ -585,7 +585,7 @@ namespace ZTS
                     if (methodInfo == null)
                     {
                         throw new JsMarshalAsConfigurationException(
-                            "[ZTS] MarshalAs XML Return requires a MethodInfo (not constructor): "
+                            "[ZenTS] MarshalAs XML Return requires a MethodInfo (not constructor): "
                             + type.FullName + "." + rule.MethodName + " in " + rule.SourcePath);
                     }
 
@@ -599,7 +599,7 @@ namespace ZTS
 
                 default:
                     throw new JsMarshalAsConfigurationException(
-                        "[ZTS] Unknown MarshalAs XML target kind in " + rule.SourcePath);
+                        "[ZenTS] Unknown MarshalAs XML target kind in " + rule.SourcePath);
             }
         }
 
@@ -611,7 +611,7 @@ namespace ZTS
             }
 
             throw new JsMarshalAsConfigurationException(
-                "[ZTS] MarshalAs XML cannot target undetermined generic type (" + targetDescription + "): "
+                "[ZenTS] MarshalAs XML cannot target undetermined generic type (" + targetDescription + "): "
                 + (clrType != null ? (clrType.FullName ?? clrType.Name) : "<null>")
                 + " in " + rule.SourcePath);
         }
@@ -621,7 +621,7 @@ namespace ZTS
             if (maps.ByMemberToken.ContainsKey(token))
             {
                 throw new JsMarshalAsConfigurationException(
-                    "[ZTS] MarshalAs XML duplicate metadata token 0x" + token.ToString("X8")
+                    "[ZenTS] MarshalAs XML duplicate metadata token 0x" + token.ToString("X8")
                     + " while binding " + rule.SourcePath);
             }
 
@@ -634,7 +634,7 @@ namespace ZTS
             if (maps.ByMethodSlot.ContainsKey(key))
             {
                 throw new JsMarshalAsConfigurationException(
-                    "[ZTS] MarshalAs XML duplicate method slot (token=0x" + methodToken.ToString("X8")
+                    "[ZenTS] MarshalAs XML duplicate method slot (token=0x" + methodToken.ToString("X8")
                     + ", index=" + index + ") while binding " + rule.SourcePath);
             }
 
@@ -647,7 +647,7 @@ namespace ZTS
             if (type == null)
             {
                 throw new JsMarshalAsConfigurationException(
-                    "[ZTS] MarshalAs XML Type '" + typeFullName + "' not found in assembly '"
+                    "[ZenTS] MarshalAs XML Type '" + typeFullName + "' not found in assembly '"
                     + assembly.GetName().Name + "' (" + sourcePath + ")");
             }
 
@@ -703,7 +703,7 @@ namespace ZTS
             }
 
             throw new JsMarshalAsConfigurationException(
-                "[ZTS] MarshalAs XML Method '" + methodName + signature + "' not found on "
+                "[ZenTS] MarshalAs XML Method '" + methodName + signature + "' not found on "
                 + type.FullName + " in " + sourcePath);
         }
     }

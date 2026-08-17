@@ -23,7 +23,7 @@ using UnityEditor.Build;
 using UnityEditor.Build.Reporting;
 using UnityEngine;
 
-namespace ZTS.BuildProcessors
+namespace ZenTS.BuildProcessors
 {
     internal class SetupIl2CppEnv : IPreprocessBuildWithReport
     {
@@ -41,7 +41,7 @@ namespace ZTS.BuildProcessors
             if (!installer.HasInstalledToLocal())
             {
                 throw new BuildFailedException(
-                    "[ZTS] Please install ZTS first via menu 'ZTS/Install...'.");
+                    "[ZenTS] Please install ZenTS first via menu 'ZenTS/Install...'.");
             }
 
             string runtimeDir = CommonDirs.LocalIl2CppPath;

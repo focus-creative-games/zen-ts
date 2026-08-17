@@ -21,9 +21,9 @@
 using System;
 using System.IO;
 using System.Text.RegularExpressions;
-using ZTS;
+using ZenTS;
 
-namespace ZTS.Utils
+namespace ZenTS.Utils
 {
     public static class UnityIl2CppPatchUtil
     {

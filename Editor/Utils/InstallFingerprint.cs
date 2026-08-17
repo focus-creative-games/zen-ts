@@ -23,7 +23,7 @@ using System.IO;
 using System.Text;
 using UnityEngine;
 
-namespace ZTS.Utils
+namespace ZenTS.Utils
 {
     [Serializable]
     public sealed class InstallFingerprintData

@@ -21,7 +21,7 @@
 using System;
 using System.Runtime.CompilerServices;
 
-namespace ZTS
+namespace ZenTS
 {
     /// <summary>
     /// Player Il2Cpp backend. Invoked by <see cref="JsAppDomain"/> via reflective

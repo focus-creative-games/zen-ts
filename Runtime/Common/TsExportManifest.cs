@@ -24,7 +24,7 @@ using System.IO;
 using System.Text;
 using UnityEngine;
 
-namespace ZTS
+namespace ZenTS
 {
     /// <summary>
     /// Optional P3 check: named exports recorded by esbuild emit
@@ -54,7 +54,7 @@ namespace ZTS
             if (!names.Contains(exportName))
             {
                 Debug.LogWarning(
-                    $"[ZTS] GetFunction('{canonicalModule}', '{exportName}') is not in generated/js-exports.json");
+                    $"[ZenTS] GetFunction('{canonicalModule}', '{exportName}') is not in generated/js-exports.json");
             }
 #endif
         }
@@ -94,7 +94,7 @@ namespace ZTS
             }
             catch (Exception ex)
             {
-                Debug.LogWarning("[ZTS] failed to parse js-exports.json: " + ex.Message);
+                Debug.LogWarning("[ZenTS] failed to parse js-exports.json: " + ex.Message);
                 s_map = null;
             }
 

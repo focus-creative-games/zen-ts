@@ -19,9 +19,9 @@
 // SOFTWARE.
 
 using System;
-using ZTS.Jvm;
+using ZenTS.Jvm;
 
-namespace ZTS.Marshaling
+namespace ZenTS.Marshaling
 {
     internal sealed class OpaqueValue
     {

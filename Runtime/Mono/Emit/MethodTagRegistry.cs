@@ -21,14 +21,14 @@
 using System;
 using System.Collections.Generic;
 using System.Reflection;
-using ZTS.Jvm;
-using ZTS.Utils;
+using ZenTS.Jvm;
+using ZenTS.Utils;
 
-namespace ZTS.Emit
+namespace ZenTS.Emit
 {
     /// <summary>
     /// Metadata for a JS method function (direct vs dispatch) used by
-    /// <c>zts.register_method</c> / <c>zts.make_generic_method</c>.
+    /// <c>zents.register_method</c> / <c>zents.make_generic_method</c>.
     /// </summary>
     internal sealed class MethodClosureTag
     {

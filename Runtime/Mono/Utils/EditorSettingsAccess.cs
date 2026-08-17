@@ -21,10 +21,10 @@
 using System;
 using System.Reflection;
 
-namespace ZTS.Utils
+namespace ZenTS.Utils
 {
     /// <summary>
-    /// Reflective access to <c>ZTS.Settings</c> (Editor assembly) from Runtime Mono
+    /// Reflective access to <c>ZenTS.Settings</c> (Editor assembly) from Runtime Mono
     /// without an Editor asmref cycle.
     /// </summary>
     internal static class EditorSettingsAccess
@@ -34,7 +34,7 @@ namespace ZTS.Utils
         internal static bool TryGetInstance(out object settings, out Type settingsType)
         {
             settings = null;
-            settingsType = Type.GetType("ZTS.Settings, ZTS.Editor");
+            settingsType = Type.GetType("ZenTS.Settings, ZenTS.Editor");
             if (settingsType == null)
             {
                 return false;

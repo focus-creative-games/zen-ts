@@ -20,9 +20,9 @@
 
 using UnityEditor.Build;
 using UnityEditor.Build.Reporting;
-using ZTS.Editor;
+using ZenTS.Editor;
 
-namespace ZTS.BuildProcessors
+namespace ZenTS.BuildProcessors
 {
     /// <summary>
     /// Ensure Alias/Extension C++ tables are regenerated before Player builds.

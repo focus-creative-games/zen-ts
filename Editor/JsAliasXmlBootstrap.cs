@@ -23,7 +23,7 @@ using System.IO;
 using UnityEditor;
 using UnityEngine;
 
-namespace ZTS
+namespace ZenTS
 {
     /// <summary>
     /// Loads Settings jsAliasXmlPaths into <see cref="JsAliasXmlRegistry"/> for Editor Mono.
@@ -36,12 +36,12 @@ namespace ZTS
             TryLoad(logSuccess: false);
         }
 
-        [MenuItem("ZTS/Reload JsAlias XML", priority = 521)]
+        [MenuItem("ZenTS/Reload JsAlias XML", priority = 521)]
         private static void ReloadMenu()
         {
             string projectRoot = Path.GetDirectoryName(Application.dataPath);
             JsAliasXmlRegistry.Load(Settings.Instance.jsAliasXmlPaths, projectRoot);
-            Debug.Log("[ZTS] JsAlias XML loaded: " + JsAliasXmlRegistry.Rules.Count + " rule(s).");
+            Debug.Log("[ZenTS] JsAlias XML loaded: " + JsAliasXmlRegistry.Rules.Count + " rule(s).");
         }
 
         internal static void TryLoad(bool logSuccess)
@@ -52,12 +52,12 @@ namespace ZTS
                 JsAliasXmlRegistry.Load(Settings.Instance.jsAliasXmlPaths, projectRoot);
                 if (logSuccess)
                 {
-                    Debug.Log("[ZTS] JsAlias XML loaded: " + JsAliasXmlRegistry.Rules.Count + " rule(s).");
+                    Debug.Log("[ZenTS] JsAlias XML loaded: " + JsAliasXmlRegistry.Rules.Count + " rule(s).");
                 }
             }
             catch (Exception ex)
             {
-                Debug.LogError("[ZTS] JsAlias XML load failed:\n" + ex.Message);
+                Debug.LogError("[ZenTS] JsAlias XML load failed:\n" + ex.Message);
             }
         }
     }

@@ -25,7 +25,7 @@ using MonoHook;
 using UnityEditor;
 using UnityEngine;
 
-namespace ZTS.MonoHooks
+namespace ZenTS.MonoHooks
 {
 #if UNITY_2022 || UNITY_2023_1_OR_NEWER
     /// <summary>

@@ -22,12 +22,12 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using ZTS.Jvm;
-using ZTS.Marshaling;
-using ZTS.Mt;
-using ZTS.Utils;
+using ZenTS.Jvm;
+using ZenTS.Marshaling;
+using ZenTS.Mt;
+using ZenTS.Utils;
 
-namespace ZTS.Emit
+namespace ZenTS.Emit
 {
     /// <summary>
     /// Builds a callable type object (STO) + instance prototype (IEO) and keeps them alive
@@ -43,9 +43,9 @@ namespace ZTS.Emit
             if (type.IsGenericTypeDefinition)
             {
                 JSValue stub = QuickJsDll.JS_NewObject(ctx);
-                QuickJsDll.JS_SetPropertyStr(ctx, stub, "__zts_type_name", QuickJsDll.NewString(ctx, type.FullName ?? type.Name));
+                QuickJsDll.JS_SetPropertyStr(ctx, stub, "__zents_type_name", QuickJsDll.NewString(ctx, type.FullName ?? type.Name));
                 int typeSlot = ObjectRegistry.Register(type, typeof(Type));
-                QuickJsDll.JS_SetPropertyStr(ctx, stub, "__zts_id", JsValueUtil.NewInt32(typeSlot));
+                QuickJsDll.JS_SetPropertyStr(ctx, stub, "__zents_id", JsValueUtil.NewInt32(typeSlot));
                 binding.TypeObject = stub;
                 binding.TypeObjectRaw = JsValueUtil.Dup(stub);
                 binding.InstanceProto = QuickJsDll.JS_NewObject(ctx);
@@ -65,10 +65,10 @@ namespace ZTS.Emit
             JSValue ctor = ConstructorEmitter.Emit(env, type, proto);
             JSValue typeObjectRaw = JsValueUtil.Dup(ctor);
 
-            // Tag type object with Type identity for zts.typeof / cast.
+            // Tag type object with Type identity for zents.typeof / cast.
             int ctorTypeSlot = ObjectRegistry.Register(type, typeof(Type));
-            QuickJsDll.JS_SetPropertyStr(ctx, ctor, "__zts_id", JsValueUtil.NewInt32(ctorTypeSlot));
-            QuickJsDll.JS_SetPropertyStr(ctx, ctor, "__zts_type_name", QuickJsDll.NewString(ctx, type.FullName ?? type.Name));
+            QuickJsDll.JS_SetPropertyStr(ctx, ctor, "__zents_id", JsValueUtil.NewInt32(ctorTypeSlot));
+            QuickJsDll.JS_SetPropertyStr(ctx, ctor, "__zents_type_name", QuickJsDll.NewString(ctx, type.FullName ?? type.Name));
 
             QuickJsDll.JS_SetConstructorBit(ctx, ctor, 1);
             QuickJsDll.JS_SetPropertyStr(ctx, ctor, "prototype", JsValueUtil.Dup(proto));
@@ -175,8 +175,8 @@ namespace ZTS.Emit
             JSValue typeObjectRaw = JsValueUtil.Dup(ctor);
 
             int ctorTypeSlot = ObjectRegistry.Register(nullableType, typeof(Type));
-            QuickJsDll.JS_SetPropertyStr(ctx, ctor, "__zts_id", JsValueUtil.NewInt32(ctorTypeSlot));
-            QuickJsDll.JS_SetPropertyStr(ctx, ctor, "__zts_type_name", QuickJsDll.NewString(ctx, nullableType.FullName ?? nullableType.Name));
+            QuickJsDll.JS_SetPropertyStr(ctx, ctor, "__zents_id", JsValueUtil.NewInt32(ctorTypeSlot));
+            QuickJsDll.JS_SetPropertyStr(ctx, ctor, "__zents_type_name", QuickJsDll.NewString(ctx, nullableType.FullName ?? nullableType.Name));
             QuickJsDll.JS_SetPropertyStr(ctx, ctor, "__nullable", JsValueUtil.NewBool(true));
 
             QuickJsDll.JS_SetConstructorBit(ctx, ctor, 1);
@@ -200,11 +200,11 @@ namespace ZTS.Emit
 
         /// <summary>Used by <see cref="Marshaling.TypedMarshal"/> to wrap instance handles.</summary>
         internal static bool TryWrapMissPublic(JsEnv env, JSValue target, out JSValue wrapped) =>
-            TryCallGlobalWrap(env, "__zts_wrap_miss", target, out wrapped);
+            TryCallGlobalWrap(env, "__zents_wrap_miss", target, out wrapped);
 
         /// <summary>Make CLR Delegate exotic callable as <c>d(...)</c> (spec marshal/09-FUNCTION §3.2).</summary>
         internal static bool TryWrapDelegateCallPublic(JsEnv env, JSValue target, out JSValue wrapped) =>
-            TryCallGlobalWrap(env, "__zts_wrap_delegate_call", target, out wrapped);
+            TryCallGlobalWrap(env, "__zents_wrap_delegate_call", target, out wrapped);
 
         private static bool TryCallGlobalWrap(JsEnv env, string globalFnName, JSValue target, out JSValue wrapped)
         {
@@ -492,7 +492,7 @@ namespace ZTS.Emit
                 JSValue setter = field.IsInitOnly || field.IsLiteral
                     ? JsCallbackGate.NewCFunction(
                         ctx,
-                        (c, thisVal, argc, argv) => JsCallbackGate.ReturnErrorSentinel(c, $"zts: field '{field.Name}' is read-only."),
+                        (c, thisVal, argc, argv) => JsCallbackGate.ReturnErrorSentinel(c, $"zents: field '{field.Name}' is read-only."),
                         "set_" + field.Name,
                         1)
                     : FieldEmitter.EmitSetter(env, field);
@@ -570,14 +570,14 @@ namespace ZTS.Emit
                     ? PropertyEmitter.EmitGetter(env, property)
                     : JsCallbackGate.NewCFunction(
                         ctx,
-                        (c, thisVal, argc, argv) => JsCallbackGate.ReturnErrorSentinel(c, $"zts: property '{property.Name}' has no getter."),
+                        (c, thisVal, argc, argv) => JsCallbackGate.ReturnErrorSentinel(c, $"zents: property '{property.Name}' has no getter."),
                         "get_" + property.Name,
                         0);
                 JSValue setter = property.CanWrite
                     ? PropertyEmitter.EmitSetter(env, property)
                     : JsCallbackGate.NewCFunction(
                         ctx,
-                        (c, thisVal, argc, argv) => JsCallbackGate.ReturnErrorSentinel(c, $"zts: property '{property.Name}' is read-only."),
+                        (c, thisVal, argc, argv) => JsCallbackGate.ReturnErrorSentinel(c, $"zents: property '{property.Name}' is read-only."),
                         "set_" + property.Name,
                         1);
                 DefineGetSet(ctx, target, property.Name, getter, setter);

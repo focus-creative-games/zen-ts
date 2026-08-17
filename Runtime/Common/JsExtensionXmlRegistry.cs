@@ -22,7 +22,7 @@ using System;
 using System.Collections.Generic;
 using System.Reflection;
 
-namespace ZTS
+namespace ZenTS
 {
     /// <summary>
     /// JsExtensions XML registry: load rules; resolve extension classes on Bind (spec 13 §2).
@@ -170,7 +170,7 @@ namespace ZTS
             if (assembly == null)
             {
                 throw new JsExtensionConfigurationException(
-                    "[ZTS] JsExtensions XML " + role + " Assembly '" + assemblyName
+                    "[ZenTS] JsExtensions XML " + role + " Assembly '" + assemblyName
                     + "' not loaded (" + sourcePath + ")");
             }
 
@@ -178,7 +178,7 @@ namespace ZTS
             if (type == null)
             {
                 throw new JsExtensionConfigurationException(
-                    "[ZTS] JsExtensions XML " + role + " type '" + typeFullName
+                    "[ZenTS] JsExtensions XML " + role + " type '" + typeFullName
                     + "' not found in assembly '" + assemblyName
                     + "' (" + sourcePath + ")");
             }

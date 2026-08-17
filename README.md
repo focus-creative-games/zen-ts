@@ -4,7 +4,7 @@ ZenTS 是一个针对 Il2Cpp 优化的现代、简洁、易用的 Unity **TypeSc
 
 - 文档：[zents.code-philosophy.com](https://zents.code-philosophy.com/)
 - 对照产品（Lua）：[ZLua](https://doc.zlua.cn) / [zlua GitHub](https://github.com/focus-creative-games/zlua)
-- Unreal 版本（开发中）：[zent-ts-ue](https://github.com/focus-creative-games/zent-ts-ue)
+- Unreal 版本（开发中）：[ZenTS-UE](https://github.com/focus-creative-games/ZenTS-UE)
 - English：[README_EN.md](./README_EN.md)
 
 ---
@@ -35,9 +35,9 @@ ZenTS 是一个针对 Il2Cpp 优化的现代、简洁、易用的 Unity **TypeSc
 
 业务侧 API 形态刻意对齐：会用 ZLua，即可很快上手 ZenTS。
 
-### 同族产品：Unreal（zent-ts-ue）
+### 同族产品：Unreal（ZenTS-UE）
 
-面向 **Unreal Engine**、对 C++ 优化的现代 TypeScript 方案见 **[zent-ts-ue](https://github.com/focus-creative-games/zent-ts-ue)**。**目前仍在开发中**；本仓库与文档站仅覆盖 **Unity / 团结** 上的 ZenTS，UE 用法与进度请跟进该仓库。
+面向 **Unreal Engine**、对 C++ 优化的现代 TypeScript 方案见 **[ZenTS-UE](https://github.com/focus-creative-games/ZenTS-UE)**。**目前仍在开发中**；本仓库与文档站仅覆盖 **Unity / 团结** 上的 ZenTS，UE 用法与进度请跟进该仓库。
 
 ---
 
@@ -263,4 +263,4 @@ MIT。欢迎自由使用、修改和分发。
 - 产品站：[code-philosophy.com](https://code-philosophy.com)
 - QQ 群：`1095435513`（ZenTS 交流群）
 - Discord：[https://discord.gg/5bT7w9aRMz](https://discord.gg/5bT7w9aRMz)
-- Unreal（开发中）：[zent-ts-ue](https://github.com/focus-creative-games/zent-ts-ue)
+- Unreal（开发中）：[ZenTS-UE](https://github.com/focus-creative-games/ZenTS-UE)

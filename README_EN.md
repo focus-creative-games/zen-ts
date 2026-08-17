@@ -4,7 +4,7 @@ ZenTS is a modern, concise, and easy-to-use Unity **TypeScript / JavaScript** sc
 
 - Documentation: [zents.code-philosophy.com](https://zents.code-philosophy.com/)
 - Sister product (Lua): [ZLua](https://doc.zlua.cn) / [zlua GitHub](https://github.com/focus-creative-games/zlua)
-- Unreal edition (WIP): [zent-ts-ue](https://github.com/focus-creative-games/zent-ts-ue)
+- Unreal edition (WIP): [ZenTS-UE](https://github.com/focus-creative-games/ZenTS-UE)
 - 中文：[README.md](./README.md)
 
 ---
@@ -35,9 +35,9 @@ Compared with Puerts / xLua-style JS bridges, or “hand-rolled QuickJS + custom
 
 Host APIs are intentionally aligned: if you know ZLua, ZenTS feels familiar.
 
-### Sister product: Unreal (zent-ts-ue)
+### Sister product: Unreal (ZenTS-UE)
 
-For a modern TypeScript solution on **Unreal Engine** (aggressively optimized for C++), see **[zent-ts-ue](https://github.com/focus-creative-games/zent-ts-ue)**. It is **still under development**. This package and docs site cover **Unity / Tuanjie** only; follow that repo for UE progress and usage.
+For a modern TypeScript solution on **Unreal Engine** (aggressively optimized for C++), see **[ZenTS-UE](https://github.com/focus-creative-games/ZenTS-UE)**. It is **still under development**. This package and docs site cover **Unity / Tuanjie** only; follow that repo for UE progress and usage.
 
 ---
 
@@ -263,4 +263,4 @@ MIT. Free to use, modify, and distribute.
 - Site: [code-philosophy.com](https://code-philosophy.com)
 - QQ group: `1095435513` (ZenTS community)
 - Discord: [https://discord.gg/5bT7w9aRMz](https://discord.gg/5bT7w9aRMz)
-- Unreal (WIP): [zent-ts-ue](https://github.com/focus-creative-games/zent-ts-ue)
+- Unreal (WIP): [ZenTS-UE](https://github.com/focus-creative-games/ZenTS-UE)

@@ -44,7 +44,7 @@ namespace ZenTS.BuildProcessors
                     "[ZenTS] Please install ZenTS first via menu 'ZenTS/Install...'.");
             }
 
-            #if UNITY_2022 || UNITY_2023_1_OR_NEWER
+#if UNITY_2022 || UNITY_2023_1_OR_NEWER
             MonoHooks.GetIl2CppFolderHook.EnsureInstalled();
 #endif
             string runtimeDir = CommonDirs.LocalIl2CppPath;

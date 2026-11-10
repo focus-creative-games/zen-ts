@@ -15,7 +15,7 @@ namespace MonoHook
 
         static DelegateFlushICache flush_icache;
         private static readonly long _Pagesize;
-        
+
         static HookUtils()
         {
             PropertyInfo p_SystemPageSize = typeof(Environment).GetProperty("SystemPageSize");
@@ -55,7 +55,7 @@ namespace MonoHook
             bool ret = VirtualProtect(ptr, (uint)size, Protection.PAGE_EXECUTE_READWRITE, out oldProtect);
             UnityEngine.Debug.Assert(ret);
 #else
-            SetMemPerms(ptr,(ulong)size,MmapProts.PROT_READ | MmapProts.PROT_WRITE | MmapProts.PROT_EXEC);
+            SetMemPerms(ptr, (ulong)size, MmapProts.PROT_READ | MmapProts.PROT_WRITE | MmapProts.PROT_EXEC);
 #endif
         }
 
@@ -73,9 +73,9 @@ namespace MonoHook
 
         public static KeyValuePair<long, long> GetPageAlignedAddr(long code, int size)
         {
-            long pagesize   = _Pagesize;
-            long startPage  = (code) & ~(pagesize - 1);
-            long endPage    = (code + size + pagesize - 1) & ~(pagesize - 1);
+            long pagesize = _Pagesize;
+            long startPage = (code) & ~(pagesize - 1);
+            long endPage = (code + size + pagesize - 1) & ~(pagesize - 1);
             return new KeyValuePair<long, long>(startPage, endPage);
         }
 
@@ -110,7 +110,8 @@ namespace MonoHook
                     count++;
                 }
             }
-        END:;
+        END:
+            ;
             return sb.ToString();
         }
 
@@ -245,24 +246,26 @@ namespace MonoHook
 
 #else
         [Flags]
-        public enum MmapProts : int {
-            PROT_READ       = 0x1,
-            PROT_WRITE      = 0x2,
-            PROT_EXEC       = 0x4,
-            PROT_NONE       = 0x0,
-            PROT_GROWSDOWN  = 0x01000000,
-            PROT_GROWSUP    = 0x02000000,
+        public enum MmapProts : int
+        {
+            PROT_READ = 0x1,
+            PROT_WRITE = 0x2,
+            PROT_EXEC = 0x4,
+            PROT_NONE = 0x0,
+            PROT_GROWSDOWN = 0x01000000,
+            PROT_GROWSUP = 0x02000000,
         }
 
         [DllImport("libc", SetLastError = true, CallingConvention = CallingConvention.Cdecl)]
         private static extern int mprotect(IntPtr start, IntPtr len, MmapProts prot);
-    
-        public static unsafe void SetMemPerms(IntPtr start, ulong len, MmapProts prot) {
+
+        public static unsafe void SetMemPerms(IntPtr start, ulong len, MmapProts prot)
+        {
             var requiredAddr = GetPageAlignedAddr(start.ToInt64(), (int)len);
             long startPage = requiredAddr.Key;
             long endPage = requiredAddr.Value;
 
-            if (mprotect((IntPtr) startPage, (IntPtr) (endPage - startPage), prot) != 0)
+            if (mprotect((IntPtr)startPage, (IntPtr)(endPage - startPage), prot) != 0)
                 throw new Exception($"mprotect with prot:{prot} fail!");
         }
 #endif

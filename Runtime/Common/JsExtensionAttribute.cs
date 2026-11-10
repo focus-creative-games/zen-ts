@@ -30,7 +30,10 @@ namespace ZenTS
         AllowMultiple = true, Inherited = false)]
     public sealed class JsExtensionAttribute : Attribute
     {
-        public Type[] ExtensionTypes { get; }
+        public Type[] ExtensionTypes
+        {
+            get;
+        }
 
         public JsExtensionAttribute(params Type[] extensionTypes)
         {

@@ -31,29 +31,44 @@ namespace ZenTS.Marshaling
     internal static class OpaqueParameterScope
     {
         private static int _generation = 1;
-        private static readonly System.Collections.Generic.Stack<int> Scopes=new System.Collections.Generic.Stack<int>();
-        private static readonly System.Collections.Generic.HashSet<int> Active=new System.Collections.Generic.HashSet<int>();
-        private static readonly System.Collections.Generic.Dictionary<int,System.Collections.Generic.List<OpaqueValue>> Handles=new System.Collections.Generic.Dictionary<int,System.Collections.Generic.List<OpaqueValue>>();
+        private static readonly System.Collections.Generic.Stack<int> Scopes = new System.Collections.Generic.Stack<int>();
+        private static readonly System.Collections.Generic.HashSet<int> Active = new System.Collections.Generic.HashSet<int>();
+        private static readonly System.Collections.Generic.Dictionary<int, System.Collections.Generic.List<OpaqueValue>> Handles = new System.Collections.Generic.Dictionary<int, System.Collections.Generic.List<OpaqueValue>>();
         public static void Enter()
         {
-            unchecked {if(++_generation<=0)_generation=1;}
-            Scopes.Push(_generation);Active.Add(_generation);Handles[_generation]=new System.Collections.Generic.List<OpaqueValue>();
+            unchecked
+            {
+                if (++_generation <= 0)
+                    _generation = 1;
+            }
+            Scopes.Push(_generation);
+            Active.Add(_generation);
+            Handles[_generation] = new System.Collections.Generic.List<OpaqueValue>();
         }
         public static void Leave(IntPtr ctx)
         {
-            if(Scopes.Count==0)return;int id=Scopes.Pop();Active.Remove(id);
-            foreach(var handle in Handles[id])handle.Target=null;
+            if (Scopes.Count == 0)
+                return;
+            int id = Scopes.Pop();
+            Active.Remove(id);
+            foreach (var handle in Handles[id])
+                handle.Target = null;
             Handles.Remove(id);
         }
         public static void Reset()
         {
-            foreach(var handles in Handles.Values)foreach(var handle in handles)handle.Target=null;
-            Handles.Clear();Active.Clear();Scopes.Clear();
+            foreach (var handles in Handles.Values)
+                foreach (var handle in handles)
+                    handle.Target = null;
+            Handles.Clear();
+            Active.Clear();
+            Scopes.Clear();
         }
 
         public static JsValue Push(IntPtr ctx, object target, Type declaredType = null, JsMarshalAsAttribute marshal = null)
         {
-            if(Scopes.Count==0)throw new JsScriptException("zents: OpaqueValue requires an active call scope");
+            if (Scopes.Count == 0)
+                throw new JsScriptException("zents: OpaqueValue requires an active call scope");
             var opaque = new OpaqueValue(target) { Generation = Scopes.Peek(), DeclaredType = declaredType ?? target?.GetType(), Marshal = marshal?.JsMarshalType == JsMarshalType.OpaqueValue ? null : marshal };
             Handles[Scopes.Peek()].Add(opaque);
             JsValue handle = EngineApi.NewObject(ctx);

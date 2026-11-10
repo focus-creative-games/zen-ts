@@ -25,15 +25,30 @@ namespace ZenTS
     /// </summary>
     public sealed class JsExtensionXmlRule
     {
-        public string SourcePath { get; set; }
+        public string SourcePath
+        {
+            get; set;
+        }
 
-        public string TargetAssemblyName { get; set; }
+        public string TargetAssemblyName
+        {
+            get; set;
+        }
 
-        public string TargetTypeFullName { get; set; }
+        public string TargetTypeFullName
+        {
+            get; set;
+        }
 
-        public string ExtensionAssemblyName { get; set; }
+        public string ExtensionAssemblyName
+        {
+            get; set;
+        }
 
-        public string ExtensionTypeFullName { get; set; }
+        public string ExtensionTypeFullName
+        {
+            get; set;
+        }
 
         public string DuplicateKey =>
             TargetAssemblyName + "|" + TargetTypeFullName + "|"

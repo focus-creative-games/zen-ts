@@ -26,7 +26,10 @@ namespace ZenTS.Editor.Diagnostics
 {
     public readonly struct JSRuntimeHandle
     {
-        public IntPtr Value { get; }
+        public IntPtr Value
+        {
+            get;
+        }
 
         public JSRuntimeHandle(IntPtr value)
         {
@@ -36,7 +39,10 @@ namespace ZenTS.Editor.Diagnostics
 
     public readonly struct JSContextHandle
     {
-        public IntPtr Value { get; }
+        public IntPtr Value
+        {
+            get;
+        }
 
         public JSContextHandle(IntPtr value)
         {
@@ -46,13 +52,25 @@ namespace ZenTS.Editor.Diagnostics
 
     public sealed class JsDebuggerHostContext
     {
-        public string ProjectRoot { get; set; }
+        public string ProjectRoot
+        {
+            get; set;
+        }
 
-        public IReadOnlyList<string> SourceSearchPaths { get; set; }
+        public IReadOnlyList<string> SourceSearchPaths
+        {
+            get; set;
+        }
 
-        public int PreferredPort { get; set; }
+        public int PreferredPort
+        {
+            get; set;
+        }
 
-        public bool WaitForDebugger { get; set; }
+        public bool WaitForDebugger
+        {
+            get; set;
+        }
     }
 
     /// <summary>

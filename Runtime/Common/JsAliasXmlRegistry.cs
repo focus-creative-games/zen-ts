@@ -239,10 +239,11 @@ namespace ZenTS
             }
 
             string assemblyName = assembly.GetName()?.Name;
-            if(!s_aotAssemblies.Contains(assembly))
+            if (!s_aotAssemblies.Contains(assembly))
             {
-                if(assemblyName!=null && s_rulesByAssemblyName.ContainsKey(assemblyName))throw new JsMarshalAsConfigurationException("[ZenTS] XML is only valid for initialized AOT assemblies: "+assemblyName);
-                return new Dictionary<int,string>();
+                if (assemblyName != null && s_rulesByAssemblyName.ContainsKey(assemblyName))
+                    throw new JsMarshalAsConfigurationException("[ZenTS] XML is only valid for initialized AOT assemblies: " + assemblyName);
+                return new Dictionary<int, string>();
             }
             var map = new Dictionary<int, string>();
             if (assemblyName != null

@@ -408,15 +408,26 @@ namespace ZenTS
 
         private static Type[] ReadTypeArgs(IntPtr ctx, JsValue jsArray)
         {
-            if(EngineApi.IsArray(ctx,jsArray)==0)throw new JsScriptException("zents: generic type arguments require an Array");
-            JsValue lengthValue=EngineApi.GetPropertyStr(ctx,jsArray,"length");int length;
-            try{length=Convert.ToInt32(PrimitiveMarshal.Pop(ctx,lengthValue));}finally{JsValueUtil.Free(ctx,lengthValue);}
-            var types=new Type[length];
-            for(int i=0;i<length;++i)
+            if (EngineApi.IsArray(ctx, jsArray) == 0)
+                throw new JsScriptException("zents: generic type arguments require an Array");
+            JsValue lengthValue = EngineApi.GetPropertyStr(ctx, jsArray, "length");
+            int length;
+            try
             {
-                if(EngineApi.HasOwnProperty(ctx,jsArray,i.ToString(System.Globalization.CultureInfo.InvariantCulture))!=1)throw new JsScriptException("zents: generic type argument array has holes");
-                JsValue item=EngineApi.GetPropertyUint32(ctx,jsArray,(uint)i);
-                try{types[i]=ResolveTypeArg(ctx,item);}finally{JsValueUtil.Free(ctx,item);}
+                length = Convert.ToInt32(PrimitiveMarshal.Pop(ctx, lengthValue));
+            }
+            finally { JsValueUtil.Free(ctx, lengthValue); }
+            var types = new Type[length];
+            for (int i = 0; i < length; ++i)
+            {
+                if (EngineApi.HasOwnProperty(ctx, jsArray, i.ToString(System.Globalization.CultureInfo.InvariantCulture)) != 1)
+                    throw new JsScriptException("zents: generic type argument array has holes");
+                JsValue item = EngineApi.GetPropertyUint32(ctx, jsArray, (uint)i);
+                try
+                {
+                    types[i] = ResolveTypeArg(ctx, item);
+                }
+                finally { JsValueUtil.Free(ctx, item); }
             }
             return types;
         }
@@ -465,41 +476,52 @@ namespace ZenTS
             var methods = new System.Collections.Generic.List<MethodInfo>();
             for (Type t = owner; t != null; t = t.BaseType)
                 methods.AddRange(t.GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static | BindingFlags.DeclaredOnly));
-            if (isStatic != true) methods.AddRange(ExtensionMethodUtil.GetExtensionMethods(owner));
+            if (isStatic != true)
+                methods.AddRange(ExtensionMethodUtil.GetExtensionMethods(owner));
             foreach (MethodInfo m in methods)
             {
                 bool ext = MethodOverloadDispatcher.IsExtensionMethod(m);
-                if ((m.IsSpecialName && !m.Name.StartsWith("add_",StringComparison.Ordinal) && !m.Name.StartsWith("remove_",StringComparison.Ordinal)) || (isStatic.HasValue && (m.IsStatic && !ext) != isStatic.Value)) continue;
-                if (genericArity >= 0 && (!m.IsGenericMethodDefinition || m.GetGenericArguments().Length != genericArity)) continue;
-                if (key.Contains("(") ? MetaBinding.FormatFullSignatureKey(m) != key : MetaBinding.ResolveMemberName(m) != key) continue;
+                if ((m.IsSpecialName && !m.Name.StartsWith("add_", StringComparison.Ordinal) && !m.Name.StartsWith("remove_", StringComparison.Ordinal)) || (isStatic.HasValue && (m.IsStatic && !ext) != isStatic.Value))
+                    continue;
+                if (genericArity >= 0 && (!m.IsGenericMethodDefinition || m.GetGenericArguments().Length != genericArity))
+                    continue;
+                if (key.Contains("(") ? MetaBinding.FormatFullSignatureKey(m) != key : MetaBinding.ResolveMemberName(m) != key)
+                    continue;
                 // Derived declarations hide identical inherited CLR signatures.
                 if (found != null && MetaBinding.FormatFullSignatureKey(found) != MetaBinding.FormatFullSignatureKey(m))
                     throw new JsScriptException("zents: ambiguous generic method: " + key);
-                if (found == null) found = m;
+                if (found == null)
+                    found = m;
             }
             return found;
         }
 
-        private static bool IsByValReceiver(IntPtr ctx,JsValue receiver)
+        private static bool IsByValReceiver(IntPtr ctx, JsValue receiver)
         {
-            JsValue kind=EngineApi.GetPropertyStr(ctx,receiver,"__zents_ud_kind");
-            try{return JsValueUtil.GetNormTag(kind)==JsValueUtil.TagString&&JsCallPlan.ReadText(ctx,kind)=="byval";}
-            finally{JsValueUtil.Free(ctx,kind);}
+            JsValue kind = EngineApi.GetPropertyStr(ctx, receiver, "__zents_ud_kind");
+            try
+            {
+                return JsValueUtil.GetNormTag(kind) == JsValueUtil.TagString && JsCallPlan.ReadText(ctx, kind) == "byval";
+            }
+            finally { JsValueUtil.Free(ctx, kind); }
         }
 
         private static JsValue ResolveSignatureCallback(IntPtr ctx, JsValue thisVal, int argc, IntPtr argv)
         {
             try
             {
-                if (argc != 2) return JsValueUtil.Undefined;
+                if (argc != 2)
+                    return JsValueUtil.Undefined;
                 JsValue receiver = ArgReader.Read(argv, 0);
                 string key = ReadStringArg(ctx, argv, 1);
-                if (!key.Contains("(")) return JsValueUtil.Undefined;
-                if (!ObjectRegistry.TryGetObject(ctx, receiver, out object obj)) return JsValueUtil.Undefined;
+                if (!key.Contains("("))
+                    return JsValueUtil.Undefined;
+                if (!ObjectRegistry.TryGetObject(ctx, receiver, out object obj))
+                    return JsValueUtil.Undefined;
                 bool isStatic = obj is Type && EngineApi.IsFunction(ctx, receiver) != 0;
                 Type owner = isStatic ? (Type)obj : ObjectRegistry.TryGetViewType(ctx, receiver, out Type view) ? view : obj.GetType();
                 MethodInfo method = FindPublicMethod(owner, key, isStatic);
-                return method == null ? JsValueUtil.Undefined : MethodEmitter.EmitMethod(JsEnv.FromContext(ctx), method, owner, IsByValReceiver(ctx,receiver));
+                return method == null ? JsValueUtil.Undefined : MethodEmitter.EmitMethod(JsEnv.FromContext(ctx), method, owner, IsByValReceiver(ctx, receiver));
             }
             catch (Exception ex) { return Fail(ctx, ex); }
         }
@@ -508,12 +530,14 @@ namespace ZenTS
         {
             try
             {
-                if (argc != 3) throw new JsScriptException("zents: inflate requires type, method name/signature and type arguments.");
+                if (argc != 3)
+                    throw new JsScriptException("zents: inflate requires type, method name/signature and type arguments.");
                 Type owner = ResolveTypeArg(ctx, ArgReader.Read(argv, 0));
                 string key = ReadStringArg(ctx, argv, 1);
                 Type[] types = ReadTypeArgs(ctx, ArgReader.Read(argv, 2));
                 MethodInfo open = FindPublicMethod(owner, key, null, types.Length);
-                if (open == null) throw new JsScriptException("zents: generic method not found: " + key);
+                if (open == null)
+                    throw new JsScriptException("zents: generic method not found: " + key);
                 return GetClosedGenericFunction(ctx, open.MakeGenericMethod(types), owner, false);
             }
             catch (Exception ex) { return Fail(ctx, ex); }
@@ -523,7 +547,8 @@ namespace ZenTS
         {
             // The callable does not capture a receiver; JS this supplies it on every call.
             var key = (closed, owner, isByVal);
-            if (ClosedGenericFunctions.TryGetValue(key, out JsValue cached)) return JsValueUtil.Dup(cached);
+            if (ClosedGenericFunctions.TryGetValue(key, out JsValue cached))
+                return JsValueUtil.Dup(cached);
             JsValue fn = MethodEmitter.EmitMethod(JsEnv.FromContext(ctx), closed, owner, isByVal);
             ClosedGenericFunctions[key] = JsValueUtil.Dup(fn);
             return fn;
@@ -760,11 +785,15 @@ namespace ZenTS
 
         private static bool IsBlittableElement(Type type)
         {
-            if (type == null || !type.IsValueType || type == typeof(bool) || type == typeof(char)) return false;
-            if (type.IsPrimitive || type.IsEnum || type == typeof(IntPtr) || type == typeof(UIntPtr)) return true;
-            if (!type.IsLayoutSequential && !type.IsExplicitLayout) return false;
+            if (type == null || !type.IsValueType || type == typeof(bool) || type == typeof(char))
+                return false;
+            if (type.IsPrimitive || type.IsEnum || type == typeof(IntPtr) || type == typeof(UIntPtr))
+                return true;
+            if (!type.IsLayoutSequential && !type.IsExplicitLayout)
+                return false;
             foreach (FieldInfo field in type.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic))
-                if (!field.FieldType.IsPointer && !IsBlittableElement(field.FieldType)) return false;
+                if (!field.FieldType.IsPointer && !IsBlittableElement(field.FieldType))
+                    return false;
             return true;
         }
 
@@ -796,7 +825,10 @@ namespace ZenTS
                 if (raw.Length != 0)
                 {
                     GCHandle pin = GCHandle.Alloc(arr, GCHandleType.Pinned);
-                    try { Marshal.Copy(pin.AddrOfPinnedObject(), raw, 0, raw.Length); }
+                    try
+                    {
+                        Marshal.Copy(pin.AddrOfPinnedObject(), raw, 0, raw.Length);
+                    }
                     finally { pin.Free(); }
                 }
                 return ArrayMarshal.ToJsArray(ctx, raw);
@@ -835,9 +867,9 @@ namespace ZenTS
                     return JsCallbackGate.ReturnErrorSentinel(ctx, "zents: get_opaquevalue: not an opaque handle.");
                 }
 
-                ObjectRegistry.TryGetObject(ctx,ArgReader.Read(argv,0),out object held);
-                var opaque=held as OpaqueValue;
-                return TypedMarshal.Push(ctx,target,opaque?.DeclaredType??target?.GetType(),opaque?.Marshal);
+                ObjectRegistry.TryGetObject(ctx, ArgReader.Read(argv, 0), out object held);
+                var opaque = held as OpaqueValue;
+                return TypedMarshal.Push(ctx, target, opaque?.DeclaredType ?? target?.GetType(), opaque?.Marshal);
             }
             catch (Exception ex)
             {
@@ -856,8 +888,8 @@ namespace ZenTS
                 }
 
                 // Validate scope first; an expired handle cannot mutate any later frame.
-                OpaqueParameterScope.TryPop(ctx,handle,out _);
-                object value=opaque.DeclaredType!=null?TypedMarshal.Pop(ctx,ArgReader.Read(argv,1),opaque.DeclaredType,opaque.Marshal):PrimitiveMarshal.Pop(ctx,ArgReader.Read(argv,1));
+                OpaqueParameterScope.TryPop(ctx, handle, out _);
+                object value = opaque.DeclaredType != null ? TypedMarshal.Pop(ctx, ArgReader.Read(argv, 1), opaque.DeclaredType, opaque.Marshal) : PrimitiveMarshal.Pop(ctx, ArgReader.Read(argv, 1));
                 OpaqueParameterScope.SetTarget(opaque, value);
                 return JsValueUtil.Undefined;
             }

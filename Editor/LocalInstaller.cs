@@ -41,7 +41,10 @@ namespace ZenTS
 
         private readonly UnityVersion _curVersion;
 
-        public bool RequiresEditorRestart { get; private set; }
+        public bool RequiresEditorRestart
+        {
+            get; private set;
+        }
 
         public LocalInstaller()
         {
@@ -86,7 +89,7 @@ namespace ZenTS
         public bool HasInstalledToLocal()
         {
             return Directory.Exists(CommonDirs.LocalLibil2cppPath)
-                   && File.Exists(Path.Combine(CommonDirs.LocalZentsPath,"ZenTSCommon.h"))
+                   && File.Exists(Path.Combine(CommonDirs.LocalZentsPath, "ZenTSCommon.h"))
                    && File.Exists(ZenTSConfWriter.LocalConfPath);
         }
 
@@ -126,7 +129,8 @@ namespace ZenTS
                     $"zents-runtime missing: {CommonDirs.ZentsRuntimePathInPackage}");
             }
 
-            if(NativeSdkStore.HasTarget(NativeSdkStore.EditorTarget))NativeEditorPlugins.Ensure();
+            if (NativeSdkStore.HasTarget(NativeSdkStore.EditorTarget))
+                NativeEditorPlugins.Ensure();
             MonoHooks.GetIl2CppFolderHook.EnsureInstalled();
 
             Directory.CreateDirectory(CommonDirs.InstallRootDir);
@@ -168,19 +172,23 @@ namespace ZenTS
 
             DirectoryUtil.CopyDir(CommonDirs.ZentsRuntimePathInPackage, CommonDirs.LocalZentsPath, true);
             // Retired M0 JSON/ccall prototype. HostJs now shares the CLR bridge through EngineApi.
-            foreach(string relative in new[]{"hostjs/HostRegistry.h","hostjs/HostRegistry.cpp","hostjs/HostDispatch.h","hostjs/HostDispatch.cpp","hostjs/HostInternalCalls.h","hostjs/HostInternalCalls.cpp"})
+            foreach (string relative in new[] { "hostjs/HostRegistry.h", "hostjs/HostRegistry.cpp", "hostjs/HostDispatch.h", "hostjs/HostDispatch.cpp", "hostjs/HostInternalCalls.h", "hostjs/HostInternalCalls.cpp" })
             {
-                string retired=Path.Combine(CommonDirs.LocalZentsPath,relative);
-                if(File.Exists(retired))File.Delete(retired);
+                string retired = Path.Combine(CommonDirs.LocalZentsPath, relative);
+                if (File.Exists(retired))
+                    File.Delete(retired);
             }
-            if(NativeSdkStore.HasTarget("windows-x64"))V8BuildSetup.ConfigureStaticLibraries(CommonDirs.LocalZentsPath);
+            if (NativeSdkStore.HasTarget("windows-x64"))
+                V8BuildSetup.ConfigureStaticLibraries(CommonDirs.LocalZentsPath);
             string facade = File.ReadAllText(Path.Combine(CommonDirs.JsLibPathInPackage, "zentslib.js"));
-            if (facade.Contains(")zents\"")) throw new InvalidOperationException("[ZenTS] JS facade raw-string delimiter collision.");
-            string includePath=Path.Combine(CommonDirs.LocalZentsPath,"jvm","ZentsLibScript.inc");
-            string embedded=File.ReadAllText(includePath);
-            int marker=embedded.IndexOf("R\"zents(",StringComparison.Ordinal);
-            if(marker<0)throw new InvalidOperationException("[ZenTS] Invalid embedded facade template.");
-            File.WriteAllText(includePath,embedded.Substring(0,marker)+"R\"zents("+facade+")zents\";\n",new UTF8Encoding(false));
+            if (facade.Contains(")zents\""))
+                throw new InvalidOperationException("[ZenTS] JS facade raw-string delimiter collision.");
+            string includePath = Path.Combine(CommonDirs.LocalZentsPath, "jvm", "ZentsLibScript.inc");
+            string embedded = File.ReadAllText(includePath);
+            int marker = embedded.IndexOf("R\"zents(", StringComparison.Ordinal);
+            if (marker < 0)
+                throw new InvalidOperationException("[ZenTS] Invalid embedded facade template.");
+            File.WriteAllText(includePath, embedded.Substring(0, marker) + "R\"zents(" + facade + ")zents\";\n", new UTF8Encoding(false));
 
 
             string defines = ApplyScriptingDefines();
@@ -288,7 +296,8 @@ namespace ZenTS
                 NamedBuildTarget.WebGL,
             };
 
-            if(Enum.TryParse("WeixinMiniGame",out BuildTargetGroup wechatGroup))targets.Add(NamedBuildTarget.FromBuildTargetGroup(wechatGroup));
+            if (Enum.TryParse("WeixinMiniGame", out BuildTargetGroup wechatGroup))
+                targets.Add(NamedBuildTarget.FromBuildTargetGroup(wechatGroup));
 
             const string define = "ZENTS_V8";
             foreach (NamedBuildTarget t in targets)
@@ -301,7 +310,7 @@ namespace ZenTS
                         StringComparer.Ordinal);
                     // ZenTS owns its reserved scripting-symbol namespace.
                     parts.RemoveWhere(x => x.StartsWith("ZENTS_", StringComparison.Ordinal) || x.StartsWith("ZTS_", StringComparison.Ordinal));
-                    parts.Add((t == NamedBuildTarget.WebGL || t.TargetName=="WeixinMiniGame") ? "ZENTS_HOST_JS" : define);
+                    parts.Add((t == NamedBuildTarget.WebGL || t.TargetName == "WeixinMiniGame") ? "ZENTS_HOST_JS" : define);
                     PlayerSettings.SetScriptingDefineSymbols(t, string.Join(";", parts.OrderBy(x => x)));
                 }
                 catch (Exception ex)

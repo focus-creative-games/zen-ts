@@ -16,7 +16,10 @@ namespace ZenTS.Editor.Diagnostics
         private SendCallback _send;
         private PumpCallback _pump;
         private int _thread;
-        public static string Endpoint { get; private set; }
+        public static string Endpoint
+        {
+            get; private set;
+        }
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)] private delegate void SendCallback(IntPtr data, int length);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)] private delegate void PumpCallback(int timeout);
         private const string Library = "zents_v8";
@@ -29,14 +32,18 @@ namespace ZenTS.Editor.Diagnostics
         [DllImport(Library, CallingConvention = CallingConvention.Cdecl)] internal static extern int ze_InspectorCount();
         public void Install(JSRuntimeHandle runtime, JSContextHandle context, JsDebuggerHostContext options)
         {
-            if (_inspector != IntPtr.Zero) throw new InvalidOperationException("Inspector already installed");
+            if (_inspector != IntPtr.Zero)
+                throw new InvalidOperationException("Inspector already installed");
             _thread = Thread.CurrentThread.ManagedThreadId;
             try
             {
                 _server = new V8InspectorServer(options.PreferredPort, options.ProjectRoot, Signal);
-                _send = Send; _pump = Pump;
-                lock (_lifetime) _inspector = ze_InspectorCreate(context.Value, _send, _pump, _server.SourceUrl);
-                if (_inspector == IntPtr.Zero) throw new InvalidOperationException("V8 Inspector creation failed");
+                _send = Send;
+                _pump = Pump;
+                lock (_lifetime)
+                    _inspector = ze_InspectorCreate(context.Value, _send, _pump, _server.SourceUrl);
+                if (_inspector == IntPtr.Zero)
+                    throw new InvalidOperationException("V8 Inspector creation failed");
                 Endpoint = _server.WebSocketUrl;
                 Debug.Log("[ZenTS][debugger] Listening on " + Endpoint + "; discovery=http://127.0.0.1:" + options.PreferredPort + "/json/list");
                 if (options.WaitForDebugger)
@@ -52,19 +59,28 @@ namespace ZenTS.Editor.Diagnostics
         {
             // RequestInterrupt is the only cross-thread V8 entry; its callback
             // dispatches protocol on the owner thread, including CPU-bound JS.
-            lock (_lifetime) if (_inspector != IntPtr.Zero) ze_InspectorInterrupt(_inspector);
+            lock (_lifetime)
+                if (_inspector != IntPtr.Zero)
+                    ze_InspectorInterrupt(_inspector);
         }
         private void AssertThread()
         {
-            if (Thread.CurrentThread.ManagedThreadId != _thread) throw new InvalidOperationException("Inspector must run on the V8 owner thread");
+            if (Thread.CurrentThread.ManagedThreadId != _thread)
+                throw new InvalidOperationException("Inspector must run on the V8 owner thread");
         }
         private void Send(IntPtr data, int length)
         {
             // Callback must never unwind a managed exception through a V8 frame.
             try
             {
-                if (_client == null || length < 0 || length > 8 * 1024 * 1024) { _client?.Close(); return; }
-                byte[] bytes = new byte[length]; Marshal.Copy(data, bytes, 0, length); _client.Send(bytes);
+                if (_client == null || length < 0 || length > 8 * 1024 * 1024)
+                {
+                    _client?.Close();
+                    return;
+                }
+                byte[] bytes = new byte[length];
+                Marshal.Copy(data, bytes, 0, length);
+                _client.Send(bytes);
             }
             catch (Exception) { _client?.Close(); }
         }
@@ -73,10 +89,15 @@ namespace ZenTS.Editor.Diagnostics
             try
             {
                 AssertThread();
-                if (_client != null && _client.Closed) { ze_InspectorDisconnect(_inspector); _client = null; }
+                if (_client != null && _client.Closed)
+                {
+                    ze_InspectorDisconnect(_inspector);
+                    _client = null;
+                }
                 for (int i = 0; i < 64 && _server != null; i++)
                 {
-                    if (!_server.Take(i == 0 ? timeout : 0, out var message)) break;
+                    if (!_server.Take(i == 0 ? timeout : 0, out var message))
+                        break;
                     if (message.Connected)
                     {
                         _client = message.Client;
@@ -84,25 +105,46 @@ namespace ZenTS.Editor.Diagnostics
                     }
                     else if (message.Client == _client)
                     {
-                        if (message.Data != null) ze_InspectorDispatch(_inspector, message.Data, message.Data.Length);
-                        else { ze_InspectorDisconnect(_inspector); _client = null; }
+                        if (message.Data != null)
+                            ze_InspectorDispatch(_inspector, message.Data, message.Data.Length);
+                        else
+                        {
+                            ze_InspectorDisconnect(_inspector);
+                            _client = null;
+                        }
                     }
                 }
             }
             catch (Exception error)
             {
-                _client?.Close(); _client = null;
-                if (_inspector != IntPtr.Zero) ze_InspectorDisconnect(_inspector);
+                _client?.Close();
+                _client = null;
+                if (_inspector != IntPtr.Zero)
+                    ze_InspectorDisconnect(_inspector);
                 Debug.LogWarning("[ZenTS][debugger] Protocol dispatch: " + error.Message);
             }
         }
-        public void Tick() { if (_inspector != IntPtr.Zero) Pump(0); }
+        public void Tick()
+        {
+            if (_inspector != IntPtr.Zero)
+                Pump(0);
+        }
         public void Uninstall()
         {
-            if (_thread != 0) AssertThread();
-            _server?.Dispose(); _server = null; _client = null;
-            lock (_lifetime) if (_inspector != IntPtr.Zero) { ze_InspectorDestroy(_inspector); _inspector = IntPtr.Zero; }
-            _send = null; _pump = null; Endpoint = null;
+            if (_thread != 0)
+                AssertThread();
+            _server?.Dispose();
+            _server = null;
+            _client = null;
+            lock (_lifetime)
+                if (_inspector != IntPtr.Zero)
+                {
+                    ze_InspectorDestroy(_inspector);
+                    _inspector = IntPtr.Zero;
+                }
+            _send = null;
+            _pump = null;
+            Endpoint = null;
         }
     }
 }

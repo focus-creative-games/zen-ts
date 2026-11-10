@@ -82,7 +82,11 @@ namespace ZenTS.Editor.Diagnostics
             }
             catch (Exception ex)
             {
-                try { host.Uninstall(); } catch { }
+                try
+                {
+                    host.Uninstall();
+                }
+                catch { }
                 Debug.LogError("[ZenTS] debugger host Install failed: " + ex.Message);
                 return;
             }
@@ -108,7 +112,11 @@ namespace ZenTS.Editor.Diagnostics
             }
 
             s_active = null;
-            if (s_tickHooked) { EditorApplication.update -= Tick; s_tickHooked = false; }
+            if (s_tickHooked)
+            {
+                EditorApplication.update -= Tick;
+                s_tickHooked = false;
+            }
         }
 
         private static void EnsureTickHook()

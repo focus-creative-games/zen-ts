@@ -31,7 +31,8 @@ namespace MonoHook
 
         public static MethodHook GetHook(MethodBase method)
         {
-            if (method == null) return null;
+            if (method == null)
+                return null;
 
             MethodHook hook;
             if (_hooks.TryGetValue(method, out hook))
@@ -41,7 +42,8 @@ namespace MonoHook
 
         public static void RemoveHooker(MethodBase method)
         {
-            if (method == null) return;
+            if (method == null)
+                return;
 
             _hooks.Remove(method);
         }
@@ -60,7 +62,7 @@ namespace MonoHook
             var list = _hooks.Values.ToList();
             foreach (var hook in list)
             {
-                if(hook.tag == tag)
+                if (hook.tag == tag)
                     hook.Uninstall();
             }
         }

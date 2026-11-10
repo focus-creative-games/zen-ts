@@ -28,16 +28,24 @@ namespace ZenTS.Marshaling
     {
         public static object FromJsArray(IntPtr ctx, JsValue jsArray)
         {
-            JsValue lengthValue=EngineApi.GetPropertyStr(ctx,jsArray,"length");
+            JsValue lengthValue = EngineApi.GetPropertyStr(ctx, jsArray, "length");
             int length;
-            try { length=Convert.ToInt32(PrimitiveMarshal.Pop(ctx,lengthValue)); }
-            finally {JsValueUtil.Free(ctx,lengthValue);}
-            var values=new object[length];
-            for(int i=0;i<length;++i)
+            try
             {
-                if(EngineApi.HasOwnProperty(ctx,jsArray,i.ToString(System.Globalization.CultureInfo.InvariantCulture))!=1)throw new JsScriptException("zents: array holes are not supported");
-                JsValue item=EngineApi.GetPropertyUint32(ctx,jsArray,(uint)i);
-                try {values[i]=PrimitiveMarshal.Pop(ctx,item);}finally{JsValueUtil.Free(ctx,item);}
+                length = Convert.ToInt32(PrimitiveMarshal.Pop(ctx, lengthValue));
+            }
+            finally { JsValueUtil.Free(ctx, lengthValue); }
+            var values = new object[length];
+            for (int i = 0; i < length; ++i)
+            {
+                if (EngineApi.HasOwnProperty(ctx, jsArray, i.ToString(System.Globalization.CultureInfo.InvariantCulture)) != 1)
+                    throw new JsScriptException("zents: array holes are not supported");
+                JsValue item = EngineApi.GetPropertyUint32(ctx, jsArray, (uint)i);
+                try
+                {
+                    values[i] = PrimitiveMarshal.Pop(ctx, item);
+                }
+                finally { JsValueUtil.Free(ctx, item); }
             }
             return values;
         }

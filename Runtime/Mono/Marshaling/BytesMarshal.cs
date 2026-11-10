@@ -30,11 +30,16 @@ namespace ZenTS.Marshaling
         public static JsValue Push(IntPtr ctx, byte[] bytes) => bytes == null ? JsValueUtil.Null : EngineApi.NewByteArrayCopy(ctx, bytes);
         public static byte[] Pop(IntPtr ctx, JsValue value)
         {
-            if (JsValueUtil.GetNormTag(value)==JsValueUtil.TagNull) return null;
-            IntPtr data=EngineApi.GetByteArrayData(ctx,value,out UIntPtr length);
-            if(data==IntPtr.Zero)throw new JsScriptException("zents: Bytes requires an attached Uint8Array");
-            int count=checked((int)length.ToUInt64());var bytes=new byte[count];
-            if(count>0)Marshal.Copy(data,bytes,0,count);return bytes;
+            if (JsValueUtil.GetNormTag(value) == JsValueUtil.TagNull)
+                return null;
+            IntPtr data = EngineApi.GetByteArrayData(ctx, value, out UIntPtr length);
+            if (data == IntPtr.Zero)
+                throw new JsScriptException("zents: Bytes requires an attached Uint8Array");
+            int count = checked((int)length.ToUInt64());
+            var bytes = new byte[count];
+            if (count > 0)
+                Marshal.Copy(data, bytes, 0, count);
+            return bytes;
         }
     }
 }

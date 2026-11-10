@@ -39,8 +39,8 @@ namespace ZenTS.Emit
         internal static bool IsExtensionMethod(MethodInfo method) => method != null && method.IsDefined(typeof(System.Runtime.CompilerServices.ExtensionAttribute), false);
         internal static ParameterInfo[] GetJsFacingParameters(MethodInfo method)
         {
-            var parameters=method.GetParameters();
-            return IsExtensionMethod(method)?parameters.Skip(1).ToArray():parameters;
+            var parameters = method.GetParameters();
+            return IsExtensionMethod(method) ? parameters.Skip(1).ToArray() : parameters;
         }
     }
 
@@ -280,7 +280,8 @@ namespace ZenTS.Emit
             int start = isExtension ? 1 : 0;
             for (int i = start; i < ps.Length; i++)
             {
-                if (JsCallPlan.IsOut(ps[i])) continue;
+                if (JsCallPlan.IsOut(ps[i]))
+                    continue;
                 int slots = TableMarshal.GetJsArgSlotCount(ps[i]);
                 if (ps[i].ParameterType.IsByRef)
                 {
@@ -315,36 +316,57 @@ namespace ZenTS.Emit
 
         private static bool TryCloseGtap(IntPtr ctx, MethodInfo open, int argc, IntPtr argv, out MethodInfo closed, out int prefix)
         {
-            closed=null;prefix=open.GetGenericArguments().Length;if(argc<prefix)return false;
-            Type[] types=new Type[prefix];
-            for(int i=0;i<prefix;++i)
+            closed = null;
+            prefix = open.GetGenericArguments().Length;
+            if (argc < prefix)
+                return false;
+            Type[] types = new Type[prefix];
+            for (int i = 0; i < prefix; ++i)
             {
-                JsValue value=ArgReader.Read(argv,i);
-                if(EngineApi.IsFunction(ctx,value)!=0 || !ObjectRegistry.TryGetObject(ctx,value,out object held) || !(held is Type type))return false;
-                JsValue kind=EngineApi.GetPropertyStr(ctx,value,"__zents_ud_kind");
-                try { if(JsValueUtil.GetNormTag(kind)!=JsValueUtil.TagString || JsCallPlan.ReadText(ctx,kind)!="byobj")return false; }
-                finally {JsValueUtil.Free(ctx,kind);}
-                types[i]=type;
+                JsValue value = ArgReader.Read(argv, i);
+                if (EngineApi.IsFunction(ctx, value) != 0 || !ObjectRegistry.TryGetObject(ctx, value, out object held) || !(held is Type type))
+                    return false;
+                JsValue kind = EngineApi.GetPropertyStr(ctx, value, "__zents_ud_kind");
+                try
+                {
+                    if (JsValueUtil.GetNormTag(kind) != JsValueUtil.TagString || JsCallPlan.ReadText(ctx, kind) != "byobj")
+                        return false;
+                }
+                finally { JsValueUtil.Free(ctx, kind); }
+                types[i] = type;
             }
-            try { closed=open.MakeGenericMethod(types); }
-            catch(ArgumentException) { return false; }
-            return JsCallPlan.For(closed).Match(ctx,argc-prefix,IntPtr.Add(argv,prefix*16),out _,out _,out _);
+            try
+            {
+                closed = open.MakeGenericMethod(types);
+            }
+            catch (ArgumentException) { return false; }
+            return JsCallPlan.For(closed).Match(ctx, argc - prefix, IntPtr.Add(argv, prefix * 16), out _, out _, out _);
         }
         private sealed class JsOpenGenericMethodCallback
         {
             private readonly MethodInfo _method;
             private readonly Type _owner;
             private readonly bool _byVal;
-            public JsOpenGenericMethodCallback(MethodInfo method,Type owner,bool byVal){_method=method;_owner=owner;_byVal=byVal;}
-            public JsValue Invoke(IntPtr ctx, JsValue thisVal,int argc,IntPtr argv)
+            public JsOpenGenericMethodCallback(MethodInfo method, Type owner, bool byVal)
+            {
+                _method = method;
+                _owner = owner;
+                _byVal = byVal;
+            }
+            public JsValue Invoke(IntPtr ctx, JsValue thisVal, int argc, IntPtr argv)
             {
                 try
                 {
-                    if(!TryCloseGtap(ctx,_method,argc,argv,out MethodInfo closed,out int prefix))throw new JsScriptException("zents: open generic method requires System.Type GTAP prefix or zents.inflate");
-                    JsValue fn=ZentsLib.GetClosedGenericFunction(ctx,closed,_owner,_byVal);
-                    try{return EngineApi.Call(ctx,fn,thisVal,argc-prefix,IntPtr.Add(argv,prefix*16));}finally{JsValueUtil.Free(ctx,fn);}
+                    if (!TryCloseGtap(ctx, _method, argc, argv, out MethodInfo closed, out int prefix))
+                        throw new JsScriptException("zents: open generic method requires System.Type GTAP prefix or zents.inflate");
+                    JsValue fn = ZentsLib.GetClosedGenericFunction(ctx, closed, _owner, _byVal);
+                    try
+                    {
+                        return EngineApi.Call(ctx, fn, thisVal, argc - prefix, IntPtr.Add(argv, prefix * 16));
+                    }
+                    finally { JsValueUtil.Free(ctx, fn); }
                 }
-                catch(Exception ex){JsCallbackBoundary.ThrowManaged(ctx,ex);return JsValueUtil.MakeErrorSentinel();}
+                catch (Exception ex) { JsCallbackBoundary.ThrowManaged(ctx, ex); return JsValueUtil.MakeErrorSentinel(); }
             }
         }
 
@@ -355,10 +377,11 @@ namespace ZenTS.Emit
             private readonly Type _owner;
             private readonly bool _byVal;
 
-            public JsMethodCallback(MethodInfo method, Type owner=null, bool byVal=false)
+            public JsMethodCallback(MethodInfo method, Type owner = null, bool byVal = false)
             {
                 _method = method;
-                _owner=owner??method.DeclaringType;_byVal=byVal;
+                _owner = owner ?? method.DeclaringType;
+                _byVal = byVal;
                 _compiled = HasPointerSignature(method) ? null : EnsureCompiled(method);
             }
 
@@ -366,20 +389,27 @@ namespace ZenTS.Emit
             {
                 try
                 {
-                    bool extension=MethodOverloadDispatcher.IsExtensionMethod(_method);object receiver=null;
-                    if((!_method.IsStatic||extension) && !ObjectRegistry.TryGetObject(ctx,thisVal,out receiver))throw new JsScriptException("zents: invalid method target");
-                    if((!_method.IsStatic||extension)&&_owner.IsValueType&&!_owner.IsEnum)
+                    bool extension = MethodOverloadDispatcher.IsExtensionMethod(_method);
+                    object receiver = null;
+                    if ((!_method.IsStatic || extension) && !ObjectRegistry.TryGetObject(ctx, thisVal, out receiver))
+                        throw new JsScriptException("zents: invalid method target");
+                    if ((!_method.IsStatic || extension) && _owner.IsValueType && !_owner.IsEnum)
                     {
-                        JsValue kind=EngineApi.GetPropertyStr(ctx,thisVal,"__zents_ud_kind");
-                        try{if((JsCallPlan.ReadText(ctx,kind)=="byval")!=_byVal)throw new JsScriptException("zents: incompatible ByVal/ByObj receiver");}
-                        finally{JsValueUtil.Free(ctx,kind);}
+                        JsValue kind = EngineApi.GetPropertyStr(ctx, thisVal, "__zents_ud_kind");
+                        try
+                        {
+                            if ((JsCallPlan.ReadText(ctx, kind) == "byval") != _byVal)
+                                throw new JsScriptException("zents: incompatible ByVal/ByObj receiver");
+                        }
+                        finally { JsValueUtil.Free(ctx, kind); }
                     }
-                    var plan=JsCallPlan.For(_method);object[] args=plan.Pop(ctx,receiver,argc,argvPtr);
-                    object result=InvokeMethod(_method,extension?null:receiver,args);
-                    WriteBackByRefParameters(ctx,_method,argc,argvPtr,args,extension);
-                    return plan.PushResult(ctx,result,args);
+                    var plan = JsCallPlan.For(_method);
+                    object[] args = plan.Pop(ctx, receiver, argc, argvPtr);
+                    object result = InvokeMethod(_method, extension ? null : receiver, args);
+                    WriteBackByRefParameters(ctx, _method, argc, argvPtr, args, extension);
+                    return plan.PushResult(ctx, result, args);
                 }
-                catch(Exception ex){JsCallbackBoundary.ThrowManaged(ctx,ex);return JsValueUtil.MakeErrorSentinel();}
+                catch (Exception ex) { JsCallbackBoundary.ThrowManaged(ctx, ex); return JsValueUtil.MakeErrorSentinel(); }
             }
         }
 
@@ -387,29 +417,39 @@ namespace ZenTS.Emit
         {
             private readonly List<MethodInfo> _methods;
 
-            private readonly Type _owner;private readonly bool _byVal;
-            public JsOverloadCallback(List<MethodInfo> methods,Type owner,bool byVal){_methods=methods;_owner=owner;_byVal=byVal;}
+            private readonly Type _owner; private readonly bool _byVal;
+            public JsOverloadCallback(List<MethodInfo> methods, Type owner, bool byVal)
+            {
+                _methods = methods;
+                _owner = owner;
+                _byVal = byVal;
+            }
 
             public JsValue Invoke(IntPtr ctx, JsValue thisVal, int argc, IntPtr argvPtr)
             {
                 try
                 {
                     // Open generic candidates get the explicit System.Type-prefix phase first.
-                    var gtap=new List<(MethodInfo method,int prefix)>();
-                    foreach(var open in _methods) if(open.IsGenericMethodDefinition && TryCloseGtap(ctx,open,argc,argvPtr,out MethodInfo closed,out int count))gtap.Add((closed,count));
-                    if(gtap.Count>0)
+                    var gtap = new List<(MethodInfo method, int prefix)>();
+                    foreach (var open in _methods)
+                        if (open.IsGenericMethodDefinition && TryCloseGtap(ctx, open, argc, argvPtr, out MethodInfo closed, out int count))
+                            gtap.Add((closed, count));
+                    if (gtap.Count > 0)
                     {
-                        int prefix=gtap[0].prefix;
-                        if(gtap.Any(x=>x.prefix!=prefix))throw new JsScriptException("zents: ambiguous GTAP overload");
-                        MethodInfo best=(MethodInfo)JsCallPlan.Select(ctx,gtap.Select(x=>(MethodBase)x.method).ToArray(),argc-prefix,IntPtr.Add(argvPtr,prefix*16));
-                        if(best==null)throw new JsScriptException("zents: no applicable GTAP overload");
-                        return new JsMethodCallback(best,_owner,_byVal).Invoke(ctx,thisVal,argc-prefix,IntPtr.Add(argvPtr,prefix*16));
+                        int prefix = gtap[0].prefix;
+                        if (gtap.Any(x => x.prefix != prefix))
+                            throw new JsScriptException("zents: ambiguous GTAP overload");
+                        MethodInfo best = (MethodInfo)JsCallPlan.Select(ctx, gtap.Select(x => (MethodBase)x.method).ToArray(), argc - prefix, IntPtr.Add(argvPtr, prefix * 16));
+                        if (best == null)
+                            throw new JsScriptException("zents: no applicable GTAP overload");
+                        return new JsMethodCallback(best, _owner, _byVal).Invoke(ctx, thisVal, argc - prefix, IntPtr.Add(argvPtr, prefix * 16));
                     }
-                    MethodInfo method=(MethodInfo)JsCallPlan.Select(ctx,_methods.Cast<MethodBase>().ToArray(),argc,argvPtr);
-                    if(method==null)throw new JsScriptException("zents: no matching overload");
-                    return new JsMethodCallback(method,_owner,_byVal).Invoke(ctx,thisVal,argc,argvPtr);
+                    MethodInfo method = (MethodInfo)JsCallPlan.Select(ctx, _methods.Cast<MethodBase>().ToArray(), argc, argvPtr);
+                    if (method == null)
+                        throw new JsScriptException("zents: no matching overload");
+                    return new JsMethodCallback(method, _owner, _byVal).Invoke(ctx, thisVal, argc, argvPtr);
                 }
-                catch(Exception ex){JsCallbackBoundary.ThrowManaged(ctx,ex);return JsValueUtil.MakeErrorSentinel();}
+                catch (Exception ex) { JsCallbackBoundary.ThrowManaged(ctx, ex); return JsValueUtil.MakeErrorSentinel(); }
             }
         }
 
@@ -433,7 +473,11 @@ namespace ZenTS.Emit
         {
             private readonly FieldInfo _field;
             private readonly JsMarshalAsAttribute _marshal;
-            public FieldGetter(FieldInfo field) { _field = field; _marshal=JsMarshalAsXmlRegistry.ResolveFieldMarshal(field); }
+            public FieldGetter(FieldInfo field)
+            {
+                _field = field;
+                _marshal = JsMarshalAsXmlRegistry.ResolveFieldMarshal(field);
+            }
 
             public JsValue Invoke(IntPtr ctx, JsValue thisVal, int argc, IntPtr argv)
             {
@@ -463,13 +507,18 @@ namespace ZenTS.Emit
         {
             private readonly FieldInfo _field;
             private readonly JsMarshalAsAttribute _marshal;
-            public FieldSetter(FieldInfo field) { _field = field; _marshal=JsMarshalAsXmlRegistry.ResolveFieldMarshal(field); }
+            public FieldSetter(FieldInfo field)
+            {
+                _field = field;
+                _marshal = JsMarshalAsXmlRegistry.ResolveFieldMarshal(field);
+            }
 
             public JsValue Invoke(IntPtr ctx, JsValue thisVal, int argc, IntPtr argv)
             {
                 try
                 {
-                    if(_field.IsInitOnly||_field.IsLiteral)throw new JsScriptException("zents: field is read-only");
+                    if (_field.IsInitOnly || _field.IsLiteral)
+                        throw new JsScriptException("zents: field is read-only");
                     object target = null;
                     if (!_field.IsStatic)
                     {
@@ -533,7 +582,8 @@ namespace ZenTS.Emit
                     }
                     il.Emit(getter.IsStatic || getter.DeclaringType.IsValueType ? OpCodes.Call : OpCodes.Callvirt, getter);
                     il.Emit(OpCodes.Ldobj, element);
-                    if (element.IsValueType) il.Emit(OpCodes.Box, element);
+                    if (element.IsValueType)
+                        il.Emit(OpCodes.Box, element);
                     il.Emit(OpCodes.Ret);
                     _readRef = (Func<object, object>)method.CreateDelegate(typeof(Func<object, object>));
                 }
@@ -575,7 +625,11 @@ namespace ZenTS.Emit
         {
             private readonly PropertyInfo _property;
             private readonly JsMarshalAsAttribute _marshal;
-            public PropSetter(PropertyInfo property) { _property = property; _marshal=JsMarshalAsXmlRegistry.ResolvePropertyMarshal(property); }
+            public PropSetter(PropertyInfo property)
+            {
+                _property = property;
+                _marshal = JsMarshalAsXmlRegistry.ResolvePropertyMarshal(property);
+            }
 
             public JsValue Invoke(IntPtr ctx, JsValue thisVal, int argc, IntPtr argv)
             {
@@ -660,8 +714,9 @@ namespace ZenTS.Emit
             public ConstructorCallback(Type type, JsValue instanceProto)
             {
                 _type = type;
-                _constructors=type.GetConstructors(BindingFlags.Public|BindingFlags.Instance);
-                foreach(var ctor in _constructors)JsCallPlan.For(ctor);
+                _constructors = type.GetConstructors(BindingFlags.Public | BindingFlags.Instance);
+                foreach (var ctor in _constructors)
+                    JsCallPlan.For(ctor);
                 Proto = instanceProto;
             }
 
@@ -669,15 +724,17 @@ namespace ZenTS.Emit
             {
                 try
                 {
-                    ConstructorInfo[] ctors=_constructors;
-                    if(ctors.Length==0 && _type.IsValueType && argc==0)return TypedMarshal.Push(ctx,Activator.CreateInstance(_type),_type);
-                    ConstructorInfo ctor=(ConstructorInfo)JsCallPlan.Select(ctx,ctors,argc,argv);
-                    if(ctor==null)throw new JsScriptException("zents: no matching constructor for "+_type.FullName);
-                    object[] args=JsCallPlan.For(ctor).Pop(ctx,null,argc,argv);
-                    object instance=ctor.GetParameters().Any(p=>p.ParameterType.IsByRef)?ctor.Invoke(args):CompileCtorPublic(ctor)(args);
-                    return TypedMarshal.Push(ctx,instance,_type);
+                    ConstructorInfo[] ctors = _constructors;
+                    if (ctors.Length == 0 && _type.IsValueType && argc == 0)
+                        return TypedMarshal.Push(ctx, Activator.CreateInstance(_type), _type);
+                    ConstructorInfo ctor = (ConstructorInfo)JsCallPlan.Select(ctx, ctors, argc, argv);
+                    if (ctor == null)
+                        throw new JsScriptException("zents: no matching constructor for " + _type.FullName);
+                    object[] args = JsCallPlan.For(ctor).Pop(ctx, null, argc, argv);
+                    object instance = ctor.GetParameters().Any(p => p.ParameterType.IsByRef) ? ctor.Invoke(args) : CompileCtorPublic(ctor)(args);
+                    return TypedMarshal.Push(ctx, instance, _type);
                 }
-                catch(Exception ex){JsCallbackBoundary.ThrowManaged(ctx,ex);return JsValueUtil.MakeErrorSentinel();}
+                catch (Exception ex) { JsCallbackBoundary.ThrowManaged(ctx, ex); return JsValueUtil.MakeErrorSentinel(); }
             }
         }
     }
@@ -803,9 +860,10 @@ namespace ZenTS.Emit
                             ctx, $"zents: no public constructor for Nullable<{_underlyingType.FullName}>.");
                     }
 
-                    ConstructorInfo ctor=(ConstructorInfo)JsCallPlan.Select(ctx,ctors,argc,argv);
-                    if(ctor==null)throw new JsScriptException("zents: no matching nullable constructor");
-                    object[] args=JsCallPlan.For(ctor).Pop(ctx,null,argc,argv);
+                    ConstructorInfo ctor = (ConstructorInfo)JsCallPlan.Select(ctx, ctors, argc, argv);
+                    if (ctor == null)
+                        throw new JsScriptException("zents: no matching nullable constructor");
+                    object[] args = JsCallPlan.For(ctor).Pop(ctx, null, argc, argv);
                     object instance = ConstructorEmitter.CompileCtorPublic(ctor)(args);
                     return TypedMarshal.Push(ctx, instance, _underlyingType);
                 }

@@ -8,11 +8,17 @@ namespace ZenTS
     {
         internal static HashSet<Assembly> Capture()
         {
-            var assemblies=new HashSet<Assembly>();
-            foreach(var assembly in AppDomain.CurrentDomain.GetAssemblies())
+            var assemblies = new HashSet<Assembly>();
+            foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
             {
-                if(assembly.IsDynamic)continue;
-                try {if(!string.IsNullOrEmpty(assembly.Location))assemblies.Add(assembly);}catch(NotSupportedException){}
+                if (assembly.IsDynamic)
+                    continue;
+                try
+                {
+                    if (!string.IsNullOrEmpty(assembly.Location))
+                        assemblies.Add(assembly);
+                }
+                catch (NotSupportedException) { }
             }
             return assemblies;
         }

@@ -25,17 +25,35 @@ namespace ZenTS
     /// </summary>
     public sealed class JsAliasXmlRule
     {
-        public string SourcePath { get; set; }
+        public string SourcePath
+        {
+            get; set;
+        }
 
-        public string AssemblyName { get; set; }
+        public string AssemblyName
+        {
+            get; set;
+        }
 
-        public string TypeFullName { get; set; }
+        public string TypeFullName
+        {
+            get; set;
+        }
 
-        public string MethodName { get; set; }
+        public string MethodName
+        {
+            get; set;
+        }
 
-        public string Signature { get; set; }
+        public string Signature
+        {
+            get; set;
+        }
 
-        public string Alias { get; set; }
+        public string Alias
+        {
+            get; set;
+        }
 
         public string DuplicateKey =>
             AssemblyName + "|" + TypeFullName + "|" + MethodName + "|" + Signature;

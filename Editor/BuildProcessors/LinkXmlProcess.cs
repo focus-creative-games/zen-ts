@@ -12,7 +12,7 @@ namespace ZenTS.Editor
         public string GenerateAdditionalLinkXmlFile(BuildReport report, UnityLinkerBuildPipelineData data)
         {
             return Settings.EnableForCurrentBuildTarget
-                ? Path.Combine(CommonDirs.PackageResolvedRoot,"link.xml") : null;
+                ? Path.Combine(CommonDirs.PackageResolvedRoot, "link.xml") : null;
         }
     }
 }

@@ -36,25 +36,52 @@ namespace ZenTS
     /// </summary>
     public sealed class JsMarshalAsXmlRule
     {
-        public string SourcePath { get; set; }
+        public string SourcePath
+        {
+            get; set;
+        }
 
-        public string AssemblyName { get; set; }
+        public string AssemblyName
+        {
+            get; set;
+        }
 
-        public string TypeFullName { get; set; }
+        public string TypeFullName
+        {
+            get; set;
+        }
 
-        public JsMarshalAsXmlTargetKind Kind { get; set; }
+        public JsMarshalAsXmlTargetKind Kind
+        {
+            get; set;
+        }
 
-        public string MemberName { get; set; }
+        public string MemberName
+        {
+            get; set;
+        }
 
-        public string MethodName { get; set; }
+        public string MethodName
+        {
+            get; set;
+        }
 
-        public string Signature { get; set; }
+        public string Signature
+        {
+            get; set;
+        }
 
         public int ParamIndex { get; set; } = -1;
 
-        public JsMarshalType MarshalType { get; set; }
+        public JsMarshalType MarshalType
+        {
+            get; set;
+        }
 
-        public string[] Members { get; set; }
+        public string[] Members
+        {
+            get; set;
+        }
 
         public string DuplicateKey
         {

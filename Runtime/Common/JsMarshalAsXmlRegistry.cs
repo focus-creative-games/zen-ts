@@ -253,39 +253,57 @@ namespace ZenTS
         /// </summary>
         internal static JsMarshalAsAttribute ResolveTypeMarshal(Type type)
         {
-            Type key=UnwrapType(type);if(key==null||key.IsGenericType)return null;
-            var attr=key.GetCustomAttribute<JsMarshalAsAttribute>(false);
-            if(attr!=null)return JsMarshalAsValidation.Resolve(attr,key,key.FullName,typeLevel:true);
-            return TryGetTypeRule(key,out var rule)?JsMarshalAsValidation.Resolve(rule.ToAttribute(),key,key.FullName,typeLevel:true,xml:true):null;
+            Type key = UnwrapType(type);
+            if (key == null || key.IsGenericType)
+                return null;
+            var attr = key.GetCustomAttribute<JsMarshalAsAttribute>(false);
+            if (attr != null)
+                return JsMarshalAsValidation.Resolve(attr, key, key.FullName, typeLevel: true);
+            return TryGetTypeRule(key, out var rule) ? JsMarshalAsValidation.Resolve(rule.ToAttribute(), key, key.FullName, typeLevel: true, xml: true) : null;
         }
-        public static JsMarshalAsAttribute ResolveParameterMarshal(ParameterInfo parameter,MethodBase method=null)
+        public static JsMarshalAsAttribute ResolveParameterMarshal(ParameterInfo parameter, MethodBase method = null)
         {
-            if(parameter==null)return null;method=method??parameter.Member as MethodBase;
-            var attr=parameter.GetCustomAttribute<JsMarshalAsAttribute>(false);
-            if(attr!=null)return JsMarshalAsValidation.Resolve(attr,parameter.ParameterType,method+" parameter "+parameter.Position);
-            if(TryGetParameterRule(parameter,method,out var rule))return JsMarshalAsValidation.Resolve(rule.ToAttribute(),parameter.ParameterType,method+" parameter "+parameter.Position,xml:true);
+            if (parameter == null)
+                return null;
+            method = method ?? parameter.Member as MethodBase;
+            var attr = parameter.GetCustomAttribute<JsMarshalAsAttribute>(false);
+            if (attr != null)
+                return JsMarshalAsValidation.Resolve(attr, parameter.ParameterType, method + " parameter " + parameter.Position);
+            if (TryGetParameterRule(parameter, method, out var rule))
+                return JsMarshalAsValidation.Resolve(rule.ToAttribute(), parameter.ParameterType, method + " parameter " + parameter.Position, xml: true);
             return ResolveTypeMarshal(parameter.ParameterType);
         }
         public static JsMarshalAsAttribute ResolveReturnMarshal(MethodInfo method)
         {
-            if(method==null)return null;
-            var attr=method.ReturnParameter.GetCustomAttribute<JsMarshalAsAttribute>(false);
-            if(attr!=null)return JsMarshalAsValidation.Resolve(attr,method.ReturnType,method+" return",isReturn:true);
-            if(TryGetReturnRule(method,out var rule))return JsMarshalAsValidation.Resolve(rule.ToAttribute(),method.ReturnType,method+" return",isReturn:true,xml:true);
+            if (method == null)
+                return null;
+            var attr = method.ReturnParameter.GetCustomAttribute<JsMarshalAsAttribute>(false);
+            if (attr != null)
+                return JsMarshalAsValidation.Resolve(attr, method.ReturnType, method + " return", isReturn: true);
+            if (TryGetReturnRule(method, out var rule))
+                return JsMarshalAsValidation.Resolve(rule.ToAttribute(), method.ReturnType, method + " return", isReturn: true, xml: true);
             return ResolveTypeMarshal(method.ReturnType);
         }
         public static JsMarshalAsAttribute ResolveFieldMarshal(FieldInfo field)
         {
-            if(field==null)return null;var attr=field.GetCustomAttribute<JsMarshalAsAttribute>(false);
-            if(attr!=null)return JsMarshalAsValidation.Resolve(attr,field.FieldType,field.ToString());
-            if(TryGetFieldRule(field,out var rule))return JsMarshalAsValidation.Resolve(rule.ToAttribute(),field.FieldType,field.ToString(),xml:true);
+            if (field == null)
+                return null;
+            var attr = field.GetCustomAttribute<JsMarshalAsAttribute>(false);
+            if (attr != null)
+                return JsMarshalAsValidation.Resolve(attr, field.FieldType, field.ToString());
+            if (TryGetFieldRule(field, out var rule))
+                return JsMarshalAsValidation.Resolve(rule.ToAttribute(), field.FieldType, field.ToString(), xml: true);
             return ResolveTypeMarshal(field.FieldType);
         }
         public static JsMarshalAsAttribute ResolvePropertyMarshal(PropertyInfo property)
         {
-            if(property==null)return null;var attr=property.GetCustomAttribute<JsMarshalAsAttribute>(false);
-            if(attr!=null)return JsMarshalAsValidation.Resolve(attr,property.PropertyType,property.ToString());
-            if(TryGetPropertyRule(property,out var rule))return JsMarshalAsValidation.Resolve(rule.ToAttribute(),property.PropertyType,property.ToString(),xml:true);
+            if (property == null)
+                return null;
+            var attr = property.GetCustomAttribute<JsMarshalAsAttribute>(false);
+            if (attr != null)
+                return JsMarshalAsValidation.Resolve(attr, property.PropertyType, property.ToString());
+            if (TryGetPropertyRule(property, out var rule))
+                return JsMarshalAsValidation.Resolve(rule.ToAttribute(), property.PropertyType, property.ToString(), xml: true);
             return ResolveTypeMarshal(property.PropertyType);
         }
 
@@ -433,9 +451,10 @@ namespace ZenTS
             }
 
             string assemblyName = assembly.GetName()?.Name;
-            if(!s_aotAssemblies.Contains(assembly))
+            if (!s_aotAssemblies.Contains(assembly))
             {
-                if(assemblyName!=null && s_rulesByAssemblyName.ContainsKey(assemblyName))throw new JsMarshalAsConfigurationException("[ZenTS] XML is only valid for initialized AOT assemblies: "+assemblyName);
+                if (assemblyName != null && s_rulesByAssemblyName.ContainsKey(assemblyName))
+                    throw new JsMarshalAsConfigurationException("[ZenTS] XML is only valid for initialized AOT assemblies: " + assemblyName);
                 return new BoundMaps();
             }
             var maps = new BoundMaps();
@@ -473,82 +492,82 @@ namespace ZenTS
                             + rule.TypeFullName + " in " + rule.SourcePath);
                     }
 
-                    EnsureDeterminedTarget(type,"Type "+type.FullName,rule);
+                    EnsureDeterminedTarget(type, "Type " + type.FullName, rule);
                     PutMember(maps, type.MetadataToken, rule);
                     break;
 
                 case JsMarshalAsXmlTargetKind.Field:
-                {
-                    FieldInfo field = type.GetField(
-                        rule.MemberName,
-                        BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static);
-                    if (field == null)
                     {
-                        throw new JsMarshalAsConfigurationException(
-                            "[ZenTS] MarshalAs XML Field '" + rule.MemberName + "' not found on "
-                            + type.FullName + " in " + rule.SourcePath);
-                    }
+                        FieldInfo field = type.GetField(
+                            rule.MemberName,
+                            BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static);
+                        if (field == null)
+                        {
+                            throw new JsMarshalAsConfigurationException(
+                                "[ZenTS] MarshalAs XML Field '" + rule.MemberName + "' not found on "
+                                + type.FullName + " in " + rule.SourcePath);
+                        }
 
-                    EnsureDeterminedTarget(field.FieldType, "Field '" + rule.MemberName + "'", rule);
-                    PutMember(maps, field.MetadataToken, rule);
-                    break;
-                }
+                        EnsureDeterminedTarget(field.FieldType, "Field '" + rule.MemberName + "'", rule);
+                        PutMember(maps, field.MetadataToken, rule);
+                        break;
+                    }
 
                 case JsMarshalAsXmlTargetKind.Property:
-                {
-                    PropertyInfo property = type.GetProperty(
-                        rule.MemberName,
-                        BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static);
-                    if (property == null)
                     {
-                        throw new JsMarshalAsConfigurationException(
-                            "[ZenTS] MarshalAs XML Property '" + rule.MemberName + "' not found on "
-                            + type.FullName + " in " + rule.SourcePath);
-                    }
+                        PropertyInfo property = type.GetProperty(
+                            rule.MemberName,
+                            BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static);
+                        if (property == null)
+                        {
+                            throw new JsMarshalAsConfigurationException(
+                                "[ZenTS] MarshalAs XML Property '" + rule.MemberName + "' not found on "
+                                + type.FullName + " in " + rule.SourcePath);
+                        }
 
-                    EnsureDeterminedTarget(property.PropertyType, "Property '" + rule.MemberName + "'", rule);
-                    PutMember(maps, property.MetadataToken, rule);
-                    break;
-                }
+                        EnsureDeterminedTarget(property.PropertyType, "Property '" + rule.MemberName + "'", rule);
+                        PutMember(maps, property.MetadataToken, rule);
+                        break;
+                    }
 
                 case JsMarshalAsXmlTargetKind.Param:
-                {
-                    MethodBase method = ResolveMethod(type, rule.MethodName, rule.Signature, rule.SourcePath);
-                    ParameterInfo[] parameters = method.GetParameters();
-                    int index = rule.ParamIndex;
-                    if (index < 0 || index >= parameters.Length)
                     {
-                        throw new JsMarshalAsConfigurationException(
-                            "[ZenTS] MarshalAs XML Param index " + index + " out of range for "
-                            + type.FullName + "." + rule.MethodName + rule.Signature
-                            + " in " + rule.SourcePath);
-                    }
+                        MethodBase method = ResolveMethod(type, rule.MethodName, rule.Signature, rule.SourcePath);
+                        ParameterInfo[] parameters = method.GetParameters();
+                        int index = rule.ParamIndex;
+                        if (index < 0 || index >= parameters.Length)
+                        {
+                            throw new JsMarshalAsConfigurationException(
+                                "[ZenTS] MarshalAs XML Param index " + index + " out of range for "
+                                + type.FullName + "." + rule.MethodName + rule.Signature
+                                + " in " + rule.SourcePath);
+                        }
 
-                    EnsureDeterminedTarget(
-                        parameters[index].ParameterType,
-                        "Param index " + index + " of " + rule.MethodName + rule.Signature,
-                        rule);
-                    PutMethodSlot(maps, method.MetadataToken, index, rule);
-                    break;
-                }
+                        EnsureDeterminedTarget(
+                            parameters[index].ParameterType,
+                            "Param index " + index + " of " + rule.MethodName + rule.Signature,
+                            rule);
+                        PutMethodSlot(maps, method.MetadataToken, index, rule);
+                        break;
+                    }
 
                 case JsMarshalAsXmlTargetKind.Return:
-                {
-                    MethodInfo methodInfo = ResolveMethod(type, rule.MethodName, rule.Signature, rule.SourcePath) as MethodInfo;
-                    if (methodInfo == null)
                     {
-                        throw new JsMarshalAsConfigurationException(
-                            "[ZenTS] MarshalAs XML Return requires a MethodInfo (not constructor): "
-                            + type.FullName + "." + rule.MethodName + " in " + rule.SourcePath);
-                    }
+                        MethodInfo methodInfo = ResolveMethod(type, rule.MethodName, rule.Signature, rule.SourcePath) as MethodInfo;
+                        if (methodInfo == null)
+                        {
+                            throw new JsMarshalAsConfigurationException(
+                                "[ZenTS] MarshalAs XML Return requires a MethodInfo (not constructor): "
+                                + type.FullName + "." + rule.MethodName + " in " + rule.SourcePath);
+                        }
 
-                    EnsureDeterminedTarget(
-                        methodInfo.ReturnType,
-                        "Return of " + rule.MethodName + rule.Signature,
-                        rule);
-                    PutMethodSlot(maps, methodInfo.MetadataToken, -1, rule);
-                    break;
-                }
+                        EnsureDeterminedTarget(
+                            methodInfo.ReturnType,
+                            "Return of " + rule.MethodName + rule.Signature,
+                            rule);
+                        PutMethodSlot(maps, methodInfo.MetadataToken, -1, rule);
+                        break;
+                    }
 
                 default:
                     throw new JsMarshalAsConfigurationException(
@@ -556,12 +575,12 @@ namespace ZenTS
             }
         }
 
-        private static void EnsureDeterminedTarget(Type clrType,string targetDescription,JsMarshalAsXmlRule rule)
+        private static void EnsureDeterminedTarget(Type clrType, string targetDescription, JsMarshalAsXmlRule rule)
         {
             // Open member slots are deliberately deferred until inflation; type-level generics are rejected above.
-            JsMarshalAsValidation.Resolve(rule.ToAttribute(),clrType,targetDescription,
-                isReturn:rule.Kind==JsMarshalAsXmlTargetKind.Return,
-                typeLevel:rule.Kind==JsMarshalAsXmlTargetKind.Type,xml:true);
+            JsMarshalAsValidation.Resolve(rule.ToAttribute(), clrType, targetDescription,
+                isReturn: rule.Kind == JsMarshalAsXmlTargetKind.Return,
+                typeLevel: rule.Kind == JsMarshalAsXmlTargetKind.Type, xml: true);
         }
 
         private static void PutMember(BoundMaps maps, int token, JsMarshalAsXmlRule rule)

@@ -39,9 +39,12 @@ namespace ZenTS
         public string[] EffectiveMarshalAsXmlPaths => WithUnityRules(marshalAsXmlPaths, "UnityOptimizations.marshalas.xml");
         private string[] WithUnityRules(string[] user, string name)
         {
-            if (!enableUnityOptimizations) return user ?? System.Array.Empty<string>();
+            if (!enableUnityOptimizations)
+                return user ?? System.Array.Empty<string>();
             var paths = new System.Collections.Generic.List<string> { System.IO.Path.Combine(CommonDirs.ZentsDataPathInPackage, "unity", name) };
-            if (user != null) paths.AddRange(user); return paths.ToArray();
+            if (user != null)
+                paths.AddRange(user);
+            return paths.ToArray();
         }
 
 
@@ -98,12 +101,17 @@ namespace ZenTS
 
         public void OnBeforeSerialize()
         {
-            if (settingsVersion < 4) settingsVersion = 4;
+            if (settingsVersion < 4)
+                settingsVersion = 4;
         }
 
         public void OnAfterDeserialize()
         {
-            if (settingsVersion < 4) { enableUnityOptimizations = true; _needsSaveAfterMigrate = true; }
+            if (settingsVersion < 4)
+            {
+                enableUnityOptimizations = true;
+                _needsSaveAfterMigrate = true;
+            }
             // Existing ProjectSettings/ZenTS.asset lacks new fields → Unity zeros them.
             if (settingsVersion < 1)
             {

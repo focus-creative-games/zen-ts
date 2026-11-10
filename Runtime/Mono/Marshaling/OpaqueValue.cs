@@ -27,10 +27,25 @@ namespace ZenTS.Marshaling
     {
         public OpaqueValue(object target) => Target = target;
 
-        public object Target { get; set; }
-        internal Type DeclaredType { get; set; }
-        internal JsMarshalAsAttribute Marshal { get; set; }
-        internal JsValue JsValue { get; set; }
-        internal int Generation { get; set; }
+        public object Target
+        {
+            get; set;
+        }
+        internal Type DeclaredType
+        {
+            get; set;
+        }
+        internal JsMarshalAsAttribute Marshal
+        {
+            get; set;
+        }
+        internal JsValue JsValue
+        {
+            get; set;
+        }
+        internal int Generation
+        {
+            get; set;
+        }
     }
 }

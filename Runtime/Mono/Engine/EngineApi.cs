@@ -22,12 +22,24 @@ using System;
 namespace ZenTS.Jvm
 {
     // Selected once per assembly; never switch a live runtime or mix backend values.
-    internal enum EngineBackend { V8 = 1, HostJs = 2 }
+    internal enum EngineBackend
+    {
+        V8 = 1, HostJs = 2
+    }
     internal interface IMonoEngineApi
     {
-        EngineBackend Backend { get; }
-        IMonoValueApi Values { get; }
-        IMonoCallbacks Callbacks { get; }
+        EngineBackend Backend
+        {
+            get;
+        }
+        IMonoValueApi Values
+        {
+            get;
+        }
+        IMonoCallbacks Callbacks
+        {
+            get;
+        }
         IntPtr NewRuntime();
         void FreeRuntime(IntPtr rt);
         IntPtr NewContext(IntPtr rt);
@@ -97,15 +109,30 @@ namespace ZenTS.Jvm
         JsValue MakeErrorSentinel();
         ulong GetUInt64(JsValue v);
         IntPtr GetIdentity(JsValue v);
-        JsValue Null { get; }
-        JsValue Undefined { get; }
-        JsValue False { get; }
-        JsValue True { get; }
-        JsValue Exception { get; }
+        JsValue Null
+        {
+            get;
+        }
+        JsValue Undefined
+        {
+            get;
+        }
+        JsValue False
+        {
+            get;
+        }
+        JsValue True
+        {
+            get;
+        }
+        JsValue Exception
+        {
+            get;
+        }
     }
     internal static class EngineApi
     {
-        #if UNITY_EDITOR_WIN || UNITY_EDITOR_OSX
+#if UNITY_EDITOR_WIN || UNITY_EDITOR_OSX
         private static readonly IMonoEngineApi BackendImpl = new V8EngineBackend();
 #else
         private static readonly IMonoEngineApi BackendImpl = UnsupportedBackend();
@@ -167,7 +194,7 @@ namespace ZenTS.Jvm
         public static int DefinePropertyValueStr(IntPtr ctx, JsValue thisObj, string prop, JsValue val, int flags) => BackendImpl.DefinePropertyValueStr(ctx, thisObj, prop, val, flags);
         public static int IsArray(IntPtr ctx, JsValue val) => BackendImpl.IsArray(ctx, val);
         public static JsValue NewArray(IntPtr ctx) => BackendImpl.NewArray(ctx);
-        public static int HasOwnProperty(IntPtr ctx, JsValue value, string name) => BackendImpl.HasOwnProperty(ctx,value,name);
+        public static int HasOwnProperty(IntPtr ctx, JsValue value, string name) => BackendImpl.HasOwnProperty(ctx, value, name);
         public static JsValue NewByteArrayCopy(IntPtr ctx, byte[] bytes) => BackendImpl.NewByteArrayCopy(ctx, bytes);
         public static IntPtr GetByteArrayData(IntPtr ctx, JsValue value, out UIntPtr length) => BackendImpl.GetByteArrayData(ctx, value, out length);
         public static int SetPropertyUint32(IntPtr ctx, JsValue thisObj, uint idx, JsValue val) => BackendImpl.SetPropertyUint32(ctx, thisObj, idx, val);

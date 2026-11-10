@@ -24,8 +24,12 @@ namespace ZenTS.Jvm
     internal sealed class V8EngineBackend : IMonoEngineApi
     {
         public EngineBackend Backend => EngineBackend.V8;
-        public int HasOwnProperty(IntPtr ctx, JsValue value, string name) => V8Native.ze_HasOwnProperty(ctx,in value,name);
-        public JsValue NewByteArrayCopy(IntPtr ctx, byte[] bytes) { V8Native.ze_NewByteArrayCopy(ctx, bytes, (UIntPtr)bytes.Length, out JsValue value); return value; }
+        public int HasOwnProperty(IntPtr ctx, JsValue value, string name) => V8Native.ze_HasOwnProperty(ctx, in value, name);
+        public JsValue NewByteArrayCopy(IntPtr ctx, byte[] bytes)
+        {
+            V8Native.ze_NewByteArrayCopy(ctx, bytes, (UIntPtr)bytes.Length, out JsValue value);
+            return value;
+        }
         public IntPtr GetByteArrayData(IntPtr ctx, JsValue value, out UIntPtr length) => V8Native.ze_GetByteArrayData(ctx, in value, out length);
         public IMonoValueApi Values { get; } = new V8ValueBackend();
         public IMonoCallbacks Callbacks { get; } = new V8Callbacks();

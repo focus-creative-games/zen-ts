@@ -43,14 +43,20 @@ namespace ZenTS
         | AttributeTargets.Struct)]
     public sealed class JsMarshalAsAttribute : Attribute
     {
-        public JsMarshalType JsMarshalType { get; }
+        public JsMarshalType JsMarshalType
+        {
+            get;
+        }
 
         /// <summary>
         /// Required for <see cref="JsMarshalType.Table"/> / <see cref="JsMarshalType.UnpackedValues"/>.
         /// Elements are CLR field or property names on the underlying struct (Nullable unwraps to T).
         /// Trailing '?' marks optional Table keys (JS→C#). UnpackedValues does not support '?'.
         /// </summary>
-        public string[] Members { get; set; }
+        public string[] Members
+        {
+            get; set;
+        }
 
         public JsMarshalAsAttribute(JsMarshalType jsMarshalType = JsMarshalType.Default)
         {

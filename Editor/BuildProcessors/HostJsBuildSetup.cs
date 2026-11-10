@@ -40,13 +40,15 @@ namespace ZenTS.BuildProcessors
 
         public void OnPreprocessBuild(BuildReport report)
         {
-            if(!Settings.EnableForCurrentBuildTarget)return;
+            if (!Settings.EnableForCurrentBuildTarget)
+                return;
             bool hostJs = HostJsPlatform.IsTarget(report.summary.platform);
-            if(hostJs)ApplyDefine(HostJsPlatform.NamedTarget(report.summary.platform),true);
+            if (hostJs)
+                ApplyDefine(HostJsPlatform.NamedTarget(report.summary.platform), true);
 
             if (hostJs)
             {
-                if(!HostJsPlatform.ExceptionSupport(report.summary.platform).ToString().StartsWith("Full",StringComparison.Ordinal))
+                if (!HostJsPlatform.ExceptionSupport(report.summary.platform).ToString().StartsWith("Full", StringComparison.Ordinal))
                     throw new BuildFailedException("[ZenTS] HostJs requires WebGL Full exception support so CLR errors can cross the JS/wasm boundary.");
                 Debug.Log("[ZenTS] Host-JS backend enabled for this build (ZENTS_HOST_JS).");
             }

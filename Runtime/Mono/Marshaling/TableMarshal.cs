@@ -28,7 +28,8 @@ namespace ZenTS.Marshaling
     {
         public static int GetJsArgSlotCount(ParameterInfo param)
         {
-            if (ZenTS.Emit.JsCallPlan.IsOut(param)) return 0;
+            if (ZenTS.Emit.JsCallPlan.IsOut(param))
+                return 0;
             JsMarshalAsAttribute mas = JsMarshalAsXmlRegistry.ResolveParameterMarshal(param);
             if (mas != null &&
                 mas.JsMarshalType == JsMarshalType.UnpackedValues &&
@@ -170,15 +171,29 @@ namespace ZenTS.Marshaling
             return boxed;
         }
 
-        internal static object PopPacked(IntPtr ctx,JsValue value,Type type,JsMarshalAsAttribute marshal)
+        internal static object PopPacked(IntPtr ctx, JsValue value, Type type, JsMarshalAsAttribute marshal)
         {
-            if(EngineApi.IsArray(ctx,value)==0)throw new JsScriptException("zents: UnpackedValues result requires an Array");
-            JsValue length=EngineApi.GetPropertyStr(ctx,value,"length");
-            try {if(Convert.ToInt32(PrimitiveMarshal.Pop(ctx,length))!=marshal.Members.Length)throw new JsScriptException("zents: UnpackedValues result length mismatch");}
-            finally {JsValueUtil.Free(ctx,length);}
-            var args=new JsValue[marshal.Members.Length];
-            try {for(int i=0;i<args.Length;++i)args[i]=EngineApi.GetPropertyUint32(ctx,value,(uint)i);unsafe {fixed(JsValue* ptr=args)return PopUnpacked(ctx,(IntPtr)ptr,0,args.Length,type,marshal);}}
-            finally {foreach(var arg in args)JsValueUtil.Free(ctx,arg);}
+            if (EngineApi.IsArray(ctx, value) == 0)
+                throw new JsScriptException("zents: UnpackedValues result requires an Array");
+            JsValue length = EngineApi.GetPropertyStr(ctx, value, "length");
+            try
+            {
+                if (Convert.ToInt32(PrimitiveMarshal.Pop(ctx, length)) != marshal.Members.Length)
+                    throw new JsScriptException("zents: UnpackedValues result length mismatch");
+            }
+            finally { JsValueUtil.Free(ctx, length); }
+            var args = new JsValue[marshal.Members.Length];
+            try
+            {
+                for (int i = 0; i < args.Length; ++i)
+                    args[i] = EngineApi.GetPropertyUint32(ctx, value, (uint)i);
+                unsafe
+                {
+                    fixed (JsValue* ptr = args)
+                        return PopUnpacked(ctx, (IntPtr)ptr, 0, args.Length, type, marshal);
+                }
+            }
+            finally { foreach (var arg in args) JsValueUtil.Free(ctx, arg); }
         }
 
         public static Type ResolveMemberType(Type structType, string memberSpec)
@@ -226,8 +241,13 @@ namespace ZenTS.Marshaling
             {
                 ParseMemberSpec(members[i], out string memberName, out bool optional);
                 MemberAccessor accessor = ResolveMember(underlying, memberName);
-                int own=EngineApi.HasOwnProperty(ctx,jsValue,memberName);
-                if(own!=1){if(optional&&own==0)continue;throw new JsScriptException("zents: Table missing member "+memberName);}
+                int own = EngineApi.HasOwnProperty(ctx, jsValue, memberName);
+                if (own != 1)
+                {
+                    if (optional && own == 0)
+                        continue;
+                    throw new JsScriptException("zents: Table missing member " + memberName);
+                }
                 JsValue propVal = EngineApi.GetPropertyStr(ctx, jsValue, memberName);
                 try
                 {
@@ -315,8 +335,14 @@ namespace ZenTS.Marshaling
 
         private readonly struct MemberAccessor
         {
-            public Type MemberType { get; }
-            public JsMarshalAsAttribute Marshal { get; }
+            public Type MemberType
+            {
+                get;
+            }
+            public JsMarshalAsAttribute Marshal
+            {
+                get;
+            }
             private readonly Action<object, object> _set;
             private readonly Func<object, object> _get;
 

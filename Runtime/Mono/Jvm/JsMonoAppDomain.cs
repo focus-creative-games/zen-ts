@@ -94,9 +94,12 @@ namespace ZenTS
 #endif
             _generation++;
 #if UNITY_EDITOR
-            if (!JsMarshalAsXmlRegistry.IsLoaded) LoadJsMarshalAsXmlFromSettings();
-            if (!JsAliasXmlRegistry.IsLoaded) LoadJsAliasXmlFromSettings();
-            if (!JsExtensionXmlRegistry.IsLoaded) LoadJsExtensionXmlFromSettings();
+            if (!JsMarshalAsXmlRegistry.IsLoaded)
+                LoadJsMarshalAsXmlFromSettings();
+            if (!JsAliasXmlRegistry.IsLoaded)
+                LoadJsAliasXmlFromSettings();
+            if (!JsExtensionXmlRegistry.IsLoaded)
+                LoadJsExtensionXmlFromSettings();
 #endif
             _env = new JsEnv();
             _env.Initialize(moduleLoader, _generation);
@@ -201,7 +204,8 @@ namespace ZenTS
 
         private static void ProcessPendingRefReleases()
         {
-            if (_env != null && _env.IsAlive) _env.DrainPendingJobs();
+            if (_env != null && _env.IsAlive)
+                _env.DrainPendingJobs();
             ObjectRegistry.ProcessPending();
         }
 

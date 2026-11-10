@@ -52,19 +52,25 @@ namespace ZenTS
         {
             if (UnityEngine.Application.platform != UnityEngine.RuntimePlatform.WindowsEditor)
                 return;
-            string full=Path.GetFullPath(runtimeRoot);
-            if(full.StartsWith(CommonDirs.PackageResolvedRoot+Path.DirectorySeparatorChar,StringComparison.OrdinalIgnoreCase))
+            string full = Path.GetFullPath(runtimeRoot);
+            if (full.StartsWith(CommonDirs.PackageResolvedRoot + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
                 throw new InvalidOperationException("[ZenTS] Never generate link settings inside the resolved package");
-            string folder=Path.Combine(runtimeRoot,"engine","v8");Directory.CreateDirectory(folder);
-            string sdkRoot=NativeSdkStore.Resolve("windows-x64");NativeSdkStore.Validate(sdkRoot,true);
+            string folder = Path.Combine(runtimeRoot, "engine", "v8");
+            Directory.CreateDirectory(folder);
+            string sdkRoot = NativeSdkStore.Resolve("windows-x64");
+            NativeSdkStore.Validate(sdkRoot, true);
             string libraries;
-            if(full==Path.GetFullPath(CommonDirs.LocalZentsPath))libraries=Path.Combine(sdkRoot,"lib");
+            if (full == Path.GetFullPath(CommonDirs.LocalZentsPath))
+                libraries = Path.Combine(sdkRoot, "lib");
             else
             {
                 // Exported VS projects are self-contained and do not depend on PackageCache/Library.
-                string portable=Path.Combine(folder,"sdk");libraries=Path.Combine(portable,"lib");Directory.CreateDirectory(libraries);
-                foreach(string name in new[]{"zents_v8_engine.lib","v8_monolith.lib"})File.Copy(Path.Combine(sdkRoot,"lib",name),Path.Combine(libraries,name),true);
-                File.Copy(Path.Combine(sdkRoot,"official-sdk.json"),Path.Combine(portable,"official-sdk.json"),true);
+                string portable = Path.Combine(folder, "sdk");
+                libraries = Path.Combine(portable, "lib");
+                Directory.CreateDirectory(libraries);
+                foreach (string name in new[] { "zents_v8_engine.lib", "v8_monolith.lib" })
+                    File.Copy(Path.Combine(sdkRoot, "lib", name), Path.Combine(libraries, name), true);
+                File.Copy(Path.Combine(sdkRoot, "official-sdk.json"), Path.Combine(portable, "official-sdk.json"), true);
             }
             string adapter = Path.Combine(libraries, "zents_v8_engine.lib");
             string sdk = Path.Combine(libraries, "v8_monolith.lib");
@@ -88,9 +94,9 @@ namespace ZenTS
 
         private static string StaticLibraryArguments(string runtimeRoot)
         {
-            string folder=Path.GetFullPath(runtimeRoot)==Path.GetFullPath(CommonDirs.LocalZentsPath)
-                ? Path.Combine(NativeSdkStore.Resolve("windows-x64"),"lib")
-                : Path.GetFullPath(Path.Combine(runtimeRoot,"engine","v8","sdk","lib"));
+            string folder = Path.GetFullPath(runtimeRoot) == Path.GetFullPath(CommonDirs.LocalZentsPath)
+                ? Path.Combine(NativeSdkStore.Resolve("windows-x64"), "lib")
+                : Path.GetFullPath(Path.Combine(runtimeRoot, "engine", "v8", "sdk", "lib"));
             return " --additional-libraries=\"" + Path.Combine(folder, "zents_v8_engine.lib") +
                    "\" --additional-libraries=\"" + Path.Combine(folder, "v8_monolith.lib") + "\"";
         }
@@ -167,7 +173,8 @@ namespace ZenTS
                 // Separate exported VS cache from Unity's initial build. _CL_ is not
                 // represented in Bee's command-line cache, so never reuse MTd objects.
                 value = Regex.Replace(value, @"--compiler-flags=-DZENTS_V8_STATIC_CRT=\d+", "--compiler-flags=-DZENTS_V8_STATIC_CRT=2");
-                if (!value.Contains("--compiler-flags=-DZENTS_V8_STATIC_CRT=2")) value += " --compiler-flags=-DZENTS_V8_STATIC_CRT=2";
+                if (!value.Contains("--compiler-flags=-DZENTS_V8_STATIC_CRT=2"))
+                    value += " --compiler-flags=-DZENTS_V8_STATIC_CRT=2";
                 const string prefix = "set \"_CL_=%_CL_% /MT /U_DEBUG\" && ";
                 if (!value.StartsWith(prefix, StringComparison.Ordinal))
                     value = prefix + value;
@@ -176,22 +183,34 @@ namespace ZenTS
             document.Save(project);
             // Unity 2022 exports an obsolete SDK pin even when a newer SDK is installed.
             string kits = Microsoft.Win32.Registry.GetValue(@"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows Kits\Installed Roots", "KitsRoot10", null) as string;
-            if (string.IsNullOrEmpty(kits)) kits = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86), "Windows Kits", "10");
+            if (string.IsNullOrEmpty(kits))
+                kits = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86), "Windows Kits", "10");
             string lib = Path.Combine(kits, "Lib");
             string sdkVersion = Directory.Exists(lib) ? Directory.GetDirectories(lib)
                 .Select(Path.GetFileName).Where(v => Version.TryParse(v, out _) &&
                     File.Exists(Path.Combine(kits, "Include", v, "um", "Windows.h")) &&
                     File.Exists(Path.Combine(lib, v, "um", "x64", "kernel32.lib")))
                 .OrderByDescending(v => Version.Parse(v)).FirstOrDefault() : null;
-            if (sdkVersion == null) throw new BuildFailedException("[ZenTS] No complete Windows 10 SDK is installed.");
+            if (sdkVersion == null)
+                throw new BuildFailedException("[ZenTS] No complete Windows 10 SDK is installed.");
             foreach (string file in Directory.GetFiles(exportRoot, "*.vcxproj", SearchOption.AllDirectories))
             {
-                var doc = XDocument.Load(file);bool changed=false;
+                var doc = XDocument.Load(file);
+                bool changed = false;
                 foreach (var version in doc.Descendants(ns + "WindowsTargetPlatformVersion"))
-                    if (version.Value != sdkVersion) { version.Value = sdkVersion; changed=true; }
+                    if (version.Value != sdkVersion)
+                    {
+                        version.Value = sdkVersion;
+                        changed = true;
+                    }
                 foreach (var toolset in doc.Descendants(ns + "PlatformToolset"))
-                    if (toolset.Value == "v140" || toolset.Value == "v141" || toolset.Value == "v142") { toolset.Value = "v143"; changed=true; }
-                if (changed) doc.Save(file);
+                    if (toolset.Value == "v140" || toolset.Value == "v141" || toolset.Value == "v142")
+                    {
+                        toolset.Value = "v143";
+                        changed = true;
+                    }
+                if (changed)
+                    doc.Save(file);
             }
         }
 
@@ -199,7 +218,8 @@ namespace ZenTS
         {
             if (!Settings.EnableForCurrentBuildTarget)
                 return;
-            if (HostJsPlatform.IsTarget(report.summary.platform) || report.summary.platform == BuildTarget.StandaloneOSX || report.summary.platform == BuildTarget.Android || report.summary.platform == BuildTarget.iOS) return;
+            if (HostJsPlatform.IsTarget(report.summary.platform) || report.summary.platform == BuildTarget.StandaloneOSX || report.summary.platform == BuildTarget.Android || report.summary.platform == BuildTarget.iOS)
+                return;
             if (report.summary.platform != BuildTarget.StandaloneWindows64)
                 throw new BuildFailedException("[ZenTS] This package currently validates Windows x64 V8 only. Supply the target V8 SDK or complete the host-JS backend before building this platform.");
             NativeEditorPlugins.Ensure();

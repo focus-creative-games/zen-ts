@@ -40,7 +40,10 @@ namespace ZenTS
 
         internal IntPtr Context => _context;
         internal IntPtr Runtime => _runtime;
-        internal int Generation { get; private set; }
+        internal int Generation
+        {
+            get; private set;
+        }
 
         public bool IsAlive => !_disposed && _context != IntPtr.Zero;
 

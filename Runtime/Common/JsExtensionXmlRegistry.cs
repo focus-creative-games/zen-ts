@@ -130,7 +130,8 @@ namespace ZenTS
                 return false;
             }
 
-            if(!s_aotAssemblies.Contains(targetType.Assembly))return false;
+            if (!s_aotAssemblies.Contains(targetType.Assembly))
+                return false;
             string assemblyName = targetType.Assembly.GetName()?.Name;
             string typeFullName = targetType.FullName;
             if (string.IsNullOrEmpty(assemblyName) || string.IsNullOrEmpty(typeFullName))

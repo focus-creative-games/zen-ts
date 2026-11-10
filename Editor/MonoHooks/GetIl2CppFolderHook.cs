@@ -41,7 +41,8 @@ namespace ZenTS.MonoHooks
         {
             EditorApplication.delayCall += () =>
             {
-                if (NativeSdkStore.HasTarget(NativeSdkStore.EditorTarget)) EnsureInstalled();
+                if (NativeSdkStore.HasTarget(NativeSdkStore.EditorTarget))
+                    EnsureInstalled();
             };
         }
 

@@ -72,12 +72,27 @@ namespace MonoHook
     public unsafe class MethodHook
     {
         public string tag;
-        public bool isHooked { get; private set; }
-        public bool isPlayModeHook { get; private set; }
+        public bool isHooked
+        {
+            get; private set;
+        }
+        public bool isPlayModeHook
+        {
+            get; private set;
+        }
 
-        public MethodBase targetMethod { get; private set; }       // 需要被hook的目标方法
-        public MethodBase replacementMethod { get; private set; }  // 被hook后的替代方法
-        public MethodBase proxyMethod { get; private set; }        // 目标方法的代理方法(可以通过此方法调用被hook后的原方法)
+        public MethodBase targetMethod
+        {
+            get; private set;
+        }       // 需要被hook的目标方法
+        public MethodBase replacementMethod
+        {
+            get; private set;
+        }  // 被hook后的替代方法
+        public MethodBase proxyMethod
+        {
+            get; private set;
+        }        // 目标方法的代理方法(可以通过此方法调用被hook后的原方法)
 
         private IntPtr _targetPtr;          // 目标方法被 jit 后的地址指针
         private IntPtr _replacementPtr;
@@ -110,9 +125,9 @@ namespace MonoHook
         /// <param name="proxyMethod">如果还需要调用原始目标方法，可以通过此参数的方法调用，如果不需要可以填 null</param>
         public MethodHook(MethodBase targetMethod, MethodBase replacementMethod, MethodBase proxyMethod, string data = "")
         {
-            this.targetMethod       = targetMethod;
-            this.replacementMethod  = replacementMethod;
-            this.proxyMethod        = proxyMethod;
+            this.targetMethod = targetMethod;
+            this.replacementMethod = replacementMethod;
+            this.proxyMethod = proxyMethod;
             this.tag = data;
 
             CheckMethod();
@@ -163,7 +178,7 @@ namespace MonoHook
 #if ENABLE_HOOK_DEBUG
                     UnityEngine.Debug.Log($"Original [{targetMethod.DeclaringType.Name}.{targetMethod.Name}]: {HookUtils.HexToString(_targetPtr.ToPointer(), 64, -16)}");
                     UnityEngine.Debug.Log($"Original [{replacementMethod.DeclaringType.Name}.{replacementMethod.Name}]: {HookUtils.HexToString(_replacementPtr.ToPointer(), 64, -16)}");
-                    if(proxyMethod != null)
+                    if (proxyMethod != null)
                         UnityEngine.Debug.Log($"Original [{proxyMethod.DeclaringType.Name}.{proxyMethod.Name}]: {HookUtils.HexToString(_proxyPtr.ToPointer(), 64, -16)}");
 #endif
 
@@ -173,7 +188,7 @@ namespace MonoHook
 #if ENABLE_HOOK_DEBUG
                     UnityEngine.Debug.Log($"New [{targetMethod.DeclaringType.Name}.{targetMethod.Name}]: {HookUtils.HexToString(_targetPtr.ToPointer(), 64, -16)}");
                     UnityEngine.Debug.Log($"New [{replacementMethod.DeclaringType.Name}.{replacementMethod.Name}]: {HookUtils.HexToString(_replacementPtr.ToPointer(), 64, -16)}");
-                    if(proxyMethod != null)
+                    if (proxyMethod != null)
                         UnityEngine.Debug.Log($"New [{proxyMethod.DeclaringType.Name}.{proxyMethod.Name}]: {HookUtils.HexToString(_proxyPtr.ToPointer(), 64, -16)}");
 #endif
                 }
@@ -203,7 +218,7 @@ namespace MonoHook
                 }
             }
 
-            if(proxyMethod != null)
+            if (proxyMethod != null)
             {
                 methodName = $"{proxyMethod.DeclaringType.Name}.{proxyMethod.Name}";
                 int codeSize = proxyMethod.GetMethodBody().GetILAsByteArray().Length;
@@ -219,8 +234,8 @@ namespace MonoHook
         private void CreateCodePatcher()
         {
             long addrOffset = Math.Abs(_targetPtr.ToInt64() - _proxyPtr.ToInt64());
-            
-            if(_proxyPtr != IntPtr.Zero)
+
+            if (_proxyPtr != IntPtr.Zero)
                 addrOffset = Math.Max(addrOffset, Math.Abs(_targetPtr.ToInt64() - _proxyPtr.ToInt64()));
 
             if (LDasm.IsARM())
@@ -238,7 +253,7 @@ namespace MonoHook
             {
                 if (IntPtr.Size == 8)
                 {
-                    if(addrOffset < 0x7fffffff) // 2G
+                    if (addrOffset < 0x7fffffff) // 2G
                         _codePatcher = new CodePatcher_x64_near(_targetPtr, _replacementPtr, _proxyPtr);
                     else
                         _codePatcher = new CodePatcher_x64_far(_targetPtr, _replacementPtr, _proxyPtr);
@@ -263,7 +278,7 @@ namespace MonoHook
             if (proxyMethod != null && _proxyPtr == null)
                 return false;
 
-            if(_replacementPtr == _targetPtr)
+            if (_replacementPtr == _targetPtr)
             {
                 throw new Exception($"the addresses of target method {targetMethod.Name} and replacement method {replacementMethod.Name} can not be same");
             }

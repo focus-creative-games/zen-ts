@@ -124,7 +124,7 @@ namespace ZenTS.Emit
                 {
                     binding.MemberKeys.Add(name);
                     object value = Enum.Parse(type, name);
-                    EngineApi.DefinePropertyValueStr(ctx, ctor, name, EnumMarshal.Push(ctx,value), 4);
+                    EngineApi.DefinePropertyValueStr(ctx, ctor, name, EnumMarshal.Push(ctx, value), 4);
                 }
             }
 
@@ -344,7 +344,8 @@ namespace ZenTS.Emit
         {
             IntPtr ctx = env.Context;
             const BindingFlags flags = BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static | BindingFlags.DeclaredOnly;
-            if (t != ownerType) return;
+            if (t != ownerType)
+                return;
             MethodInfo[] methods = EnumerateTypeChain(ownerType).SelectMany(x => x.GetMethods(flags))
                 .GroupBy(m => (m.IsStatic, FormatFullSignatureKey(m))).Select(g => g.First()).ToArray();
 

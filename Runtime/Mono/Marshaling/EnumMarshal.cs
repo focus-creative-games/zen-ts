@@ -27,8 +27,8 @@ namespace ZenTS.Marshaling
     {
         public static JsValue Push(IntPtr ctx, object enumValue)
         {
-            Type underlying=Enum.GetUnderlyingType(enumValue.GetType());
-            return TypedMarshal.Push(ctx,Convert.ChangeType(enumValue,underlying,System.Globalization.CultureInfo.InvariantCulture),underlying);
+            Type underlying = Enum.GetUnderlyingType(enumValue.GetType());
+            return TypedMarshal.Push(ctx, Convert.ChangeType(enumValue, underlying, System.Globalization.CultureInfo.InvariantCulture), underlying);
         }
     }
 }

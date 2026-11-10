@@ -187,27 +187,27 @@ namespace ZenTS
                 switch (el.Name)
                 {
                     case "Param":
-                    {
-                        if (el.HasAttribute("name"))
                         {
-                            throw new JsMarshalAsConfigurationException(
-                                "[ZenTS] Param must use @index (not @name) in " + filePath);
-                        }
+                            if (el.HasAttribute("name"))
+                            {
+                                throw new JsMarshalAsConfigurationException(
+                                    "[ZenTS] Param must use @index (not @name) in " + filePath);
+                            }
 
-                        if (!el.HasAttribute("index")
-                            || !int.TryParse(el.GetAttribute("index"), out int index)
-                            || index < 0)
-                        {
-                            throw new JsMarshalAsConfigurationException(
-                                "[ZenTS] Param/@index must be a non-negative integer in " + filePath);
-                        }
+                            if (!el.HasAttribute("index")
+                                || !int.TryParse(el.GetAttribute("index"), out int index)
+                                || index < 0)
+                            {
+                                throw new JsMarshalAsConfigurationException(
+                                    "[ZenTS] Param/@index must be a non-negative integer in " + filePath);
+                            }
 
-                        AddRule(rules, seen, BuildRule(
-                            filePath, assemblyName, typeFullName, JsMarshalAsXmlTargetKind.Param,
-                            memberName: null, methodName: methodName, signature: signature, paramIndex: index,
-                            RequireSingleMarshalAs(el, filePath)));
-                        break;
-                    }
+                            AddRule(rules, seen, BuildRule(
+                                filePath, assemblyName, typeFullName, JsMarshalAsXmlTargetKind.Param,
+                                memberName: null, methodName: methodName, signature: signature, paramIndex: index,
+                                RequireSingleMarshalAs(el, filePath)));
+                            break;
+                        }
                     case "Return":
                         AddRule(rules, seen, BuildRule(
                             filePath, assemblyName, typeFullName, JsMarshalAsXmlTargetKind.Return,

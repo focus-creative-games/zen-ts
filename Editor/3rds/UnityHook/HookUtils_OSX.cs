@@ -41,15 +41,15 @@ namespace MonoHook
         {
             if (!jit_write_protect_supported)
             {
-                fixed(void * pSrc = &src[0])
+                fixed (void* pSrc = &src[0])
                 {
                     MemCpy(pDst, pSrc, src.Length);
                 }
 
                 return;
             }
-            
-            fixed(void * p = &src[0])
+
+            fixed (void* p = &src[0])
             {
                 memcpy_jit(new IntPtr(pDst), new IntPtr(p), src.Length);
             }
@@ -58,9 +58,13 @@ namespace MonoHook
         /// <summary>
         /// set flags of address to `read write execute`
         /// </summary>
-        public static void SetAddrFlagsToRWX(IntPtr ptr, int size) { }
+        public static void SetAddrFlagsToRWX(IntPtr ptr, int size)
+        {
+        }
 
-        public static void FlushICache(void* code, int size) { }
+        public static void FlushICache(void* code, int size)
+        {
+        }
 
         public static KeyValuePair<long, long> GetPageAlignedAddr(long code, int size)
         {
@@ -101,7 +105,8 @@ namespace MonoHook
                     count++;
                 }
             }
-        END:;
+        END:
+            ;
             return sb.ToString();
         }
 

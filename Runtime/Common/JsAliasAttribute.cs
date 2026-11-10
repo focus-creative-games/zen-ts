@@ -25,7 +25,10 @@ namespace ZenTS
     [AttributeUsage(AttributeTargets.Method, AllowMultiple = false, Inherited = false)]
     public sealed class JsAliasAttribute : Attribute
     {
-        public string Alias { get; }
+        public string Alias
+        {
+            get;
+        }
 
         public JsAliasAttribute(string alias)
         {

@@ -150,7 +150,7 @@ namespace ZenTS.Mt
         public static bool TryGetViewType(IntPtr ctx, JsValue jsValue, out Type viewType)
         {
             viewType = null;
-            if (!TryGetObject(ctx, jsValue, out _) )
+            if (!TryGetObject(ctx, jsValue, out _))
             {
                 return false;
             }

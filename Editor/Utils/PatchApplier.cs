@@ -78,7 +78,11 @@ namespace ZenTS.Utils
                 if (!string.Equals(patchInput, patchFile, StringComparison.Ordinal)
                     && File.Exists(patchInput))
                 {
-                    try { File.Delete(patchInput); } catch { /* best-effort */ }
+                    try
+                    {
+                        File.Delete(patchInput);
+                    }
+                    catch { /* best-effort */ }
                 }
             }
         }

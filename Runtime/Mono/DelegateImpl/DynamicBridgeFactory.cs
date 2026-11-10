@@ -185,24 +185,38 @@ namespace ZenTS.DelegateImpl
             }
 
             IntPtr ctx = env.Context;
-            int clrArgc=args?.Length??0;
-            var offsets=new int[clrArgc];int argc=0;
-            for(int i=0;i<clrArgc;++i){offsets[i]=argc;var mas=plan.Marshal[i];argc+=!paramTypes[i].IsByRef && mas?.JsMarshalType==JsMarshalType.UnpackedValues?mas.Members.Length:1;}
-            var jsArgs=new JsValue[argc];
+            int clrArgc = args?.Length ?? 0;
+            var offsets = new int[clrArgc];
+            int argc = 0;
+            for (int i = 0; i < clrArgc; ++i)
+            {
+                offsets[i] = argc;
+                var mas = plan.Marshal[i];
+                argc += !paramTypes[i].IsByRef && mas?.JsMarshalType == JsMarshalType.UnpackedValues ? mas.Members.Length : 1;
+            }
+            var jsArgs = new JsValue[argc];
             OpaqueParameterScope.Enter();
             try
             {
-                for(int i=0;i<clrArgc;++i)
+                for (int i = 0; i < clrArgc; ++i)
                 {
-                    Type pt=paramTypes[i];var mas=plan.Marshal[i];int slot=offsets[i];
-                    if(pt.IsByRef)jsArgs[slot]=OpaqueParameterScope.Push(ctx,args[i],pt.GetElementType(),mas);
-                    else if(mas?.JsMarshalType==JsMarshalType.UnpackedValues)
+                    Type pt = paramTypes[i];
+                    var mas = plan.Marshal[i];
+                    int slot = offsets[i];
+                    if (pt.IsByRef)
+                        jsArgs[slot] = OpaqueParameterScope.Push(ctx, args[i], pt.GetElementType(), mas);
+                    else if (mas?.JsMarshalType == JsMarshalType.UnpackedValues)
                     {
-                        JsValue packed=TypedMarshal.Push(ctx,args[i],pt,mas);
-                        try {for(int k=0;k<mas.Members.Length;++k)jsArgs[slot+k]=EngineApi.GetPropertyUint32(ctx,packed,(uint)k);}
-                        finally {JsValueUtil.Free(ctx,packed);}
+                        JsValue packed = TypedMarshal.Push(ctx, args[i], pt, mas);
+                        try
+                        {
+                            for (int k = 0; k < mas.Members.Length; ++k)
+                                jsArgs[slot + k] = EngineApi.GetPropertyUint32(ctx, packed, (uint)k);
+                        }
+                        finally { JsValueUtil.Free(ctx, packed); }
                     }
-                    else jsArgs[slot]=TypedMarshal.Push(ctx,args[i],pt,mas);
+                    else
+                        jsArgs[slot] = TypedMarshal.Push(ctx, args[i], pt, mas);
                 }
 
                 JsValue ret;

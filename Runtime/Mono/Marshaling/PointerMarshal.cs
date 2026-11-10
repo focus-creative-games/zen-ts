@@ -37,8 +37,7 @@ namespace ZenTS.Marshaling
             IntPtr addr = ExtractAddress(value);
             var handle = new PointerHandle(addr, pointerType);
             int id = ObjectRegistry.Register(handle, pointerType);
-            JsValue obj = EngineApi.NewObject(ctx);
-            EngineApi.SetPropertyStr(ctx, obj, "__zents_id", JsValueUtil.NewInt32(id));
+            JsValue obj = ObjectRegistry.CreateJsHandle(ctx, id);
             EngineApi.SetPropertyStr(ctx, obj, "__zents_pointer", JsValueUtil.NewBool(true));
             return obj;
         }

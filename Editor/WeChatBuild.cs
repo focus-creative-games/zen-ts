@@ -28,7 +28,7 @@ namespace ZenTS.Editor
                 automaticGraphics = PlayerSettings.GetUseDefaultGraphicsAPIs(target);
                 graphics = PlayerSettings.GetGraphicsAPIs(target);
                 codeGeneration = PlayerSettings.GetIl2CppCodeGeneration(named);
-                var type = typeof(PlayerSettings).GetNestedType(target == BuildTarget.WebGL ? "WebGL" : "WeixinMiniGame", BindingFlags.Public);
+                var type = typeof(PlayerSettings).GetNestedType(target == BuildTarget.WebGL ? "WebGL" : "MiniGame", BindingFlags.Public) ?? typeof(PlayerSettings).GetNestedType("WeixinMiniGame", BindingFlags.Public);
                 if (type == null)
                     throw new BuildFailedException("[ZenTS] Missing host platform settings: " + target);
                 foreach (string name in new[] { "template", "emscriptenArgs", "threadsSupport", "dataCaching", "debugSymbolMode", "compressionFormat", "exceptionSupport", "linkerTarget" })

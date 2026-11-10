@@ -20,229 +20,193 @@
 
 using System;
 using System.Collections.Generic;
+using System.Runtime.InteropServices;
 using ZenTS.Jvm;
-using ZenTS.Utils;
 
 namespace ZenTS.Mt
 {
-    /// <summary>
-    /// Strong-slot registry for CLR objects exposed to JS (ByObj handles).
-    /// </summary>
     internal static class ObjectRegistry
     {
-        private static readonly List<object> Slots = new List<object> { null };
-        private static readonly List<Type> ViewTypes = new List<Type> { null };
-        private static readonly Queue<int> PendingRelease = new Queue<int>();
+        private sealed class Slot
+        {
+            public object Value;
+            public Type View;
+            public ulong Ticket;
+            public int Wrappers;
+        }
+        private static readonly List<Slot> Slots = new List<Slot> { new Slot() };
+        private static readonly Stack<int> Free = new Stack<int>();
+        private static readonly Queue<(int id, ulong ticket)> PendingRelease = new Queue<(int, ulong)>();
         private static readonly Dictionary<object, int> Reverse = new Dictionary<object, int>(ReferenceEqualityComparer.Instance);
-        private static readonly Dictionary<(int id, Type view), JsValue> ViewCache = new Dictionary<(int, Type), JsValue>();
-        private static int _nextId = 1;
+        private static readonly JsObjectCollected Collected = OnCollected;
+        private static ulong _nextTicket;
 
         public static int Register(object obj) => Register(obj, obj?.GetType());
-
         public static int Register(object obj, Type viewType)
         {
             if (obj == null)
-            {
                 return 0;
-            }
-
             lock (Slots)
             {
                 if (Reverse.TryGetValue(obj, out int existing))
-                {
                     return existing;
-                }
-
-                int id = _nextId++;
-                while (id >= Slots.Count)
-                {
-                    Slots.Add(null);
-                    ViewTypes.Add(null);
-                }
-
-                Slots[id] = obj;
-                ViewTypes[id] = viewType ?? obj.GetType();
+                int id = Free.Count != 0 ? Free.Pop() : Slots.Count;
+                if (id == Slots.Count)
+                    Slots.Add(new Slot());
+                Slot slot = Slots[id];
+                slot.Value = obj;
+                slot.View = viewType ?? obj.GetType();
+                slot.Ticket = checked(++_nextTicket);
+                slot.Wrappers = 0;
                 Reverse[obj] = id;
                 return id;
             }
         }
 
+        [AOT.MonoPInvokeCallback(typeof(JsObjectCollected))]
+        private static void OnCollected(int id, ulong ticket)
+        {
+            // V8 weak callbacks may not re-enter JS. Only queue a main-thread release.
+            lock (Slots)
+                PendingRelease.Enqueue((id, ticket));
+        }
+
         public static void QueueRelease(int id)
         {
-            if (id <= 0)
-            {
-                return;
-            }
-
             lock (Slots)
-            {
-                PendingRelease.Enqueue(id);
-            }
+                if (id > 0 && id < Slots.Count)
+                    PendingRelease.Enqueue((id, Slots[id].Ticket));
+        }
+
+        public static void ReleaseImmediately(int id)
+        {
+            lock (Slots)
+                if (id > 0 && id < Slots.Count)
+                    ReleaseSlot(id);
+        }
+
+        private static void ReleaseSlot(int id)
+        {
+            Slot slot = Slots[id];
+            if (slot.Value == null)
+                return;
+            if (Reverse.TryGetValue(slot.Value, out int reverse) && reverse == id)
+                Reverse.Remove(slot.Value);
+            slot.Value = null;
+            slot.View = null;
+            slot.Wrappers = 0;
+            Free.Push(id);
         }
 
         public static void ProcessPending()
         {
             lock (Slots)
-            {
-                while (PendingRelease.Count > 0)
+                while (PendingRelease.Count != 0)
                 {
-                    int id = PendingRelease.Dequeue();
-                    if (id <= 0 || id >= Slots.Count)
-                    {
+                    var release = PendingRelease.Dequeue();
+                    if (release.id <= 0 || release.id >= Slots.Count)
                         continue;
-                    }
-
-                    object obj = Slots[id];
-                    Slots[id] = null;
-                    ViewTypes[id] = null;
-                    if (obj != null)
-                    {
-                        Reverse.Remove(obj);
-                    }
-
-                    // Drop any cached JS handles for this id (values freed on Reset).
-                    var doomed = new List<(int, Type)>();
-                    foreach (var key in ViewCache.Keys)
-                    {
-                        if (key.id == id)
-                        {
-                            doomed.Add(key);
-                        }
-                    }
-
-                    foreach (var key in doomed)
-                    {
-                        ViewCache.Remove(key);
-                    }
+                    Slot slot = Slots[release.id];
+                    if (slot.Value == null || slot.Ticket != release.ticket)
+                        continue;
+                    if (--slot.Wrappers <= 0)
+                        ReleaseSlot(release.id);
                 }
+        }
+
+        private static bool TryGetSlot(IntPtr ctx, JsValue value, out int id)
+        {
+            id = 0;
+            if (JsValueUtil.GetNormTag(value) != JsValueUtil.TagObject)
+                return false;
+            JsValue index = EngineApi.GetPropertyStr(ctx, value, "__zents_id");
+            JsValue lo = EngineApi.GetPropertyStr(ctx, value, "__zents_ticket_lo");
+            JsValue hi = EngineApi.GetPropertyStr(ctx, value, "__zents_ticket_hi");
+            try
+            {
+                if (JsValueUtil.GetNormTag(index) != JsValueUtil.TagInt ||
+                    JsValueUtil.GetNormTag(lo) != JsValueUtil.TagInt || JsValueUtil.GetNormTag(hi) != JsValueUtil.TagInt)
+                    return false;
+                id = unchecked((int)JsValueUtil.GetUInt64(index));
+                ulong ticket = (uint)JsValueUtil.GetUInt64(lo) | ((ulong)(uint)JsValueUtil.GetUInt64(hi) << 32);
+                return id > 0 && id < Slots.Count && Slots[id].Value != null && Slots[id].Ticket == ticket;
+            }
+            finally
+            {
+                JsValueUtil.Free(ctx, index);
+                JsValueUtil.Free(ctx, lo);
+                JsValueUtil.Free(ctx, hi);
             }
         }
 
-        public static bool TryGetObject(IntPtr ctx, JsValue jsValue, out object obj)
+        public static bool TryGetObject(IntPtr ctx, JsValue value, out object obj)
         {
-            obj = null;
-            if (JsValueUtil.GetNormTag(jsValue) != JsValueUtil.TagObject)
-            {
-                return false;
-            }
-
-            JsValue idVal = EngineApi.GetPropertyStr(ctx, jsValue, "__zents_id");
-            if (JsValueUtil.GetNormTag(idVal) != JsValueUtil.TagInt)
-            {
-                JsValueUtil.Free(ctx, idVal);
-                return false;
-            }
-
-            int id = unchecked((int)JsValueUtil.GetUInt64(idVal));
-            JsValueUtil.Free(ctx, idVal);
             lock (Slots)
             {
-                if (id <= 0 || id >= Slots.Count)
-                {
-                    return false;
-                }
-
-                obj = Slots[id];
-                return obj != null;
+                bool found = TryGetSlot(ctx, value, out int id);
+                obj = found ? Slots[id].Value : null;
+                return found;
             }
         }
 
-        public static bool TryGetViewType(IntPtr ctx, JsValue jsValue, out Type viewType)
+        public static bool TryGetViewType(IntPtr ctx, JsValue value, out Type viewType)
         {
-            viewType = null;
-            if (!TryGetObject(ctx, jsValue, out _))
-            {
-                return false;
-            }
-
-            JsValue idVal = EngineApi.GetPropertyStr(ctx, jsValue, "__zents_id");
-            int id = unchecked((int)JsValueUtil.GetUInt64(idVal));
-            JsValueUtil.Free(ctx, idVal);
             lock (Slots)
             {
-                if (id <= 0 || id >= ViewTypes.Count)
-                {
-                    return false;
-                }
-
-                viewType = ViewTypes[id];
-                return viewType != null;
+                bool found = TryGetSlot(ctx, value, out int id);
+                viewType = found ? Slots[id].View : null;
+                return found;
             }
         }
 
-        /// <summary>Replace the CLR object held by an existing ByObj handle (byref writeback).</summary>
-        public static bool TryReplaceObject(IntPtr ctx, JsValue jsValue, object newValue)
+        public static bool TryReplaceObject(IntPtr ctx, JsValue value, object newValue)
         {
-            if (newValue == null || JsValueUtil.GetNormTag(jsValue) != JsValueUtil.TagObject)
-            {
+            if (newValue == null)
                 return false;
-            }
-
-            JsValue idVal = EngineApi.GetPropertyStr(ctx, jsValue, "__zents_id");
-            if (JsValueUtil.GetNormTag(idVal) != JsValueUtil.TagInt)
-            {
-                JsValueUtil.Free(ctx, idVal);
-                return false;
-            }
-
-            int id = unchecked((int)JsValueUtil.GetUInt64(idVal));
-            JsValueUtil.Free(ctx, idVal);
             lock (Slots)
             {
-                if (id <= 0 || id >= Slots.Count)
-                {
+                if (!TryGetSlot(ctx, value, out int id))
                     return false;
-                }
-
-                object old = Slots[id];
-                if (old == null)
-                {
-                    return false;
-                }
-
-                if (!ReferenceEquals(old, newValue))
-                {
-                    Reverse.Remove(old);
-                    Slots[id] = newValue;
-                    Reverse[newValue] = id;
-                }
-
+                Slot slot = Slots[id];
+                if (Reverse.TryGetValue(slot.Value, out int reverse) && reverse == id)
+                    Reverse.Remove(slot.Value);
+                slot.Value = newValue;
+                Reverse[newValue] = id;
                 return true;
             }
         }
 
         public static JsValue CreateJsHandle(IntPtr ctx, int id) => CreateJsHandle(ctx, id, default, null);
-
-        public static JsValue CreateJsHandle(IntPtr ctx, int id, JsValue proto) =>
-            CreateJsHandle(ctx, id, proto, null);
-
+        public static JsValue CreateJsHandle(IntPtr ctx, int id, JsValue proto) => CreateJsHandle(ctx, id, proto, null);
         public static JsValue CreateJsHandle(IntPtr ctx, int id, JsValue proto, string udKind)
         {
-            JsValue obj = JsValueUtil.GetNormTag(proto) == JsValueUtil.TagObject
-                ? EngineApi.NewObjectProto(ctx, proto)
-                : EngineApi.NewObject(ctx);
-            EngineApi.SetPropertyStr(ctx, obj, "__zents_id", JsValueUtil.NewInt32(id));
-            if (!string.IsNullOrEmpty(udKind))
+            JsValue obj = JsValueUtil.GetNormTag(proto) == JsValueUtil.TagObject ? EngineApi.NewObjectProto(ctx, proto) : EngineApi.NewObject(ctx);
+            try
             {
-                EngineApi.SetPropertyStr(ctx, obj, "__zents_ud_kind", EngineApi.NewString(ctx, udKind));
+                AttachJsHandle(ctx, obj, id, udKind);
+                return obj;
             }
-
-            return obj;
+            catch { JsValueUtil.Free(ctx, obj); throw; }
         }
 
-        public static JsValue PushObject(IntPtr ctx, object obj, Type viewType, JsValue instanceProto) =>
-            PushObject(ctx, obj, viewType, instanceProto, udKind: "byobj");
+        internal static void AttachJsHandle(IntPtr ctx, JsValue obj, int id, string udKind = null)
+        {
+            Slot slot = Slots[id];
+            EngineApi.SetPropertyStr(ctx, obj, "__zents_id", JsValueUtil.NewInt32(id));
+            EngineApi.SetPropertyStr(ctx, obj, "__zents_ticket_lo", JsValueUtil.NewInt32(unchecked((int)slot.Ticket)));
+            EngineApi.SetPropertyStr(ctx, obj, "__zents_ticket_hi", JsValueUtil.NewInt32(unchecked((int)(slot.Ticket >> 32))));
+            if (!string.IsNullOrEmpty(udKind))
+                EngineApi.SetPropertyStr(ctx, obj, "__zents_ud_kind", EngineApi.NewString(ctx, udKind));
+            EngineApi.TrackObject(ctx, obj, id, slot.Ticket, Collected);
+            slot.Wrappers++;
+        }
 
-        public static JsValue PushObject(IntPtr ctx, object obj, Type viewType, JsValue instanceProto, string udKind)
+        public static JsValue PushObject(IntPtr ctx, object obj, Type viewType, JsValue proto) => PushObject(ctx, obj, viewType, proto, "byobj");
+        public static JsValue PushObject(IntPtr ctx, object obj, Type viewType, JsValue proto, string udKind)
         {
             if (obj == null)
-            {
                 return JsValueUtil.Null;
-            }
-
-            Type view = viewType ?? obj.GetType();
-            int id = Register(obj, view);
-            return CreateJsHandle(ctx, id, instanceProto, udKind);
+            return CreateJsHandle(ctx, Register(obj, viewType), proto, udKind);
         }
 
         public static void Reset()
@@ -250,24 +214,19 @@ namespace ZenTS.Mt
             lock (Slots)
             {
                 Slots.Clear();
-                Slots.Add(null);
-                ViewTypes.Clear();
-                ViewTypes.Add(null);
+                Slots.Add(new Slot());
+                Free.Clear();
                 PendingRelease.Clear();
                 Reverse.Clear();
-                ViewCache.Clear();
-                _nextId = 1;
+                // Tickets never restart: late callbacks cannot release a slot in a newer runtime.
             }
         }
 
         private sealed class ReferenceEqualityComparer : IEqualityComparer<object>
         {
             public static readonly ReferenceEqualityComparer Instance = new ReferenceEqualityComparer();
-
             public new bool Equals(object x, object y) => ReferenceEquals(x, y);
-
-            public int GetHashCode(object obj) =>
-                obj == null ? 0 : System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(obj);
+            public int GetHashCode(object obj) => System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(obj);
         }
     }
 }

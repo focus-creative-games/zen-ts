@@ -45,7 +45,7 @@ namespace ZenTS.Emit
                 JsValue stub = EngineApi.NewObject(ctx);
                 EngineApi.SetPropertyStr(ctx, stub, "__zents_type_name", EngineApi.NewString(ctx, type.FullName ?? type.Name));
                 int typeSlot = ObjectRegistry.Register(type, typeof(Type));
-                EngineApi.SetPropertyStr(ctx, stub, "__zents_id", JsValueUtil.NewInt32(typeSlot));
+                ObjectRegistry.AttachJsHandle(ctx, stub, typeSlot);
                 binding.TypeObject = stub;
                 binding.TypeObjectRaw = JsValueUtil.Dup(stub);
                 binding.InstanceProto = EngineApi.NewObject(ctx);
@@ -67,7 +67,7 @@ namespace ZenTS.Emit
 
             // Tag type object with Type identity for zents.typeof / cast.
             int ctorTypeSlot = ObjectRegistry.Register(type, typeof(Type));
-            EngineApi.SetPropertyStr(ctx, ctor, "__zents_id", JsValueUtil.NewInt32(ctorTypeSlot));
+            ObjectRegistry.AttachJsHandle(ctx, ctor, ctorTypeSlot);
             EngineApi.SetPropertyStr(ctx, ctor, "__zents_type_name", EngineApi.NewString(ctx, type.FullName ?? type.Name));
 
             EngineApi.SetConstructorBit(ctx, ctor, 1);
@@ -175,7 +175,7 @@ namespace ZenTS.Emit
             JsValue typeObjectRaw = JsValueUtil.Dup(ctor);
 
             int ctorTypeSlot = ObjectRegistry.Register(nullableType, typeof(Type));
-            EngineApi.SetPropertyStr(ctx, ctor, "__zents_id", JsValueUtil.NewInt32(ctorTypeSlot));
+            ObjectRegistry.AttachJsHandle(ctx, ctor, ctorTypeSlot);
             EngineApi.SetPropertyStr(ctx, ctor, "__zents_type_name", EngineApi.NewString(ctx, nullableType.FullName ?? nullableType.Name));
             EngineApi.SetPropertyStr(ctx, ctor, "__nullable", JsValueUtil.NewBool(true));
 

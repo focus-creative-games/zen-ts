@@ -7,14 +7,14 @@ namespace ZenTS
 {
     public static class HostJsPlatform
     {
-        public static bool IsWeChat(BuildTarget target) => target.ToString() == "WeixinMiniGame";
+        public static bool IsWeChat(BuildTarget target) => (target.ToString() == "WeixinMiniGame" || target.ToString() == "MiniGame");
         public static bool IsTarget(BuildTarget target) => target == BuildTarget.WebGL || IsWeChat(target);
         internal static NamedBuildTarget NamedTarget(BuildTarget target) => NamedBuildTarget.FromBuildTargetGroup(BuildPipeline.GetBuildTargetGroup(target));
         internal static object ExceptionSupport(BuildTarget target)
         {
             if (target == BuildTarget.WebGL)
                 return PlayerSettings.WebGL.exceptionSupport;
-            var settings = typeof(PlayerSettings).GetNestedType("WeixinMiniGame", BindingFlags.Public);
+            var settings = (typeof(PlayerSettings).GetNestedType("MiniGame", BindingFlags.Public) ?? typeof(PlayerSettings).GetNestedType("WeixinMiniGame", BindingFlags.Public));
             var property = settings?.GetProperty("exceptionSupport", BindingFlags.Public | BindingFlags.Static);
             if (property == null)
                 throw new BuildFailedException("[ZenTS] Cannot read WeixinMiniGame exception support in this Editor");
@@ -27,7 +27,7 @@ namespace ZenTS
                 PlayerSettings.WebGL.exceptionSupport = WebGLExceptionSupport.FullWithStacktrace;
                 return;
             }
-            var settings = typeof(PlayerSettings).GetNestedType("WeixinMiniGame", BindingFlags.Public);
+            var settings = (typeof(PlayerSettings).GetNestedType("MiniGame", BindingFlags.Public) ?? typeof(PlayerSettings).GetNestedType("WeixinMiniGame", BindingFlags.Public));
             var property = settings?.GetProperty("exceptionSupport", BindingFlags.Public | BindingFlags.Static);
             if (property == null)
                 throw new BuildFailedException("[ZenTS] Cannot configure WeixinMiniGame exception support");

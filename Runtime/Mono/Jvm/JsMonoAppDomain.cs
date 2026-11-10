@@ -101,14 +101,24 @@ namespace ZenTS
             if (!JsExtensionXmlRegistry.IsLoaded)
                 LoadJsExtensionXmlFromSettings();
 #endif
-            _env = new JsEnv();
-            _env.Initialize(moduleLoader, _generation);
-            _env.Activate();
-            // Native __zents_* hooks + zentslib.js (installs CSharp Proxy).
-            ZentsLib.RegisterGlobals(_env);
-            AssemblyRegistry.EnsureCSharpRoot(_env);
-            DynamicBridgeFactory.InvalidateGeneration(_generation);
-            TryJsDebuggerStart();
+            var pending = new JsEnv();
+            try
+            {
+                pending.Initialize(moduleLoader, _generation);
+                pending.Activate();
+                ZentsLib.RegisterGlobals(pending);
+                AssemblyRegistry.EnsureCSharpRoot(pending);
+                DynamicBridgeFactory.InvalidateGeneration(_generation);
+                _env = pending;
+                TryJsDebuggerStart();
+            }
+            catch
+            {
+                // Roll back partial registries and native handles, preserving the original error.
+                _env = pending;
+                Shutdown();
+                throw;
+            }
         }
 
 #if UNITY_EDITOR
@@ -175,37 +185,49 @@ namespace ZenTS
 
         private static void Shutdown()
         {
-            if (_env == null)
-            {
+            JsEnv env = _env;
+            if (env == null)
                 return;
-            }
-
-            TryJsDebuggerStop();
-            ProcessPendingRefReleases();
-            // Release all managed value handles before destroying the V8 context/runtime.
-            IntPtr ctx = _env.Context;
-            Marshaling.OpaqueParameterScope.Leave(ctx);
-            Marshaling.OpaqueParameterScope.Reset();
-            AssemblyRegistry.Release(_env);
-            TypeRegistry.Release(_env);
-            Emit.ArrayBinding.Release(_env);
-            DynamicBridgeFactory.Release(_env);
-            ZentsLib.ResetGenericMethodCache(ctx);
-            ZenTS.Utils.JsCallbackGate.Reset(ctx);
-            _env.Shutdown();
             _env = null;
-            AssemblyRegistry.Reset();
-            TypeRegistry.Reset();
-            Emit.ArrayBinding.Reset();
-            Emit.MethodTagRegistry.Reset();
-            Emit.MethodEmitter.ResetCaches();
-            ObjectRegistry.Reset();
+            IntPtr ctx = env.Context;
+            Exception failure = null;
+            Cleanup(TryJsDebuggerStop, ref failure);
+            // Do not execute arbitrary queued JS while tearing down its domain.
+            Cleanup(DynamicBridgeFactory.ProcessPendingReleases, ref failure);
+            Cleanup(ObjectRegistry.ProcessPending, ref failure);
+            Cleanup(() => Marshaling.OpaqueParameterScope.Leave(ctx), ref failure);
+            Cleanup(Marshaling.OpaqueParameterScope.Reset, ref failure);
+            Cleanup(() => AssemblyRegistry.Release(env), ref failure);
+            Cleanup(() => TypeRegistry.Release(env), ref failure);
+            Cleanup(() => Emit.ArrayBinding.Release(env), ref failure);
+            Cleanup(() => DynamicBridgeFactory.Release(env), ref failure);
+            Cleanup(() => ZentsLib.ResetGenericMethodCache(ctx), ref failure);
+            Cleanup(() => ZenTS.Utils.JsCallbackGate.Reset(ctx), ref failure);
+            Cleanup(env.Shutdown, ref failure);
+            Cleanup(AssemblyRegistry.Reset, ref failure);
+            Cleanup(TypeRegistry.Reset, ref failure);
+            Cleanup(Emit.ArrayBinding.Reset, ref failure);
+            Cleanup(Emit.MethodTagRegistry.Reset, ref failure);
+            Cleanup(Emit.MethodEmitter.ResetCaches, ref failure);
+            Cleanup(ObjectRegistry.Reset, ref failure);
+            if (failure != null)
+                Debug.LogWarning("[ZenTS] Domain cleanup: " + failure);
+        }
+
+        private static void Cleanup(Action action, ref Exception failure)
+        {
+            try
+            {
+                action();
+            }
+            catch (Exception error) { if (failure == null) failure = error; }
         }
 
         private static void ProcessPendingRefReleases()
         {
             if (_env != null && _env.IsAlive)
                 _env.DrainPendingJobs();
+            DynamicBridgeFactory.ProcessPendingReleases();
             ObjectRegistry.ProcessPending();
         }
 

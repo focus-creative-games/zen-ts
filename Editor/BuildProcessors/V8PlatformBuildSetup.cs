@@ -50,22 +50,19 @@ namespace ZenTS
                 return;
             if (NativeSdkStore.HasTarget(NativeSdkStore.EditorTarget))
                 NativeEditorPlugins.Ensure();
-            string clean = Regex.Replace(PlayerSettings.GetAdditionalIl2CppArgs() ?? "", @"\s*--additional-libraries=""[^""]*engine[/\\]v8[/\\]sdks[^""]*\.a""", "");
-            PlayerSettings.SetAdditionalIl2CppArgs(clean.Trim());
             string key = TargetKey(report.summary.platform);
             if (key == null)
                 return;
             string sdk = EnsureInstalled(key);
-            if (report.summary.platform == BuildTarget.iOS)
-                return; // Xcode links the copied static libraries.
             previousArgs = PlayerSettings.GetAdditionalIl2CppArgs();
             configured = true;
             EditorApplication.update += RestoreAfterBuild;
             AssemblyReloadEvents.beforeAssemblyReload += Restore;
             EditorApplication.quitting += Restore;
-            string args = previousArgs ?? "";
-            foreach (string name in new[] { "libzents_v8_engine.a", "libv8_monolith.a" })
-                args += " --additional-libraries=\"" + Path.Combine(sdk, "lib", name) + "\"";
+            string args = NativeBuildArguments.ForHost(previousArgs);
+            if (report.summary.platform != BuildTarget.iOS)
+                foreach (string name in new[] { "libzents_v8_engine.a", "libv8_monolith.a" })
+                    args += " --additional-libraries=\"" + Path.Combine(sdk, "lib", name) + "\"";
             PlayerSettings.SetAdditionalIl2CppArgs(args.Trim());
         }
         private static void RestoreAfterBuild()

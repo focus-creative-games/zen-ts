@@ -34,6 +34,7 @@ namespace ZenTS.Marshaling
         private static readonly System.Collections.Generic.Stack<int> Scopes = new System.Collections.Generic.Stack<int>();
         private static readonly System.Collections.Generic.HashSet<int> Active = new System.Collections.Generic.HashSet<int>();
         private static readonly System.Collections.Generic.Dictionary<int, System.Collections.Generic.List<OpaqueValue>> Handles = new System.Collections.Generic.Dictionary<int, System.Collections.Generic.List<OpaqueValue>>();
+        private static readonly System.Collections.Generic.Stack<System.Collections.Generic.List<OpaqueValue>> ListPool = new System.Collections.Generic.Stack<System.Collections.Generic.List<OpaqueValue>>();
         public static void Enter()
         {
             unchecked
@@ -43,7 +44,7 @@ namespace ZenTS.Marshaling
             }
             Scopes.Push(_generation);
             Active.Add(_generation);
-            Handles[_generation] = new System.Collections.Generic.List<OpaqueValue>();
+            Handles[_generation] = null;
         }
         public static void Leave(IntPtr ctx)
         {
@@ -51,15 +52,31 @@ namespace ZenTS.Marshaling
                 return;
             int id = Scopes.Pop();
             Active.Remove(id);
-            foreach (var handle in Handles[id])
-                handle.Target = null;
+            if (Handles[id] != null)
+                foreach (var handle in Handles[id])
+                {
+                    handle.Target = null;
+                    ObjectRegistry.ReleaseImmediately(handle.RegistryId);
+                }
+            if (Handles[id] != null)
+            {
+                Handles[id].Clear();
+                ListPool.Push(Handles[id]);
+            }
             Handles.Remove(id);
         }
         public static void Reset()
         {
             foreach (var handles in Handles.Values)
-                foreach (var handle in handles)
-                    handle.Target = null;
+                if (handles != null)
+                    foreach (var handle in handles)
+                        handle.Target = null;
+            foreach (var handles in Handles.Values)
+                if (handles != null)
+                {
+                    handles.Clear();
+                    ListPool.Push(handles);
+                }
             Handles.Clear();
             Active.Clear();
             Scopes.Clear();
@@ -70,10 +87,12 @@ namespace ZenTS.Marshaling
             if (Scopes.Count == 0)
                 throw new JsScriptException("zents: OpaqueValue requires an active call scope");
             var opaque = new OpaqueValue(target) { Generation = Scopes.Peek(), DeclaredType = declaredType ?? target?.GetType(), Marshal = marshal?.JsMarshalType == JsMarshalType.OpaqueValue ? null : marshal };
+            if (Handles[Scopes.Peek()] == null)
+                Handles[Scopes.Peek()] = ListPool.Count != 0 ? ListPool.Pop() : new System.Collections.Generic.List<OpaqueValue>();
             Handles[Scopes.Peek()].Add(opaque);
-            JsValue handle = EngineApi.NewObject(ctx);
             int slot = ObjectRegistry.Register(opaque);
-            EngineApi.SetPropertyStr(ctx, handle, "__zents_id", JsValueUtil.NewInt32(slot));
+            opaque.RegistryId = slot;
+            JsValue handle = ObjectRegistry.CreateJsHandle(ctx, slot);
             EngineApi.SetPropertyStr(ctx, handle, "__zents_opaque", JsValueUtil.NewBool(true));
             opaque.JsValue = handle;
             return handle;
@@ -95,6 +114,14 @@ namespace ZenTS.Marshaling
             target = null;
             if (!ObjectRegistry.TryGetObject(ctx, jsValue, out object obj))
             {
+                if (JsValueUtil.GetNormTag(jsValue) == JsValueUtil.TagObject)
+                {
+                    JsValue expired = EngineApi.GetPropertyStr(ctx, jsValue, "__zents_opaque");
+                    bool isExpired = JsValueUtil.GetNormTag(expired) == JsValueUtil.TagBool && JsValueUtil.GetUInt64(expired) != 0;
+                    JsValueUtil.Free(ctx, expired);
+                    if (isExpired)
+                        throw new JsScriptException("zents: invalid opaque parameter handle (expired).");
+                }
                 return false;
             }
 

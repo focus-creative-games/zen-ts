@@ -53,6 +53,7 @@ namespace ZenTS.Emit
         internal static void ResetCaches()
         {
             JsCallPlan.Reset();
+            TableMarshal.ResetCache();
             Compiled.Clear();
         }
 
@@ -196,7 +197,9 @@ namespace ZenTS.Emit
 
             Expression instance = method.IsStatic
                 ? null
-                : Expression.Convert(target, method.DeclaringType);
+                : method.DeclaringType.IsValueType
+                    ? Expression.Unbox(target, method.DeclaringType)
+                    : Expression.Convert(target, method.DeclaringType);
 
             Expression call = method.IsStatic
                 ? Expression.Call(method, callArgs)
@@ -220,18 +223,7 @@ namespace ZenTS.Emit
             return Expression.Convert(raw, pt);
         }
 
-        private static bool HasByRefParameters(MethodInfo method)
-        {
-            foreach (ParameterInfo p in method.GetParameters())
-            {
-                if (p.ParameterType.IsByRef)
-                {
-                    return true;
-                }
-            }
-
-            return false;
-        }
+        private static bool HasByRefParameters(MethodInfo method) => JsCallPlan.For(method).HasByRef;
 
         private static object InvokeMethod(MethodInfo method, object target, object[] args)
         {
@@ -248,41 +240,22 @@ namespace ZenTS.Emit
             return EnsureCompiled(method)(target, args);
         }
 
-        private static bool HasPointerSignature(MethodInfo method)
-        {
-            if (method.ReturnType.IsPointer)
-            {
-                return true;
-            }
-
-            foreach (ParameterInfo p in method.GetParameters())
-            {
-                Type pt = p.ParameterType;
-                if (pt.IsByRef)
-                {
-                    pt = pt.GetElementType();
-                }
-
-                if (pt != null && pt.IsPointer)
-                {
-                    return true;
-                }
-            }
-
-            return false;
-        }
+        private static bool HasPointerSignature(MethodInfo method) => JsCallPlan.For(method).HasPointers;
 
         private static void WriteBackByRefParameters(
             IntPtr ctx, MethodInfo method, int argc, IntPtr argvPtr, object[] args, bool isExtension)
         {
-            ParameterInfo[] ps = method.GetParameters();
+            var plan = JsCallPlan.For(method);
+            if (!plan.HasByRef)
+                return;
+            ParameterInfo[] ps = plan.Parameters;
             int jsIndex = 0;
             int start = isExtension ? 1 : 0;
             for (int i = start; i < ps.Length; i++)
             {
                 if (JsCallPlan.IsOut(ps[i]))
                     continue;
-                int slots = TableMarshal.GetJsArgSlotCount(ps[i]);
+                int slots = plan.Marshal[i]?.JsMarshalType == JsMarshalType.UnpackedValues ? plan.Marshal[i].Members.Length : 1;
                 if (ps[i].ParameterType.IsByRef)
                 {
                     if (jsIndex >= 0 && jsIndex < argc)
@@ -305,7 +278,7 @@ namespace ZenTS.Emit
                     }
                 }
 
-                if (ps[i].IsDefined(typeof(ParamArrayAttribute), false))
+                if (plan.Params && i == ps.Length - 1)
                 {
                     break;
                 }
@@ -340,7 +313,7 @@ namespace ZenTS.Emit
                 closed = open.MakeGenericMethod(types);
             }
             catch (ArgumentException) { return false; }
-            return JsCallPlan.For(closed).Match(ctx, argc - prefix, IntPtr.Add(argv, prefix * 16), out _, out _, out _);
+            return JsCallPlan.For(closed).IsApplicable(ctx, argc - prefix, IntPtr.Add(argv, prefix * 16));
         }
         private sealed class JsOpenGenericMethodCallback
         {
@@ -385,7 +358,8 @@ namespace ZenTS.Emit
                 _compiled = HasPointerSignature(method) ? null : EnsureCompiled(method);
             }
 
-            public JsValue Invoke(IntPtr ctx, JsValue thisVal, int argc, IntPtr argvPtr)
+            public JsValue Invoke(IntPtr ctx, JsValue thisVal, int argc, IntPtr argvPtr) => InvokeValidated(ctx, thisVal, argc, argvPtr, false);
+            public JsValue InvokeValidated(IntPtr ctx, JsValue thisVal, int argc, IntPtr argvPtr, bool validated)
             {
                 try
                 {
@@ -404,7 +378,7 @@ namespace ZenTS.Emit
                         finally { JsValueUtil.Free(ctx, kind); }
                     }
                     var plan = JsCallPlan.For(_method);
-                    object[] args = plan.Pop(ctx, receiver, argc, argvPtr);
+                    object[] args = plan.Pop(ctx, receiver, argc, argvPtr, validated);
                     object result = InvokeMethod(_method, extension ? null : receiver, args);
                     WriteBackByRefParameters(ctx, _method, argc, argvPtr, args, extension);
                     return plan.PushResult(ctx, result, args);
@@ -415,14 +389,24 @@ namespace ZenTS.Emit
 
         private sealed class JsOverloadCallback
         {
-            private readonly List<MethodInfo> _methods;
+            private readonly MethodInfo[] _methods;
+            private readonly MethodInfo[] _openMethods;
+            private readonly Dictionary<MethodInfo, JsMethodCallback> _callbacks = new Dictionary<MethodInfo, JsMethodCallback>();
 
             private readonly Type _owner; private readonly bool _byVal;
             public JsOverloadCallback(List<MethodInfo> methods, Type owner, bool byVal)
             {
-                _methods = methods;
+                _methods = methods.ToArray();
+                _openMethods = methods.Where(m => m.IsGenericMethodDefinition).ToArray();
                 _owner = owner;
                 _byVal = byVal;
+            }
+
+            private JsMethodCallback Callback(MethodInfo method)
+            {
+                if (!_callbacks.TryGetValue(method, out JsMethodCallback callback))
+                    _callbacks[method] = callback = new JsMethodCallback(method, _owner, _byVal);
+                return callback;
             }
 
             public JsValue Invoke(IntPtr ctx, JsValue thisVal, int argc, IntPtr argvPtr)
@@ -430,11 +414,11 @@ namespace ZenTS.Emit
                 try
                 {
                     // Open generic candidates get the explicit System.Type-prefix phase first.
-                    var gtap = new List<(MethodInfo method, int prefix)>();
-                    foreach (var open in _methods)
+                    List<(MethodInfo method, int prefix)> gtap = _openMethods.Length == 0 ? null : new List<(MethodInfo method, int prefix)>();
+                    foreach (var open in _openMethods)
                         if (open.IsGenericMethodDefinition && TryCloseGtap(ctx, open, argc, argvPtr, out MethodInfo closed, out int count))
                             gtap.Add((closed, count));
-                    if (gtap.Count > 0)
+                    if (gtap != null && gtap.Count > 0)
                     {
                         int prefix = gtap[0].prefix;
                         if (gtap.Any(x => x.prefix != prefix))
@@ -442,12 +426,12 @@ namespace ZenTS.Emit
                         MethodInfo best = (MethodInfo)JsCallPlan.Select(ctx, gtap.Select(x => (MethodBase)x.method).ToArray(), argc - prefix, IntPtr.Add(argvPtr, prefix * 16));
                         if (best == null)
                             throw new JsScriptException("zents: no applicable GTAP overload");
-                        return new JsMethodCallback(best, _owner, _byVal).Invoke(ctx, thisVal, argc - prefix, IntPtr.Add(argvPtr, prefix * 16));
+                        return Callback(best).InvokeValidated(ctx, thisVal, argc - prefix, IntPtr.Add(argvPtr, prefix * 16), true);
                     }
-                    MethodInfo method = (MethodInfo)JsCallPlan.Select(ctx, _methods.Cast<MethodBase>().ToArray(), argc, argvPtr);
+                    MethodInfo method = (MethodInfo)JsCallPlan.Select(ctx, _methods, argc, argvPtr);
                     if (method == null)
                         throw new JsScriptException("zents: no matching overload");
-                    return new JsMethodCallback(method, _owner, _byVal).Invoke(ctx, thisVal, argc, argvPtr);
+                    return Callback(method).InvokeValidated(ctx, thisVal, argc, argvPtr, true);
                 }
                 catch (Exception ex) { JsCallbackBoundary.ThrowManaged(ctx, ex); return JsValueUtil.MakeErrorSentinel(); }
             }
@@ -730,7 +714,7 @@ namespace ZenTS.Emit
                     ConstructorInfo ctor = (ConstructorInfo)JsCallPlan.Select(ctx, ctors, argc, argv);
                     if (ctor == null)
                         throw new JsScriptException("zents: no matching constructor for " + _type.FullName);
-                    object[] args = JsCallPlan.For(ctor).Pop(ctx, null, argc, argv);
+                    object[] args = JsCallPlan.For(ctor).Pop(ctx, null, argc, argv, validated: true);
                     object instance = ctor.GetParameters().Any(p => p.ParameterType.IsByRef) ? ctor.Invoke(args) : CompileCtorPublic(ctor)(args);
                     return TypedMarshal.Push(ctx, instance, _type);
                 }
@@ -863,7 +847,7 @@ namespace ZenTS.Emit
                     ConstructorInfo ctor = (ConstructorInfo)JsCallPlan.Select(ctx, ctors, argc, argv);
                     if (ctor == null)
                         throw new JsScriptException("zents: no matching nullable constructor");
-                    object[] args = JsCallPlan.For(ctor).Pop(ctx, null, argc, argv);
+                    object[] args = JsCallPlan.For(ctor).Pop(ctx, null, argc, argv, validated: true);
                     object instance = ConstructorEmitter.CompileCtorPublic(ctor)(args);
                     return TypedMarshal.Push(ctx, instance, _underlyingType);
                 }

@@ -116,7 +116,7 @@ namespace ZenTS
             try
             {
                 Environment.SetEnvironmentVariable("_CL_", (previousCompilerOptions + " /MT /U_DEBUG").Trim());
-                string args = previousIl2CppArgs ?? string.Empty;
+                string args = NativeBuildArguments.StripV8Libraries(previousIl2CppArgs);
                 if (!args.Contains(CacheMarker))
                     args += " " + CacheMarker;
                 PlayerSettings.SetAdditionalIl2CppArgs(

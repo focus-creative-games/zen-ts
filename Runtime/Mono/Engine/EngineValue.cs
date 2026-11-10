@@ -45,6 +45,9 @@ namespace ZenTS.Jvm
     internal delegate IntPtr JsModuleLoaderFunc(IntPtr ctx, IntPtr moduleName, IntPtr opaque);
 
     /// <summary>High-level managed callback signature (converted at the gate boundary).</summary>
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+    internal delegate void JsObjectCollected(int id, ulong ticket);
+
     internal delegate JsValue JsCFunction(IntPtr ctx, JsValue thisVal, int argc, IntPtr argv);
 
     internal delegate JsValue JsCFunctionMagic(IntPtr ctx, JsValue thisVal, int argc, IntPtr argv, int magic);

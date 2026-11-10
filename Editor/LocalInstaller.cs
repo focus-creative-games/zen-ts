@@ -310,7 +310,7 @@ namespace ZenTS
                         StringComparer.Ordinal);
                     // ZenTS owns its reserved scripting-symbol namespace.
                     parts.RemoveWhere(x => x.StartsWith("ZENTS_", StringComparison.Ordinal) || x.StartsWith("ZTS_", StringComparison.Ordinal));
-                    parts.Add((t == NamedBuildTarget.WebGL || t.TargetName == "WeixinMiniGame") ? "ZENTS_HOST_JS" : define);
+                    parts.Add((t == NamedBuildTarget.WebGL || (t.TargetName == "WeixinMiniGame" || t.TargetName == "MiniGame")) ? "ZENTS_HOST_JS" : define);
                     PlayerSettings.SetScriptingDefineSymbols(t, string.Join(";", parts.OrderBy(x => x)));
                 }
                 catch (Exception ex)

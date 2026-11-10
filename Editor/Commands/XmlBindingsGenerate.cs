@@ -32,6 +32,8 @@ namespace ZenTS.Editor
     {
         private static readonly string[] GeneratedFileNames =
         {
+            "DelegateBridgeStub.h",
+            "DelegateBridgeStub.cpp",
             "MarshalBindings.h",
             "MarshalBindings.cpp",
             "AliasBindings.h",
@@ -54,6 +56,7 @@ namespace ZenTS.Editor
             string outDir = CommonDirs.GeneratedZentsPath;
             Directory.CreateDirectory(outDir);
 
+            DelegateBridgeCodegen.Generate(outDir);
             new MarshalAsCodegen(outDir).Generate();
             new AliasCodegen(outDir).Generate();
             new ExtensionCodegen(outDir).Generate();

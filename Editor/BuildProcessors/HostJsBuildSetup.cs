@@ -32,8 +32,10 @@ namespace ZenTS.BuildProcessors
     ///
     /// Module precompilation is handled by HostJsModulesBuild after TS/test publishing.
     /// </summary>
-    internal sealed class HostJsBuildSetup : IPreprocessBuildWithReport
+    internal sealed class HostJsBuildSetup : IPreprocessBuildWithReport, IPostprocessBuildWithReport
     {
+        private static string savedArguments;
+        private static bool argumentsConfigured;
         private const string Define = "ZENTS_HOST_JS";
 
         public int callbackOrder => 1;
@@ -43,6 +45,13 @@ namespace ZenTS.BuildProcessors
             if (!Settings.EnableForCurrentBuildTarget)
                 return;
             bool hostJs = HostJsPlatform.IsTarget(report.summary.platform);
+            if (hostJs && !argumentsConfigured)
+            {
+                savedArguments = PlayerSettings.GetAdditionalIl2CppArgs();
+                argumentsConfigured = true;
+                PlayerSettings.SetAdditionalIl2CppArgs(NativeBuildArguments.ForHost(savedArguments));
+                EditorApplication.update += RestoreArgumentsAfterBuild;
+            }
             if (hostJs)
                 ApplyDefine(HostJsPlatform.NamedTarget(report.summary.platform), true);
 
@@ -52,6 +61,21 @@ namespace ZenTS.BuildProcessors
                     throw new BuildFailedException("[ZenTS] HostJs requires WebGL Full exception support so CLR errors can cross the JS/wasm boundary.");
                 Debug.Log("[ZenTS] Host-JS backend enabled for this build (ZENTS_HOST_JS).");
             }
+        }
+
+        public void OnPostprocessBuild(BuildReport report) => RestoreArguments();
+        private static void RestoreArgumentsAfterBuild()
+        {
+            if (!BuildPipeline.isBuildingPlayer)
+                RestoreArguments();
+        }
+        private static void RestoreArguments()
+        {
+            if (!argumentsConfigured)
+                return;
+            argumentsConfigured = false;
+            EditorApplication.update -= RestoreArgumentsAfterBuild;
+            PlayerSettings.SetAdditionalIl2CppArgs(savedArguments);
         }
 
         private static void ApplyDefine(NamedBuildTarget target, bool enable)

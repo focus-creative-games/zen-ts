@@ -20,12 +20,21 @@
 
 using System;
 using System.Reflection;
+using System.Collections.Generic;
+using System.Linq.Expressions;
 using ZenTS.Jvm;
 
 namespace ZenTS.Marshaling
 {
     internal static class TableMarshal
     {
+        private static readonly Dictionary<(Type type, string member), MemberAccessor> Accessors = new Dictionary<(Type, string), MemberAccessor>();
+        internal static void ResetCache()
+        {
+            lock (Accessors)
+                Accessors.Clear();
+        }
+
         public static int GetJsArgSlotCount(ParameterInfo param)
         {
             if (ZenTS.Emit.JsCallPlan.IsOut(param))
@@ -86,36 +95,56 @@ namespace ZenTS.Marshaling
         private static JsValue PushTable(IntPtr ctx, object value, Type underlying, string[] members)
         {
             JsValue obj = EngineApi.NewObject(ctx);
-            for (int i = 0; i < members.Length; i++)
+            try
             {
-                ParseMemberSpec(members[i], out string memberName, out _);
-                MemberAccessor accessor = ResolveMember(underlying, memberName);
-                object memberValue = accessor.Get(value);
-                JsValue jsMember = TypedMarshal.Push(ctx, memberValue, accessor.MemberType, accessor.Marshal);
-                EngineApi.SetPropertyStr(ctx, obj, memberName, jsMember);
-            }
+                for (int i = 0; i < members.Length; i++)
+                {
+                    ParseMemberSpec(members[i], out string memberName, out _);
+                    MemberAccessor accessor = ResolveMember(underlying, memberName);
+                    JsValue jsMember = accessor.Push(ctx, value);
+                    EngineApi.SetPropertyStr(ctx, obj, memberName, jsMember);
+                }
 
-            return obj;
+                return obj;
+            }
+            catch { JsValueUtil.Free(ctx, obj); throw; }
         }
 
         private static JsValue PushUnpacked(IntPtr ctx, object value, Type underlying, string[] members)
         {
             JsValue arr = EngineApi.NewArray(ctx);
-            for (int i = 0; i < members.Length; i++)
+            try
             {
-                string spec = members[i];
-                if (spec != null && spec.EndsWith("?", StringComparison.Ordinal))
+                for (int i = 0; i < members.Length; i++)
                 {
-                    throw new JsScriptException("zents: UnpackedValues does not support optional member '?'.");
+                    string spec = members[i];
+                    if (spec != null && spec.EndsWith("?", StringComparison.Ordinal))
+                    {
+                        throw new JsScriptException("zents: UnpackedValues does not support optional member '?'.");
+                    }
+
+                    MemberAccessor accessor = ResolveMember(underlying, spec);
+                    JsValue jsMember = accessor.Push(ctx, value);
+                    EngineApi.SetPropertyUint32(ctx, arr, (uint)i, jsMember);
                 }
 
-                MemberAccessor accessor = ResolveMember(underlying, spec);
-                object memberValue = accessor.Get(value);
-                JsValue jsMember = TypedMarshal.Push(ctx, memberValue, accessor.MemberType, accessor.Marshal);
-                EngineApi.SetPropertyUint32(ctx, arr, (uint)i, jsMember);
+                return arr;
             }
+            catch { JsValueUtil.Free(ctx, arr); throw; }
+        }
 
-            return arr;
+        internal static void PushUnpackedInto(IntPtr ctx, object value, Type type, JsMarshalAsAttribute marshal, JsValue[] destination, int offset)
+        {
+            if (value == null)
+                throw new JsScriptException("zents: null cannot be expanded into UnpackedValues arguments");
+            Type underlying = Nullable.GetUnderlyingType(type) ?? type;
+            for (int i = 0; i < marshal.Members.Length; ++i)
+            {
+                ParseMemberSpec(marshal.Members[i], out string name, out bool optional);
+                if (optional)
+                    throw new JsScriptException("zents: UnpackedValues does not support optional member '?'.");
+                destination[offset + i] = ResolveMember(underlying, name).Push(ctx, value);
+            }
         }
 
         public static object PopUnpacked(
@@ -315,18 +344,29 @@ namespace ZenTS.Marshaling
 
         private static MemberAccessor ResolveMember(Type structType, string memberName)
         {
+            lock (Accessors)
+            {
+                var key = (structType, memberName);
+                if (!Accessors.TryGetValue(key, out MemberAccessor accessor))
+                    Accessors[key] = accessor = BuildMember(structType, memberName);
+                return accessor;
+            }
+        }
+
+        private static MemberAccessor BuildMember(Type structType, string memberName)
+        {
             const BindingFlags flags = BindingFlags.Public | BindingFlags.Instance;
             FieldInfo field = structType.GetField(memberName, flags);
             if (field != null)
             {
-                return new MemberAccessor(field.FieldType, field.SetValue, field.GetValue, JsMarshalAsXmlRegistry.ResolveFieldMarshal(field));
+                return new MemberAccessor(field.FieldType, field.SetValue, field.GetValue, JsMarshalAsXmlRegistry.ResolveFieldMarshal(field), field);
             }
 
             PropertyInfo prop = structType.GetProperty(memberName, flags);
             if (prop != null && prop.CanRead)
             {
                 Action<object, object> setter = prop.CanWrite ? prop.SetValue : null;
-                return new MemberAccessor(prop.PropertyType, setter, prop.GetValue, JsMarshalAsXmlRegistry.ResolvePropertyMarshal(prop));
+                return new MemberAccessor(prop.PropertyType, setter, prop.GetValue, JsMarshalAsXmlRegistry.ResolvePropertyMarshal(prop), prop);
             }
 
             throw new JsScriptException(
@@ -345,13 +385,56 @@ namespace ZenTS.Marshaling
             }
             private readonly Action<object, object> _set;
             private readonly Func<object, object> _get;
+            private readonly Func<IntPtr, object, JsValue> _push;
 
-            public MemberAccessor(Type memberType, Action<object, object> set, Func<object, object> get, JsMarshalAsAttribute marshal)
+            public MemberAccessor(Type memberType, Action<object, object> set, Func<object, object> get, JsMarshalAsAttribute marshal, MemberInfo member)
             {
                 MemberType = memberType;
                 Marshal = marshal;
                 _set = set;
                 _get = get;
+                _push = marshal == null ? CompilePush(member) : null;
+            }
+
+            public JsValue Push(IntPtr ctx, object target) => _push != null
+                ? _push(ctx, target) : TypedMarshal.Push(ctx, _get(target), MemberType, Marshal);
+
+            private static Func<IntPtr, object, JsValue> CompilePush(MemberInfo member)
+            {
+                var ctx = Expression.Parameter(typeof(IntPtr));
+                var target = Expression.Parameter(typeof(object));
+                Type owner = member.DeclaringType;
+                Expression receiver = owner.IsValueType ? Expression.Unbox(target, owner) : Expression.Convert(target, owner);
+                Expression value = member is FieldInfo field ? (Expression)Expression.Field(receiver, field) : Expression.Property(receiver, (PropertyInfo)member);
+                Type type = value.Type.IsEnum ? Enum.GetUnderlyingType(value.Type) : value.Type;
+                Expression push;
+                switch (Type.GetTypeCode(type))
+                {
+                    case TypeCode.Boolean:
+                        push = Expression.Call(typeof(JsValueUtil), nameof(JsValueUtil.NewBool), null, value);
+                        break;
+                    case TypeCode.SByte:
+                    case TypeCode.Byte:
+                    case TypeCode.Int16:
+                    case TypeCode.UInt16:
+                    case TypeCode.Char:
+                    case TypeCode.Int32:
+                        push = Expression.Call(typeof(JsValueUtil), nameof(JsValueUtil.NewInt32), null, Expression.Convert(value, typeof(int)));
+                        break;
+                    case TypeCode.UInt32:
+                    case TypeCode.Int64:
+                    case TypeCode.UInt64:
+                    case TypeCode.Single:
+                    case TypeCode.Double:
+                        push = Expression.Call(typeof(JsValueUtil), nameof(JsValueUtil.NewFloat64), null, Expression.Convert(value, typeof(double)));
+                        break;
+                    case TypeCode.String:
+                        push = Expression.Call(typeof(EngineApi), nameof(EngineApi.NewString), null, ctx, value);
+                        break;
+                    default:
+                        return null;
+                }
+                return Expression.Lambda<Func<IntPtr, object, JsValue>>(push, ctx, target).Compile();
             }
 
             public void Set(object target, object value)

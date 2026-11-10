@@ -26,6 +26,8 @@ namespace ZenTS.Jvm
     {
         internal const string Library = "zents_v8";
         [DllImport(Library, CallingConvention = CallingConvention.Cdecl)]
+        internal static extern void ze_TrackObject(IntPtr ctx, in JsValue value, int id, ulong ticket, JsObjectCollected callback);
+        [DllImport(Library, CallingConvention = CallingConvention.Cdecl)]
         internal static extern int ze_HasOwnProperty(IntPtr ctx, in JsValue value, [MarshalAs(UnmanagedType.LPUTF8Str)] string name);
         [DllImport(Library, CallingConvention = CallingConvention.Cdecl)]
         internal static extern void ze_NewByteArrayCopy(IntPtr ctx, byte[] data, UIntPtr length, out JsValue value);

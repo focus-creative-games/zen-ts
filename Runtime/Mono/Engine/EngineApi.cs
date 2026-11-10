@@ -40,6 +40,7 @@ namespace ZenTS.Jvm
         {
             get;
         }
+        void TrackObject(IntPtr ctx, JsValue value, int id, ulong ticket, JsObjectCollected callback);
         IntPtr NewRuntime();
         void FreeRuntime(IntPtr rt);
         IntPtr NewContext(IntPtr rt);
@@ -167,6 +168,7 @@ namespace ZenTS.Jvm
         public static JsValue Call(IntPtr ctx, JsValue funcObj, JsValue thisObj, int argc, IntPtr argv) => BackendImpl.Call(ctx, funcObj, thisObj, argc, argv);
         public static JsValue GetException(IntPtr ctx) => BackendImpl.GetException(ctx);
         public static JsValue Throw(IntPtr ctx, JsValue obj) => BackendImpl.Throw(ctx, obj);
+        public static void TrackObject(IntPtr ctx, JsValue value, int id, ulong ticket, JsObjectCollected callback) => BackendImpl.TrackObject(ctx, value, id, ticket, callback);
         public static JsValue NewObject(IntPtr ctx) => BackendImpl.NewObject(ctx);
         public static JsValue GetGlobalObject(IntPtr ctx) => BackendImpl.GetGlobalObject(ctx);
         public static int SetPropertyStr(IntPtr ctx, JsValue thisObj, string prop, JsValue val) => BackendImpl.SetPropertyStr(ctx, thisObj, prop, val);

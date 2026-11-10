@@ -64,7 +64,7 @@ namespace ZenTS.Marshaling
             if (!method.IsStatic)
             {
                 il.Emit(OpCodes.Ldarg_0);
-                il.Emit(OpCodes.Castclass, method.DeclaringType);
+                il.Emit(method.DeclaringType.IsValueType ? OpCodes.Unbox : OpCodes.Castclass, method.DeclaringType);
             }
 
             for (int i = 0; i < ps.Length; i++)
@@ -104,7 +104,7 @@ namespace ZenTS.Marshaling
                 }
             }
 
-            il.Emit(method.IsStatic ? OpCodes.Call : OpCodes.Callvirt, method);
+            il.Emit(method.IsStatic || method.DeclaringType.IsValueType ? OpCodes.Call : OpCodes.Callvirt, method);
 
             if (method.ReturnType == typeof(void))
             {

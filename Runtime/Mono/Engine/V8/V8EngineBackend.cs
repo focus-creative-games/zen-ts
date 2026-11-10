@@ -33,6 +33,7 @@ namespace ZenTS.Jvm
         public IntPtr GetByteArrayData(IntPtr ctx, JsValue value, out UIntPtr length) => V8Native.ze_GetByteArrayData(ctx, in value, out length);
         public IMonoValueApi Values { get; } = new V8ValueBackend();
         public IMonoCallbacks Callbacks { get; } = new V8Callbacks();
+        public void TrackObject(IntPtr ctx, JsValue value, int id, ulong ticket, JsObjectCollected callback) => V8Native.ze_TrackObject(ctx, in value, id, ticket, callback);
         private JsModuleLoaderFunc loaderRoot;
         public IntPtr NewRuntime()
         {

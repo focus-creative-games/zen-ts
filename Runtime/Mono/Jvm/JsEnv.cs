@@ -70,6 +70,7 @@ namespace ZenTS
             _context = EngineApi.NewContext(_runtime);
             if (_context == IntPtr.Zero)
             {
+                EngineApi.StdFreeHandlers(_runtime);
                 EngineApi.FreeRuntime(_runtime);
                 _runtime = IntPtr.Zero;
                 throw new JsScriptException("zents: JS_NewContext failed.");

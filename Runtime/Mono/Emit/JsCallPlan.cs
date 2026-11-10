@@ -4,6 +4,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Reflection;
+using System.Buffers;
 using ZenTS.Jvm;
 using ZenTS.Marshaling;
 using ZenTS.Mt;
@@ -22,6 +23,8 @@ namespace ZenTS.Emit
         internal readonly bool[] Optional;
         internal readonly int Start;
         internal readonly bool Params;
+        internal readonly bool HasByRef;
+        internal readonly bool HasPointers;
         internal readonly JsMarshalAsAttribute ReturnMarshal;
         internal static JsCallPlan For(MethodBase method) => Cache.GetOrAdd(method, m => new JsCallPlan(m));
         internal static void Reset() => Cache.Clear();
@@ -29,6 +32,13 @@ namespace ZenTS.Emit
         {
             Method = method;
             Parameters = method.GetParameters();
+            HasPointers = method is MethodInfo pointerReturn && pointerReturn.ReturnType.IsPointer;
+            foreach (ParameterInfo parameter in Parameters)
+            {
+                HasByRef |= parameter.ParameterType.IsByRef;
+                Type type = parameter.ParameterType.IsByRef ? parameter.ParameterType.GetElementType() : parameter.ParameterType;
+                HasPointers |= type.IsPointer;
+            }
             Start = method is MethodInfo mi && MethodOverloadDispatcher.IsExtensionMethod(mi) ? 1 : 0;
             int n = Parameters.Length;
             Marshal = new JsMarshalAsAttribute[n];
@@ -48,9 +58,9 @@ namespace ZenTS.Emit
         internal static bool IsOut(ParameterInfo p) => p.ParameterType.IsByRef && p.IsOut && !p.IsIn;
         private static Type Element(ParameterInfo p) => p.ParameterType.IsByRef ? p.ParameterType.GetElementType() : p.ParameterType;
         private static bool WholeArray(IntPtr ctx, JsValue value, Type arrayType) => ObjectRegistry.TryGetObject(ctx, value, out object obj) && obj != null && arrayType.IsInstanceOfType(obj);
-        internal bool Match(IntPtr ctx, int argc, IntPtr argv, out int[] kinds, out int optional, out int expanded)
+        internal bool Match(IntPtr ctx, int argc, IntPtr argv, int[] kinds, int kindOffset, out int optional, out int expanded)
         {
-            kinds = new int[argc];
+            Array.Clear(kinds, kindOffset, argc);
             optional = 0;
             expanded = 0;
             int slot = 0;
@@ -71,7 +81,7 @@ namespace ZenTS.Emit
                     }
                     if (available == 1 && WholeArray(ctx, ArgReader.Read(argv, slot), type))
                     {
-                        kinds[slot] = 0;
+                        kinds[kindOffset + slot] = 0;
                         return true;
                     }
                     expanded = 1;
@@ -81,7 +91,7 @@ namespace ZenTS.Emit
                         int k = MatchValue(ctx, ArgReader.Read(argv, slot), element, null);
                         if (k < 0)
                             return false;
-                        kinds[slot++] = k;
+                        kinds[kindOffset + slot++] = k;
                     }
                     return true;
                 }
@@ -91,12 +101,12 @@ namespace ZenTS.Emit
                     {
                         if (!OpaqueParameterScope.TryPop(ctx, ArgReader.Read(argv, slot), out _) || opaque.DeclaredType != type)
                             return false;
-                        kinds[slot++] = 0;
+                        kinds[kindOffset + slot++] = 0;
                         continue;
                     }
                     if (held != null && held.GetType() == type)
                     {
-                        kinds[slot++] = 0;
+                        kinds[kindOffset + slot++] = 0;
                         continue;
                     }
                 }
@@ -118,7 +128,7 @@ namespace ZenTS.Emit
                         int k = MatchValue(ctx, ArgReader.Read(argv, slot), mt, null);
                         if (k < 0)
                             return false;
-                        kinds[slot++] = k;
+                        kinds[kindOffset + slot++] = k;
                     }
                 }
                 else
@@ -126,7 +136,7 @@ namespace ZenTS.Emit
                     int k = MatchValue(ctx, ArgReader.Read(argv, slot), type, mas);
                     if (k < 0)
                         return false;
-                    kinds[slot++] = k;
+                    kinds[kindOffset + slot++] = k;
                 }
             }
             return slot == argc;
@@ -212,10 +222,28 @@ namespace ZenTS.Emit
             }
             finally { EngineApi.FreeCString(ctx, text); }
         }
-        internal object[] Pop(IntPtr ctx, object receiver, int argc, IntPtr argv)
+        internal bool IsApplicable(IntPtr ctx, int argc, IntPtr argv)
         {
-            if (!Match(ctx, argc, argv, out _, out _, out _))
-                throw new JsScriptException("zents: argument mismatch for " + Method.Name);
+            int[] scores = ArrayPool<int>.Shared.Rent(Math.Max(1, argc));
+            try
+            {
+                return Match(ctx, argc, argv, scores, 0, out _, out _);
+            }
+            finally { ArrayPool<int>.Shared.Return(scores); }
+        }
+
+        internal object[] Pop(IntPtr ctx, object receiver, int argc, IntPtr argv, bool validated = false)
+        {
+            if (!validated)
+            {
+                int[] scores = ArrayPool<int>.Shared.Rent(Math.Max(1, argc));
+                try
+                {
+                    if (!Match(ctx, argc, argv, scores, 0, out _, out _))
+                        throw new JsScriptException("zents: argument mismatch for " + Method.Name);
+                }
+                finally { ArrayPool<int>.Shared.Return(scores); }
+            }
             var args = new object[Parameters.Length];
             if (Start == 1)
                 args[0] = receiver;
@@ -296,49 +324,67 @@ namespace ZenTS.Emit
             }
             catch { JsValueUtil.Free(ctx, tuple); throw; }
         }
+        private struct MatchEntry
+        {
+            public MethodBase Method;
+            public int Offset, Optional, Expanded, Params;
+        }
+
+        private static bool Better(MatchEntry a, MatchEntry b, int[] scores, int argc)
+        {
+            bool better = false;
+            for (int i = 0; i < argc; ++i)
+            {
+                if (scores[a.Offset + i] > scores[b.Offset + i])
+                    return false;
+                better |= scores[a.Offset + i] < scores[b.Offset + i];
+            }
+            return better || a.Optional < b.Optional || (a.Optional == b.Optional &&
+                (a.Expanded < b.Expanded || (a.Expanded == b.Expanded && a.Params < b.Params)));
+        }
+
         internal static MethodBase Select(IntPtr ctx, MethodBase[] methods, int argc, IntPtr argv)
         {
-            var matches = new List<(MethodBase method, int[] kinds, int optional, int expanded, int param)>();
-            foreach (MethodBase method in methods)
+            int[] scores = ArrayPool<int>.Shared.Rent(Math.Max(1, checked(methods.Length * argc)));
+            MatchEntry[] frontier = ArrayPool<MatchEntry>.Shared.Rent(Math.Max(1, methods.Length));
+            int count = 0;
+            try
             {
-                if (method.ContainsGenericParameters)
-                    continue;
-                var plan = For(method);
-                if (plan.Match(ctx, argc, argv, out int[] kinds, out int optional, out int expanded))
-                    matches.Add((method, kinds, optional, expanded, plan.Params ? 1 : 0));
+                for (int index = 0; index < methods.Length; ++index)
+                {
+                    MethodBase method = methods[index];
+                    if (method.ContainsGenericParameters)
+                        continue;
+                    var plan = For(method);
+                    int offset = index * argc;
+                    if (!plan.Match(ctx, argc, argv, scores, offset, out int optional, out int expanded))
+                        continue;
+                    var candidate = new MatchEntry { Method = method, Offset = offset, Optional = optional, Expanded = expanded, Params = plan.Params ? 1 : 0 };
+                    bool beaten = false;
+                    for (int i = 0; i < count; ++i)
+                    {
+                        if (Better(frontier[i], candidate, scores, argc))
+                        {
+                            beaten = true;
+                            break;
+                        }
+                        if (Better(candidate, frontier[i], scores, argc))
+                        {
+                            frontier[i--] = frontier[--count];
+                        }
+                    }
+                    if (!beaten)
+                        frontier[count++] = candidate;
+                }
+                if (count > 1)
+                    throw new JsScriptException("zents: ambiguous overload");
+                return count == 0 ? null : frontier[0].Method;
             }
-            MethodBase winner = null;
-            foreach (var a in matches)
+            finally
             {
-                bool beaten = false;
-                foreach (var b in matches)
-                {
-                    if (a.method == b.method)
-                        continue;
-                    bool better = false, worse = false;
-                    for (int i = 0; i < a.kinds.Length; ++i)
-                    {
-                        if (b.kinds[i] < a.kinds[i])
-                            better = true;
-                        else if (b.kinds[i] > a.kinds[i])
-                            worse = true;
-                    }
-                    if (worse)
-                        continue;
-                    if (better || (b.optional < a.optional) || (b.optional == a.optional && (b.expanded < a.expanded || (b.expanded == a.expanded && b.param < a.param))))
-                    {
-                        beaten = true;
-                        break;
-                    }
-                }
-                if (!beaten)
-                {
-                    if (winner != null)
-                        throw new JsScriptException("zents: ambiguous overload");
-                    winner = a.method;
-                }
+                ArrayPool<int>.Shared.Return(scores);
+                ArrayPool<MatchEntry>.Shared.Return(frontier, clearArray: true);
             }
-            return winner;
         }
     }
 }

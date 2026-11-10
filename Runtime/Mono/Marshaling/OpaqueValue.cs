@@ -27,6 +27,8 @@ namespace ZenTS.Marshaling
     {
         public OpaqueValue(object target) => Target = target;
 
+        internal int RegistryId;
+
         public object Target
         {
             get; set;

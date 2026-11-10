@@ -23,6 +23,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Buffers;
 using System.Reflection;
 using ZenTS.Jvm;
 using ZenTS.Emit;
@@ -33,15 +34,32 @@ namespace ZenTS.DelegateImpl
 {
     internal static class DynamicBridgeFactory
     {
-        private static readonly List<JsValue> HeldFunctions = new List<JsValue>();
+        private static readonly List<WeakReference<JsFuncHolder>> HeldFunctions = new List<WeakReference<JsFuncHolder>>();
         private static readonly ConcurrentDictionary<Type, Func<JsEnv, JsValue, int, Delegate>> Factories =
             new ConcurrentDictionary<Type, Func<JsEnv, JsValue, int, Delegate>>();
         private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<Delegate, JsFuncHolder> BoundJsFuncs =
             new System.Runtime.CompilerServices.ConditionalWeakTable<Delegate, JsFuncHolder>();
 
+        private static readonly ConcurrentQueue<JsFuncHolder> PendingReleases = new ConcurrentQueue<JsFuncHolder>();
+
         private sealed class JsFuncHolder
         {
             public JsValue Func;
+            public JsEnv Owner;
+            public int Generation;
+            public bool Valid = true;
+            ~JsFuncHolder()
+            {
+                PendingReleases.Enqueue(this);
+            }
+            public void Release()
+            {
+                if (!Valid)
+                    return;
+                Valid = false;
+                if (Owner.IsAlive && Owner.Generation == Generation)
+                    JsValueUtil.Free(Owner.Context, Func);
+            }
         }
 
         public static Delegate CreateBinding(JsEnv env, Type delegateType, string jsModule, string jsExportName)
@@ -57,8 +75,8 @@ namespace ZenTS.DelegateImpl
             }
         }
 
-        private static readonly ConcurrentDictionary<(IntPtr identity, Type delType), Delegate> FromJsIdentityCache =
-            new ConcurrentDictionary<(IntPtr, Type), Delegate>();
+        private static readonly ConcurrentDictionary<(IntPtr identity, Type delType), WeakReference<Delegate>> FromJsIdentityCache =
+            new ConcurrentDictionary<(IntPtr, Type), WeakReference<Delegate>>();
 
         public static Delegate Create(JsEnv env, Type delegateType, JsValue jsFunc, int generation)
         {
@@ -80,23 +98,29 @@ namespace ZenTS.DelegateImpl
 
             // Reuse identity so event remove_ with the same JS function matches add_.
             var cacheKey = (JsValueUtil.GetIdentity(jsFunc), delegateType);
-            if (FromJsIdentityCache.TryGetValue(cacheKey, out Delegate cached) && cached != null)
+            if (FromJsIdentityCache.TryGetValue(cacheKey, out WeakReference<Delegate> weakCached) && weakCached.TryGetTarget(out Delegate cached))
             {
                 return cached;
             }
 
             JsValue funcDup = JsValueUtil.Dup(jsFunc);
+            var holder = new JsFuncHolder { Func = funcDup, Owner = env, Generation = generation };
             lock (HeldFunctions)
             {
-                HeldFunctions.Add(funcDup);
+                HeldFunctions.Add(new WeakReference<JsFuncHolder>(holder));
             }
 
             Func<JsEnv, JsValue, int, Delegate> factory = Factories.GetOrAdd(delegateType, BuildFactory);
-            Delegate created = factory(env, funcDup, generation);
-            BoundJsFuncs.Add(created, new JsFuncHolder { Func = funcDup });
-            FromJsIdentityCache[cacheKey] = created;
+            Delegate created;
+            try
+            {
+                created = factory(env, funcDup, generation);
+            }
+            catch { holder.Release(); throw; }
+            BoundJsFuncs.Add(created, holder);
+            FromJsIdentityCache[cacheKey] = new WeakReference<Delegate>(created);
             // Also index the Dup'd value (may differ if bits differ after Dup — usually same).
-            FromJsIdentityCache[(JsValueUtil.GetIdentity(funcDup), delegateType)] = created;
+            FromJsIdentityCache[(JsValueUtil.GetIdentity(funcDup), delegateType)] = new WeakReference<Delegate>(created);
             return created;
         }
 
@@ -107,48 +131,89 @@ namespace ZenTS.DelegateImpl
             Type returnType = invoke.ReturnType;
             Type[] paramTypes = parameters.Select(p => p.ParameterType).ToArray();
 
-            return (env, func, gen) =>
+            JsCallPlan plan = JsCallPlan.For(invoke);
+            var closure = Expression.Parameter(typeof(BridgeClosure), "closure");
+            ParameterExpression[] pexprs = parameters.Select(p => Expression.Parameter(p.ParameterType, p.Name ?? "arg")).ToArray();
+            bool primitive = parameters.Length <= 4 && parameters.All(p => IsPrimitive(p.ParameterType))
+                && (returnType == typeof(void) || IsPrimitive(returnType))
+                && plan.Marshal.All(m => m == null) && plan.ReturnMarshal == null;
+            Expression body;
+            if (primitive)
             {
-                var closure = new BridgeClosure(env, func, gen, paramTypes, returnType, JsCallPlan.For(invoke));
-                ParameterExpression[] pexprs = parameters
-                    .Select(p => Expression.Parameter(p.ParameterType, p.Name ?? "arg"))
-                    .ToArray();
-                ParameterExpression argsVar = Expression.Variable(typeof(object[]), "args");
-                MethodInfo run = typeof(BridgeClosure).GetMethod(nameof(BridgeClosure.Run));
-
-                var initializers = new Expression[parameters.Length];
-                for (int i = 0; i < parameters.Length; i++)
+                var values = parameters.Select((p, i) => PushPrimitive(pexprs[i], p.ParameterType)).ToArray();
+                MethodInfo call = typeof(BridgeClosure).GetMethod("Call" + values.Length);
+                Expression result = Expression.Call(closure, call, values);
+                body = returnType == typeof(void)
+                    ? (Expression)Expression.Call(closure, typeof(BridgeClosure).GetMethod(nameof(BridgeClosure.Discard)), result)
+                    : Expression.Call(closure, typeof(BridgeClosure).GetMethod(nameof(BridgeClosure.Read)).MakeGenericMethod(returnType), result);
+            }
+            else
+            {
+                var args = Expression.Variable(typeof(object[]), "args");
+                var expressions = new List<Expression>
                 {
-                    Type pt = parameters[i].ParameterType;
-                    if (pt.IsByRef || pt.IsValueType)
-                    {
-                        initializers[i] = Expression.Convert(pexprs[i], typeof(object));
-                    }
-                    else
-                    {
-                        initializers[i] = pexprs[i];
-                    }
-                }
-
-                var body = new List<Expression>
-                {
-                    Expression.Assign(argsVar, Expression.NewArrayInit(typeof(object), initializers))
+                    Expression.Assign(args, parameters.Length == 0
+                        ? (Expression)Expression.Call(typeof(Array), nameof(Array.Empty), new[] { typeof(object) })
+                        : Expression.NewArrayInit(typeof(object), pexprs.Select(p => Expression.Convert(p, typeof(object)))))
                 };
-
+                MethodInfo run = typeof(BridgeClosure).GetMethod(nameof(BridgeClosure.Run));
                 if (returnType == typeof(void))
                 {
-                    body.Add(Expression.Call(Expression.Constant(closure), run, argsVar));
-                    AppendByRefWritebacks(body, parameters, pexprs, argsVar);
-                    return Expression.Lambda(delegateType, Expression.Block(new[] { argsVar }, body), pexprs).Compile();
+                    expressions.Add(Expression.Call(closure, run, args));
+                    AppendByRefWritebacks(expressions, parameters, pexprs, args);
+                    expressions.Add(Expression.Empty());
+                    body = Expression.Block(new[] { args }, expressions);
                 }
-
-                ParameterExpression retVar = Expression.Variable(typeof(object), "ret");
-                body.Add(Expression.Assign(retVar, Expression.Call(Expression.Constant(closure), run, argsVar)));
-                AppendByRefWritebacks(body, parameters, pexprs, argsVar);
-                body.Add(Expression.Convert(retVar, returnType));
-                return Expression.Lambda(delegateType, Expression.Block(new[] { argsVar, retVar }, body), pexprs).Compile();
-            };
+                else
+                {
+                    var ret = Expression.Variable(typeof(object), "ret");
+                    expressions.Add(Expression.Assign(ret, Expression.Call(closure, run, args)));
+                    AppendByRefWritebacks(expressions, parameters, pexprs, args);
+                    expressions.Add(Expression.Convert(ret, returnType));
+                    body = Expression.Block(new[] { args, ret }, expressions);
+                }
+            }
+            var inner = Expression.Lambda(delegateType, body, pexprs);
+            var bind = Expression.Lambda<Func<BridgeClosure, Delegate>>(Expression.Convert(inner, typeof(Delegate)), closure).Compile();
+            return (env, func, gen) => bind(new BridgeClosure(env, func, gen, paramTypes, returnType, plan));
         }
+
+        private static bool IsPrimitive(Type type)
+        {
+            if (type.IsByRef || Nullable.GetUnderlyingType(type) != null)
+                return false;
+            Type t = type.IsEnum ? Enum.GetUnderlyingType(type) : type;
+            return t == typeof(bool) || t == typeof(char) || t == typeof(byte) || t == typeof(sbyte)
+                || t == typeof(short) || t == typeof(ushort) || t == typeof(int) || t == typeof(uint)
+                || t == typeof(long) || t == typeof(ulong) || t == typeof(float) || t == typeof(double);
+        }
+
+        private static Expression PushPrimitive(Expression value, Type type)
+        {
+            Type t = type.IsEnum ? Enum.GetUnderlyingType(type) : type;
+            if (t == typeof(bool))
+                return Expression.Call(typeof(JsValueUtil), nameof(JsValueUtil.NewBool), null, value);
+            if (t == typeof(sbyte) || t == typeof(byte) || t == typeof(short) || t == typeof(ushort) || t == typeof(char) || t == typeof(int))
+                return Expression.Call(typeof(JsValueUtil), nameof(JsValueUtil.NewInt32), null, Expression.Convert(value, typeof(int)));
+            return Expression.Call(typeof(JsValueUtil), nameof(JsValueUtil.NewFloat64), null, Expression.Convert(value, typeof(double)));
+        }
+
+        private static class PrimitiveReader<T>
+        {
+            internal static readonly Func<JsValue, T> Convert = Build();
+            private static Func<JsValue, T> Build()
+            {
+                var value = Expression.Parameter(typeof(JsValue));
+                Type t = typeof(T).IsEnum ? Enum.GetUnderlyingType(typeof(T)) : typeof(T);
+                Expression read = t == typeof(bool)
+                    ? (Expression)Expression.NotEqual(Expression.Call(typeof(JsValueUtil), nameof(JsValueUtil.GetUInt64), null, value), Expression.Constant(0UL))
+                    : Expression.Convert(Expression.Call(typeof(DynamicBridgeFactory), nameof(ReadNumber), null, value), t);
+                return Expression.Lambda<Func<JsValue, T>>(Expression.Convert(read, typeof(T)), value).Compile();
+            }
+        }
+
+        public static double ReadNumber(JsValue value) => JsValueUtil.GetNormTag(value) == JsValueUtil.TagInt
+            ? unchecked((int)JsValueUtil.GetUInt64(value)) : JsValueUtil.GetFloat64(value);
 
         private static void AppendByRefWritebacks(
             List<Expression> body,
@@ -176,7 +241,7 @@ namespace ZenTS.DelegateImpl
             int boundGen,
             Type[] paramTypes,
             Type returnType,
-            object[] args, JsCallPlan plan)
+            object[] args, JsCallPlan plan, int[] offsets, int argc, bool opaque)
         {
             JsMainThread.EnsureMainThread();
             if (!env.IsAlive || boundGen != env.Generation)
@@ -186,16 +251,11 @@ namespace ZenTS.DelegateImpl
 
             IntPtr ctx = env.Context;
             int clrArgc = args?.Length ?? 0;
-            var offsets = new int[clrArgc];
-            int argc = 0;
-            for (int i = 0; i < clrArgc; ++i)
-            {
-                offsets[i] = argc;
-                var mas = plan.Marshal[i];
-                argc += !paramTypes[i].IsByRef && mas?.JsMarshalType == JsMarshalType.UnpackedValues ? mas.Members.Length : 1;
-            }
-            var jsArgs = new JsValue[argc];
-            OpaqueParameterScope.Enter();
+            JsValue[] jsArgs = argc == 0 ? Array.Empty<JsValue>() : ArrayPool<JsValue>.Shared.Rent(argc);
+            Array.Clear(jsArgs, 0, argc);
+            JsValue ret = JsValueUtil.Undefined;
+            if (opaque)
+                OpaqueParameterScope.Enter();
             try
             {
                 for (int i = 0; i < clrArgc; ++i)
@@ -207,19 +267,12 @@ namespace ZenTS.DelegateImpl
                         jsArgs[slot] = OpaqueParameterScope.Push(ctx, args[i], pt.GetElementType(), mas);
                     else if (mas?.JsMarshalType == JsMarshalType.UnpackedValues)
                     {
-                        JsValue packed = TypedMarshal.Push(ctx, args[i], pt, mas);
-                        try
-                        {
-                            for (int k = 0; k < mas.Members.Length; ++k)
-                                jsArgs[slot + k] = EngineApi.GetPropertyUint32(ctx, packed, (uint)k);
-                        }
-                        finally { JsValueUtil.Free(ctx, packed); }
+                        TableMarshal.PushUnpackedInto(ctx, args[i], pt, mas, jsArgs, slot);
                     }
                     else
                         jsArgs[slot] = TypedMarshal.Push(ctx, args[i], pt, mas);
                 }
 
-                JsValue ret;
                 unsafe
                 {
                     fixed (JsValue* argvPtr = argc > 0 ? jsArgs : null)
@@ -273,22 +326,24 @@ namespace ZenTS.DelegateImpl
 
                 if (returnType == typeof(void))
                 {
-                    JsValueUtil.Free(ctx, ret);
                     return null;
                 }
 
                 object managed = TypedMarshal.Pop(ctx, ret, returnType, plan.ReturnMarshal);
-                JsValueUtil.Free(ctx, ret);
                 return managed;
             }
             finally
             {
+                JsValueUtil.Free(ctx, ret);
                 for (int i = 0; i < argc; i++)
                 {
                     JsValueUtil.Free(ctx, jsArgs[i]);
                 }
 
-                OpaqueParameterScope.Leave(ctx);
+                if (argc != 0)
+                    ArrayPool<JsValue>.Shared.Return(jsArgs, clearArray: true);
+                if (opaque)
+                    OpaqueParameterScope.Leave(ctx);
             }
         }
 
@@ -300,6 +355,9 @@ namespace ZenTS.DelegateImpl
             private readonly Type[] _paramTypes;
             private readonly Type _returnType;
             private readonly JsCallPlan _plan;
+            private readonly int[] _offsets;
+            private readonly int _argc;
+            private readonly bool _opaque;
 
             public BridgeClosure(JsEnv env, JsValue func, int gen, Type[] paramTypes, Type returnType, JsCallPlan plan)
             {
@@ -309,12 +367,77 @@ namespace ZenTS.DelegateImpl
                 _paramTypes = paramTypes;
                 _returnType = returnType;
                 _plan = plan;
+                _offsets = new int[paramTypes.Length];
+                for (int i = 0; i < paramTypes.Length; ++i)
+                {
+                    _offsets[i] = _argc;
+                    var marshal = plan.Marshal[i];
+                    _argc += !paramTypes[i].IsByRef && marshal?.JsMarshalType == JsMarshalType.UnpackedValues ? marshal.Members.Length : 1;
+                    _opaque |= paramTypes[i].IsByRef || marshal?.JsMarshalType == JsMarshalType.OpaqueValue;
+                }
+            }
+
+            private unsafe JsValue Call(int count, JsValue* values)
+            {
+                JsMainThread.EnsureMainThread();
+                if (!_env.IsAlive || _env.Generation != _gen)
+                    throw new InvalidOperationException("zents: JS runtime was reset; re-bind GetFunction delegates.");
+                JsValue result = EngineApi.Call(_env.Context, _func, JsValueUtil.Undefined, count, (IntPtr)values);
+                if (JsValueUtil.IsException(result))
+                {
+                    if (NestedJsCallPendingError.TryTake(out Exception nested))
+                        throw nested;
+                    _env.ThrowPendingException();
+                }
+                return result;
+            }
+            public unsafe JsValue Call0() => Call(0, null);
+            public unsafe JsValue Call1(JsValue a)
+            {
+                JsValue* values = stackalloc JsValue[1];
+                values[0] = a;
+                return Call(1, values);
+            }
+            public unsafe JsValue Call2(JsValue a, JsValue b)
+            {
+                JsValue* values = stackalloc JsValue[2];
+                values[0] = a;
+                values[1] = b;
+                return Call(2, values);
+            }
+            public unsafe JsValue Call3(JsValue a, JsValue b, JsValue c)
+            {
+                JsValue* values = stackalloc JsValue[3];
+                values[0] = a;
+                values[1] = b;
+                values[2] = c;
+                return Call(3, values);
+            }
+            public unsafe JsValue Call4(JsValue a, JsValue b, JsValue c, JsValue d)
+            {
+                JsValue* values = stackalloc JsValue[4];
+                values[0] = a;
+                values[1] = b;
+                values[2] = c;
+                values[3] = d;
+                return Call(4, values);
+            }
+            public void Discard(JsValue result) => JsValueUtil.Free(_env.Context, result);
+            public T Read<T>(JsValue result)
+            {
+                try
+                {
+                    if (JsCallPlan.MatchValue(_env.Context, result, typeof(T), null) < 0)
+                        throw new InvalidCastException("zents: JS result is not assignable to " + typeof(T));
+                    return PrimitiveReader<T>.Convert(result);
+                }
+                finally { JsValueUtil.Free(_env.Context, result); }
             }
 
             public JsValue JsFunction => _func;
 
             public object Run(object[] args) =>
-                InvokeCore(_env, _func, _gen, _paramTypes, _returnType, args, _plan);
+                InvokeCore(_env, _func, _gen, _paramTypes, _returnType, args, _plan, _offsets, _argc, _opaque);
         }
 
         /// <summary>
@@ -339,31 +462,34 @@ namespace ZenTS.DelegateImpl
                 return false;
             }
 
+            if (!holder.Valid || !holder.Owner.IsAlive || holder.Generation != holder.Owner.Generation)
+                throw new InvalidOperationException("zents: JS runtime was reset; re-bind GetFunction delegates.");
             jsFunc = holder.Func;
             return true;
         }
 
+        public static void ProcessPendingReleases()
+        {
+            while (PendingReleases.TryDequeue(out JsFuncHolder holder))
+            {
+                holder.Release();
+            }
+            lock (HeldFunctions)
+                HeldFunctions.RemoveAll(weak => !weak.TryGetTarget(out _));
+            foreach (var pair in FromJsIdentityCache)
+                if (!pair.Value.TryGetTarget(out _))
+                    FromJsIdentityCache.TryRemove(pair.Key, out _);
+        }
+
         public static void Release(JsEnv env)
         {
+            ProcessPendingReleases();
             FromJsIdentityCache.Clear();
-            if (env == null || !env.IsAlive)
-            {
-                lock (HeldFunctions)
-                {
-                    HeldFunctions.Clear();
-                }
-
-                return;
-            }
-
-            IntPtr ctx = env.Context;
             lock (HeldFunctions)
             {
-                foreach (JsValue fn in HeldFunctions)
-                {
-                    JsValueUtil.Free(ctx, fn);
-                }
-
+                foreach (var weak in HeldFunctions)
+                    if (weak.TryGetTarget(out JsFuncHolder holder))
+                        holder.Release();
                 HeldFunctions.Clear();
             }
         }

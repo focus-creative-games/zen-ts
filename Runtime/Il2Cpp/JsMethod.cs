@@ -32,6 +32,7 @@ namespace ZenTS
         private bool _disposed;
         private IntPtr _ctx;
         private int _funcRef;
+        private int _generation;
         private IntPtr _methodMarshalCtx;
 
         internal JsMethod()
@@ -50,7 +51,7 @@ namespace ZenTS
         }
 
         [MethodImpl(MethodImplOptions.InternalCall)]
-        private static extern void AddPendingRef(IntPtr ctx, int refIndex);
+        private static extern void AddPendingRef(IntPtr ctx, int refIndex, int generation);
 
         private void Dispose(bool disposing)
         {
@@ -59,8 +60,8 @@ namespace ZenTS
                 return;
             }
 
-            AddPendingRef(_ctx, _funcRef);
             _disposed = true;
+            AddPendingRef(_ctx, _funcRef, _generation);
         }
     }
 }

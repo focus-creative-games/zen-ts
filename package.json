@@ -1,6 +1,6 @@
 {
   "name": "com.code-philosophy.zen-ts",
-  "version": "1.0.0-beta.1",
+  "version": "1.0.0-rc",
   "displayName": "ZenTS",
   "description": "ZenTS is a high-performance TypeScript/JavaScript scripting solution for Unity powered by V8, designed in parallel with ZLua.",
   "category": "Scripting",

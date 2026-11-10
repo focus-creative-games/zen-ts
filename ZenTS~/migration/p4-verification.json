@@ -1,0 +1,2901 @@
+{
+  "verified_utc": "2026-11-09T12:52:41.894287+00:00",
+  "scope": "P4 Unity 2022.3.62f3 Chrome WebGL + Windows Editor and Win64 regressions",
+  "webgl": {
+    "engine": "platform VM; no embedded V8",
+    "js_suites": {
+      "passed": 56,
+      "total": 56
+    },
+    "smoke": {
+      "passed": 10,
+      "total": 10
+    },
+    "typescript_demos": {
+      "passed": 3,
+      "total": 3
+    },
+    "skipped_cases": [
+      "[JS] [P4][SKIP] managed worker-thread test: WebGL has no managed Thread"
+    ],
+    "gc": {
+      "baseline": 1723,
+      "allocated": 1851,
+      "remaining": 1723,
+      "collected": true,
+      "contexts": 1,
+      "staleSlots": 0,
+      "pending": 0
+    },
+    "wasm_imports": [
+      {
+        "module": "env",
+        "name": "emscripten_resize_heap",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "emscripten_memcpy_big",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "emscripten_console_error",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "exit",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "emscripten_get_now",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "setTempRet0",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_ii",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_vii",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "__cxa_find_matching_catch_2",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "getTempRet0",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "__resumeException",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "abort",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_v",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "__cxa_find_matching_catch_3",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "__cxa_begin_catch",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "__cxa_end_catch",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_iii",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "__syscall_openat",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "__syscall_fcntl64",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "__syscall_ioctl",
+        "kind": "function"
+      },
+      {
+        "module": "wasi_snapshot_preview1",
+        "name": "fd_fdstat_get",
+        "kind": "function"
+      },
+      {
+        "module": "wasi_snapshot_preview1",
+        "name": "fd_write",
+        "kind": "function"
+      },
+      {
+        "module": "wasi_snapshot_preview1",
+        "name": "fd_read",
+        "kind": "function"
+      },
+      {
+        "module": "wasi_snapshot_preview1",
+        "name": "fd_close",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "__syscall_unlinkat",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "__syscall_rmdir",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "_munmap_js",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "_mmap_js",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "__cxa_allocate_exception",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_vi",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_iiii",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_iiiii",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_iiiiii",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_viii",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "__cxa_throw",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "__cxa_free_exception",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "__syscall_fstat64",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "__syscall_stat64",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "__syscall_newfstatat",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "__syscall_lstat64",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "_dlopen_js",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "_dlsym_js",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "__assert_fail",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "__syscall_bind",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "__syscall_getsockopt",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "__syscall_connect",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "__syscall_poll",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "__syscall_getsockname",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "__syscall_listen",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "__syscall_accept4",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "__syscall_sendto",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "__syscall_recvfrom",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "_tzset_js",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "_mktime_js",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "_localtime_js",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "_gmtime_js",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "_emscripten_date_now",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "_emscripten_get_now_is_monotonic",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "emscripten_get_now_res",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "__syscall__newselect",
+        "kind": "function"
+      },
+      {
+        "module": "wasi_snapshot_preview1",
+        "name": "environ_sizes_get",
+        "kind": "function"
+      },
+      {
+        "module": "wasi_snapshot_preview1",
+        "name": "environ_get",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "emscripten_get_heap_max",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "emscripten_log",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "strftime",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "__syscall_pipe",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "__syscall_faccessat",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "__syscall_chmod",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "__syscall_renameat",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "__syscall_utimensat",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_i",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "__syscall_getcwd",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "__syscall_mkdir",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "__syscall_getdents64",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_viiii",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "getaddrinfo",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "getnameinfo",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "__syscall_socket",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "__syscall_getpeername",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "__syscall_dup3",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "__syscall_sendmsg",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "__syscall_recvmsg",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_iiiiiii",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_iiiiiiii",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_iiiiiiiiiii",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_iiiiiiiiiiiii",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_fiii",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_diii",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_viiiiiii",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_iiiiiiiiiiii",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_viiiiiiiiii",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "__cxa_rethrow",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_viiiiii",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "__cxa_decrement_exception_refcount",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "__cxa_increment_exception_refcount",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "__cxa_current_primary_exception",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "__cxa_rethrow_primary_exception",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "llvm_eh_typeid_for",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_viiiiiiii",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "__cxa_find_matching_catch_4",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_viiiii",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_viiiiiiiii",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_viiiiiiiiiii",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_iiffi",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_iiiiiiiii",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_dii",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_fii",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_didi",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_fifi",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_iiiiiiiiii",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_idiii",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_idiiiii",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_diiii",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_idi",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_fdi",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_vidi",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_dddi",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_vifi",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_viiiiiiiiiiiiii",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_viifi",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_iifiii",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_iifi",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_viiiiiiiiiiii",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_iidii",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_iidiii",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_iidi",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_ifi",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_viidi",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_fidi",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_fiiii",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_iifii",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_fiffi",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_fi",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_ffi",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_ff",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_vfii",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_vfi",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_viiffi",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_viiff",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_vif",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_viiifi",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_iiidiii",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_iiifiii",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_iiddi",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_iiiiiiiiiiiiii",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_viiiiiiiiiiiii",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_iiiidii",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_iiiifii",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_vdii",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_fiff",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_fif",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_didd",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_did",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_ddd",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_vdiii",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_idiiii",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_ifiii",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_ifiiiii",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_dfi",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "__syscall_symlink",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "__syscall_readlinkat",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_ddi",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_di",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "zents_host_modules",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "HostOperation",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_iiiiiiiid",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "__cxa_call_unexpected",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "__cxa_find_matching_catch_5",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "emscripten_date_now",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "JS_Init_ContextMenuHandler",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "glGetProgramiv",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "glGetActiveAttrib",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "glGetAttribLocation",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "glGetVertexAttribiv",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "glValidateProgram",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "glGetProgramInfoLog",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "glGetShaderiv",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "glGetIntegerv",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "glActiveTexture",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "glGetIntegeri_v",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "glIsEnabled",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "glAttachShader",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "glBindBuffer",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "glBindAttribLocation",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "glBindTexture",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "glBindRenderbuffer",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "glBindFramebuffer",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "glBufferSubData",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "glBufferData",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "glBlendFuncSeparate",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "glBlendEquationSeparate",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "glBlendEquation",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "glCheckFramebufferStatus",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "glClearStencil",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "glClearDepthf",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "glClearColor",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "glClear",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "glCompileShader",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "glColorMask",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "glCompressedTexSubImage2D",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "glCompressedTexImage2D",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "glCopyTexImage2D",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "glCopyTexSubImage2D",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "glCreateProgram",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "glCreateShader",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "glCullFace",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "glDeleteBuffers",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "glDeleteFramebuffers",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "glDeleteProgram",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "glDeleteRenderbuffers",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "glDeleteShader",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "glDeleteTextures",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "glDepthFunc",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "glDepthMask",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "glDetachShader",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "glDisable",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "glDisableVertexAttribArray",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "glEnable",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "glDrawElements",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "glDrawArrays",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "glEnableVertexAttribArray",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "glGetRenderbufferParameteriv",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "glFramebufferRenderbuffer",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "glFlush",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "glFinish",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "glFramebufferTexture2D",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "glFrontFace",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "glGenBuffers",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "glGenTextures",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "glGenerateMipmap",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "glGenRenderbuffers",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "glGenFramebuffers",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "glGetActiveUniform",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "glGetError",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "glGetFramebufferAttachmentParameteriv",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "glGetShaderSource",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "glGetShaderInfoLog",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "glGetString",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "glGetShaderPrecisionFormat",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "glGetUniformLocation",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "glGetUniformiv",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "glGetTexParameteriv",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "glLinkProgram",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "glPixelStorei",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "glRenderbufferStorage",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "glReadPixels",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "glPolygonOffset",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "glStencilFuncSeparate",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "glShaderSource",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "glScissor",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "glStencilOpSeparate",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "glStencilMask",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "glTexParameterf",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "glTexImage2D",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "glTexParameteriv",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "glTexParameteri",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "glTexSubImage2D",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "glVertexAttribPointer",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "glVertexAttrib4fv",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "glVertexAttrib4f",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "glUseProgram",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "glUniformMatrix4fv",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "glUniformMatrix3fv",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "glUniform4uiv",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "glUniform4iv",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "glUniform4fv",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "glUniform3uiv",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "glUniform3iv",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "glUniform3fv",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "glUniform2uiv",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "glUniform2iv",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "glUniform2fv",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "glUniform1uiv",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "glUniform1iv",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "glUniform1i",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "glUniform1fv",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "glViewport",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "glGetQueryObjectuiv",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "glGetQueryiv",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "glEndQuery",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "glBeginQuery",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "glDeleteQueries",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "glGenQueries",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "glGenVertexArrays",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "glDeleteVertexArrays",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "glIsVertexArray",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "glBindVertexArray",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "glCompressedTexSubImage3D",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "glTexSubImage3D",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "glTexImage3D",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "glCompressedTexImage3D",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "glTexStorage3D",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "glTexStorage2D",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "glGetStringi",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "glRenderbufferStorageMultisample",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "glBlitFramebuffer",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "glFlushMappedBufferRange",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "glUnmapBuffer",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "glMapBufferRange",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "glInvalidateFramebuffer",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "glDrawArraysInstanced",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "glDrawElementsInstanced",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "glCopyBufferSubData",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "glDrawBuffers",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "glBindBufferBase",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "glReadBuffer",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "glFramebufferTextureLayer",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "glVertexAttribIPointer",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "glBindBufferRange",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "glUniformBlockBinding",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "glGetActiveUniformBlockName",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "glGetActiveUniformBlockiv",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "glGetUniformIndices",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "glGetUniformBlockIndex",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "glGetActiveUniformsiv",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "glGetInternalformativ",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "glSamplerParameteri",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "glBindSampler",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "glDeleteSamplers",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "glGenSamplers",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "glProgramParameteri",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "glProgramBinary",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "glGetProgramBinary",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "glClearBufferfi",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "glClearBufferfv",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "glClearBufferuiv",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "glDeleteSync",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "glFenceSync",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "__syscall_truncate64",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "__syscall_statfs64",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "JS_SystemInfo_GetDocumentURL",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "JS_SystemInfo_HasWebGL",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "emscripten_webgl_init_context_attributes",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "emscripten_asm_const_int_sync_on_main_thread",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "emscripten_webgl_create_context",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "emscripten_webgl_make_context_current",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "emscripten_webgl_enable_extension",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "emscripten_webgl_destroy_context",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "emscripten_is_webgl_context_lost",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "emscripten_webgl_get_current_context",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "glGetBufferSubData",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "JS_SystemInfo_HasAstcHdr",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "emscripten_asm_const_int",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "JS_DOM_UnityCanvasSelector",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "JS_CallAsLongAsNoExceptionsSeen",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "JS_UnityEngineShouldQuit",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "emscripten_html5_remove_all_event_listeners",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "emscripten_cancel_main_loop",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "JS_RunQuitCallbacks",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "emscripten_clear_interval",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "emscripten_set_main_loop_timing",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "JS_Profiler_InjectJobs",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "JS_FileSystem_Initialize",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "emscripten_set_interval",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "JS_SystemInfo_GetGPUInfo",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "emscripten_set_main_loop",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "emscripten_sample_gamepad_data",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "emscripten_get_num_gamepads",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "emscripten_get_gamepad_status",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "JS_DOM_MapViewportCoordinateToElementLocalCoordinate",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "JS_Cursor_SetShow",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "JS_Cursor_SetImage",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "emscripten_set_keydown_callback_on_thread",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "emscripten_set_keyup_callback_on_thread",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "emscripten_set_keypress_callback_on_thread",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "emscripten_set_mouseup_callback_on_thread",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "emscripten_set_mousedown_callback_on_thread",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "emscripten_set_mousemove_callback_on_thread",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "emscripten_set_wheel_callback_on_thread",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "emscripten_set_touchstart_callback_on_thread",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "emscripten_set_touchend_callback_on_thread",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "emscripten_set_touchmove_callback_on_thread",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "emscripten_set_touchcancel_callback_on_thread",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "emscripten_set_gamepadconnected_callback_on_thread",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "emscripten_set_gamepaddisconnected_callback_on_thread",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "JS_ScreenOrientation_Init",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "JS_Sound_ResumeIfNeeded",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "JS_RequestDeviceSensorPermissionsOnTouch",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "JS_OrientationSensor_Start",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "JS_OrientationSensor_IsRunning",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "JS_OrientationSensor_Stop",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "JS_Accelerometer_Start",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "JS_Accelerometer_IsRunning",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "JS_Accelerometer_Stop",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "JS_LinearAccelerationSensor_Start",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "JS_LinearAccelerationSensor_IsRunning",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "JS_LinearAccelerationSensor_Stop",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "JS_GravitySensor_Start",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "JS_GravitySensor_IsRunning",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "JS_GravitySensor_Stop",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "JS_Gyroscope_Start",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "JS_Gyroscope_IsRunning",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "JS_Gyroscope_Stop",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "JS_GuardAgainstJsExceptions",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "JS_ScreenOrientation_DeInit",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "JS_SystemInfo_GetCanvasClientSize",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "JS_FileSystem_Sync",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "GetJSMemoryInfo",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "emscripten_set_canvas_element_size",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "JS_SystemInfo_HasFullscreen",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "emscripten_request_fullscreen",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "emscripten_exit_fullscreen",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "emscripten_get_fullscreen_status",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "JS_SystemInfo_GetMatchWebGLToCanvasSize",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "JS_MobileKeybard_GetIgnoreBlurEvent",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "emscripten_set_fullscreenchange_callback_on_thread",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "emscripten_set_focus_callback_on_thread",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "emscripten_set_blur_callback_on_thread",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "emscripten_set_pointerlockchange_callback_on_thread",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "JS_SystemInfo_GetPreferredDevicePixelRatio",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "JS_SystemInfo_HasCursorLock",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "emscripten_request_pointerlock",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "emscripten_exit_pointerlock",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "JS_SystemInfo_GetScreenSize",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "emscripten_get_canvas_element_size",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "JS_ScreenOrientation_Lock",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "JS_Log_StackTrace",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "JS_SystemInfo_GetOS",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "JS_SystemInfo_GetMemory",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "JS_Log_Dump",
+        "kind": "function"
+      },
+      {
+        "module": "wasi_snapshot_preview1",
+        "name": "fd_seek",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_iij",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_iiijiii",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_jiiii",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_ji",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_jii",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_viijii",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_iiiiij",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_j",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_ijji",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_vijiiiiiii",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_vijiii",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_jji",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_iijji",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_viji",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_jiji",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_ijiii",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_ijiiii",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_jijiii",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_jijii",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_jiii",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_viiji",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_iji",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_vji",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_jjji",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_vijii",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_jjii",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_vijji",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_iiji",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_ijiiji",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_ijjiii",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_ijiiiiji",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_jdi",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_vjjiiiii",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_vjjii",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_ijiijii",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_jjiiii",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_iiiijii",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_viiijji",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_viijiijiii",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_viiiijiiii",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_viijji",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_iiiji",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_iiiiiiiiiji",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_viiijii",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_iijiii",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_viiiji",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_jiiiii",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_viijiiijiiii",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_jidi",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_vijjji",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_iiijii",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_iijiiii",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_iijiiiiii",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_iijjiiiiii",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_iiiijjii",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_iijii",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_diji",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_iiiiji",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_viij",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_iiiiijii",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_jiiiiiiiiii",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_vjiiii",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_viiifdji",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_vijiji",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_viijijii",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_viijijiii",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_jiiiiii",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_iijjii",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_vijiiiiiiii",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_ijijiiiii",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_ijjjiijii",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_ijii",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_vjii",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_vjjjiiii",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_jidii",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_vijiiiiii",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_vijiiii",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_jjiii",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_jjiiiii",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_jijjji",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_ijjjiii",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_viijiiiiii",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_jijjjii",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_vjiiiii",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_ijiiiii",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_viiiijii",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_jijj",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_jij",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_fji",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_dji",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_jjjii",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_jfi",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_jdii",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "invoke_viijjii",
+        "kind": "function"
+      },
+      {
+        "module": "env",
+        "name": "glClientWaitSync",
+        "kind": "function"
+      }
+    ],
+    "host_exports": [
+      {
+        "name": "zents_host_callback",
+        "kind": "function"
+      },
+      {
+        "name": "zents_host_finalize",
+        "kind": "function"
+      },
+      {
+        "name": "zents_host_module_source",
+        "kind": "function"
+      }
+    ],
+    "exception_utf8_boundary": "passed"
+  },
+  "editor": {
+    "engine": "official V8",
+    "smoke": "8/8",
+    "js_suites": "56/56",
+    "typescript_demos": "3/3",
+    "domain_reload": [
+      1,
+      0,
+      1
+    ]
+  },
+  "win64": {
+    "engine": "official static V8",
+    "smoke": "10/10",
+    "js_suites": "56/56",
+    "typescript_demos": "3/3",
+    "existing_export_reused": true
+  },
+  "module_diagnostics_rejected": [
+    "dynamic_import",
+    "import_meta",
+    "top_level_await"
+  ],
+  "current_module_compiler_matches_build": true,
+  "alignment_boundary_cases": 33,
+  "architecture_guard": "passed",
+  "sdk_independent_cpp_contract": "passed",
+  "typescript_no_emit": "passed",
+  "runtime_copies_match": true,
+  "artifacts": {
+    "Build-WebGL\\Build\\Build-WebGL.wasm": "6ff76e381933f177eb1d7d0546acf8a114a90db74080f039d9d37499cc610f63",
+    "Build-WebGL\\Build\\Build-WebGL.framework.js": "a9f7e014053de4ef1288989d925cbfab20fbdc352d62913e0038f33431ed0e25",
+    "Build-WebGL\\Build\\Build-WebGL.data": "3da93b5be4e7073bddc28d8c61f4d24b66bb7b0b89c6274310bb287f2eebfec0",
+    "Assets\\ZenTSHostGenerated\\ZenTSModules.jslib": "7941b1105d1f12ddda1fe65bc32d8920b724482d7fcb20ebb2d2346d92c0ab13",
+    "Build-Win64\\build\\bin\\x64\\Debug\\GameAssembly.dll": "9a124b2c6b13d9cba746eb5c444701b9b4855059c17c6a28b01313b0c7fe9220"
+  },
+  "source_hashes": {
+    "Editor/3rds/UnityHook/CodePatcher.cs": "711d4ea484511b2c7e357a16c699401cf6a2c9c8960513ade46e49c1c549e05e",
+    "Editor/3rds/UnityHook/HookPool.cs": "876fe9c1ec24b5a53a743c5a23fa202abc44e094df7d5f1faa1aac3e06b08e51",
+    "Editor/3rds/UnityHook/HookUtils.cs": "c16bd5e77db9bb53a7fbc9b0a07915318d21b3ecaa3ae87666578d3fe39eb1f5",
+    "Editor/3rds/UnityHook/HookUtils_OSX.cs": "6c391ea735c4db081d230e9585fbb90c403fba32c0e0c5a7b2b0292e16371c2c",
+    "Editor/3rds/UnityHook/LDasm.cs": "255a48f5c7e6d6aae3415fa3bcede3e8bac6876fe189970bdb71898812fc41a0",
+    "Editor/3rds/UnityHook/MethodHook.cs": "ea5e6155c2a2005f395cecb6c4fe1313c9cf6c4b7efcf415a5c468d479192d8a",
+    "Editor/3rds/UnityHook/Plugins/Utils.cpp": "8581fe469ebb546856033e799fcc36e5f5ea9d365ff03af9c81d43343506d971",
+    "Editor/BuildProcessors/AddLil2cppSourceCodeToXcodeproj2020Or2021.cs": "15fe27d4c51c48521c73c337873a1e0a26b6fb0c2f2766e52e2233483d19d189",
+    "Editor/BuildProcessors/AddLil2cppSourceCodeToXcodeproj2022OrNewer.cs": "186502a7aabb5d0d49a34e11abe73d6714d72bad8b4183b23d4677f15993e6c2",
+    "Editor/BuildProcessors/AddLil2cppSourceCodeToXcodeproj2023OrNewer.cs": "50e95ac7d07d8834dbe90211958507278685191620cda30a2e4a236e1fea9a20",
+    "Editor/BuildProcessors/CheckLocalInstall.cs": "14fbaf1a79e6a3afe47f89d11299ff79d579febe48a8bfd400c5f8629aaf073c",
+    "Editor/BuildProcessors/CopyTypescriptStreaming.cs": "f60d8a7dad97f732c6213933e60347f5298839d68de17dcfd2b057ca0484429c",
+    "Editor/BuildProcessors/GenerateXmlBindingsOnBuild.cs": "8a93755c87ca35e955ee27c949c70a9ebb22833873c125344817394604709106",
+    "Editor/BuildProcessors/HostJsBuildSetup.cs": "3dd89bda5fdc4a9422b1a6894b28c16708aa3c037ed073d5f346b5de94d998f9",
+    "Editor/BuildProcessors/HostJsModulesBuild.cs": "a9d2977c680c0fcf7dff7d8da713041136c43d48b368a44097bdb581013fe3d7",
+    "Editor/BuildProcessors/LinkXmlProcess.cs": "32872e6caef6d5c4384e1ce2b59fcf6ba3ead7c2a20949961220ea8bf5e5afa7",
+    "Editor/BuildProcessors/SetupIl2CppEnv.cs": "e793b56a75139cc505ab2c83da85005de6517a4bd39a80915e55e8e741514968",
+    "Editor/BuildProcessors/V8BuildSetup.cs": "27d100dfc16f599d4a85562ac15de44655b19c68f387e3049faf05e4fa9c1cca",
+    "Editor/Commands/ExportWin64Command.cs": "3f7d9060b2e88c683ad88391acbc208d05b6f39dc8625930a3555992d772e0f8",
+    "Editor/Commands/XmlBindingsGenerate.cs": "9f6b2753277fa24ff625e5e3fe7c6291eaa6a102cd7edb661540c09248bbcec5",
+    "Editor/CommonDirs.cs": "039356e8f70ca4bab971143da62e0c28fddae872462caf1a5d1e81b9b847a8bb",
+    "Editor/CoreLibsEnsure.cs": "91fff8d418c47f0075b2c5e5685d51c9b51f8cb1a5d9cef35d897661ba58070d",
+    "Editor/CppCodeGen/AliasCodegen.cs": "a45fae126c4fd86d18136706da392fea73d9f00cafeb1b3be3ab62b2262e45ff",
+    "Editor/CppCodeGen/CodeWriter.cs": "4318f4c20235acbbc4e8edfb49e6d35c1732665a95780dc312af9178b6e92679",
+    "Editor/CppCodeGen/ExtensionCodegen.cs": "cfc22b41061ce17b2d9378b5a53f0cb4dac67322e3df55a0946384ac5b23b982",
+    "Editor/CppCodeGen/MarshalAsCodegen.cs": "98bcd0e2c79f180f8c0c48235cb9773c0395f7fddcdda1b0320d32139a1592cd",
+    "Editor/Diagnostics/IZentsJsDebuggerHost.cs": "312553a420cf67d53355aad9fa9b8933e83044d449038a043a8e82c42a90d59a",
+    "Editor/Diagnostics/JsDebuggerBootstrap.cs": "fd7217316c7d63f272224357a1f34bebd6b22b8a960ddea359821bc64e36c291",
+    "Editor/JsAliasXmlBootstrap.cs": "49a7afeac39f29560cc8723d8db4907b9382a01690bc585d8cfc4c8f43c3549f",
+    "Editor/JsExtensionXmlBootstrap.cs": "9e56fc39033dd63109da1e4e9d22f30567f76d34e1a4aae212c6009bbc29bf7b",
+    "Editor/JsMarshalAsXmlBootstrap.cs": "bcfec2e2253f3b76383b7ec0db2681e2c9a7cb1aeb56f9e0a82cb74d5478e75b",
+    "Editor/LocalInstaller.cs": "264ce4af498211a5cb7a871c57e24b0b8c406bc2c90f0f61c2c9afd1849a2b38",
+    "Editor/Menus.cs": "dea5a9f072146848b8dfb70339d238eb59c6ff1967c93c6181fdda3cc10f24ea",
+    "Editor/MonoHooks/GetIl2CppFolderHook.cs": "b5f2adc5121aba9457041bb59a3b5873b76abdbfb26746384719cbe8f9ba905a",
+    "Editor/P3Acceptance.cs": "346834057818bfa0381ca779cf6dce585a9c9ecf7932320d2759b49585b4480a",
+    "Editor/P4Acceptance.cs": "3d421ffe553c2c8bae07ce59a2a447cc2ac77686c47dd8f529d0785e0edbc0a6",
+    "Editor/Settings.cs": "0e1dd421405bf52ec2f7557fa6bcd43a38ceed2d052d6c955d8ca10cf5065c9c",
+    "Editor/TsSettings.cs": "037ea6befd9d4777d2fdb397b0beb40dbb837f50c5fd3953030b5bb38e2530fa",
+    "Editor/Typescript/CsharpDtsGenerator.cs": "1363d812e893852a9eeb6eda30f38086d30b34298e7e940b17368bd7f015e9e7",
+    "Editor/Typescript/NodeCli.cs": "c7be9cac54953b2cd3c8a16425140b7d3ae06428e168c62e1d85180297a43774",
+    "Editor/Typescript/TsPlayGate.cs": "b96380d7ef5f4fa3d1962079f7c21ea25912b95d6f7b30ebaa4f74c4ddeba5c6",
+    "Editor/Typescript/TsProjectPaths.cs": "b47c6d8e85a4c3be6cb3f6929bcdefbe5cc43294556e46ad2de1e3e3a59d9d32",
+    "Editor/Typescript/TsScaffold.cs": "584d36ac138d83b22ed38f033385ae389239987f71b15641820065163ca1d288",
+    "Editor/Typescript/TypescriptToolchain.cs": "bca8c766d40afac172b3310c6013846dd2fa938b38d5d3ef1db254955c965c9c",
+    "Editor/Utils/DirectoryUtil.cs": "61be27cdc701219f5b78d43ad49eb3a6beff15d1768f9516e3dd4ea46f93cc95",
+    "Editor/Utils/EngineVersionUtil.cs": "d6ca7fc09e73be139bbe8a8739c4ac4cbb69d6060038d2df9cc4006b91c283c9",
+    "Editor/Utils/InstallFingerprint.cs": "c072c368bb4069185805050049581826fa5412eb0fa3b15c48461bf2d688236a",
+    "Editor/Utils/PatchApplier.cs": "455cbe1fdda2aaba8d089112f25638026c0a122b3e73cb63bfce94affd389c25",
+    "Editor/Utils/UnityIl2CppPatchUtil.cs": "d70af4086831cc976eea4805dc8719cc68dbc1c92fe8083e9f391dcc5bbc1dea",
+    "Editor/Utils/UnityVersion.cs": "ed2e7ab754fbdaa16d9ad10d7d478f5f7b170dc01866c652a09e98f9eb441bd2",
+    "Editor/Utils/ZenTSConfWriter.cs": "d7abb7bc63214a400218371f4c612ce9d6e1b3626afa07980fb3c82e3d26a70c",
+    "Editor/V8Acceptance.cs": "83ec055e3f07b13fa8e2f142ee36f09d3a374f730a555e18780a21c65adae686",
+    "Editor/XmlRulesLoaders.cs": "6e7abe199792c38ce1091e8f6f6e6b0c827bf4d2474971857277bf013d43f960",
+    "Editor/ZentsEditorMenus.cs": "08603762f1592d4a742942bb05621e921bda8bcea047f33ef5bc094a886d608e",
+    "Editor/ZentsSettingsProvider.cs": "d41f9f03a7cda74ac4ad19f4304f19ff0a6b8b6c13a2c308e58593001caa2c26",
+    "Plugins/WebGL/HostEngine.jslib": "1fc7666443420675cab1dafa62e36ad07de894252d32b7b69c73b379922bc8c2",
+    "Runtime/Common/AotXmlPolicy.cs": "e184d4b3fa66d7b973f9e67570a107881447f89e816f1401d65eedbce493ff6d",
+    "Runtime/Common/AssemblyInfo.cs": "f8a99aebe94ee0430d545ddef2bdf9cbc9ce4ce651ca3d450f1b8c619864ba92",
+    "Runtime/Common/CsharpVirtualModule.cs": "ef3e8ba5624ff24422d18bcb4b21f219e0d9115a63b92e53ae0468fd87625cf7",
+    "Runtime/Common/IJsRuntime.cs": "cd6b1991be4a1b419372ff639c71bf85ab190733c9d6b5870091237508e1b0e8",
+    "Runtime/Common/JsAliasAttribute.cs": "dedadfa6c0e7a42bd8a14c3082825d65ae65c5fdd6622b7fcbcf8828aa27ed59",
+    "Runtime/Common/JsAliasConfigurationException.cs": "ec3fb6952116224924275d3a36586a3011f41c59a42fa35857dc891e859b1247",
+    "Runtime/Common/JsAliasXmlLoader.cs": "df9f80351a99a67889300749b8389932a7327302359383480dfdd0cc6a65c6ea",
+    "Runtime/Common/JsAliasXmlModels.cs": "6819afc46acefac0087a61afdb84876645f313fde3a5acfb116cab40444e019c",
+    "Runtime/Common/JsAliasXmlRegistry.cs": "55cc8dd03268c0bbe81e4e50eaad22804375643412367b96b484e646b0ea658c",
+    "Runtime/Common/JsAppDomain.cs": "09b0a25ca628acc43b5bbc18a05772c57805dbcf3d4601048ad3bd186a669fba",
+    "Runtime/Common/JsExtensionAttribute.cs": "118eb760b194b6cb4212190d717a546212417c1f4079de1dcf16381051876581",
+    "Runtime/Common/JsExtensionConfigurationException.cs": "df8785fcc3b3ec6a0ccc5e720d299404363ddb8fb05d99adfd3573eb1dadf67f",
+    "Runtime/Common/JsExtensionXmlLoader.cs": "8e5a4f1e682a24acbca020c4070e7e4625d07fcc9c43eef08025cb0747ca3f43",
+    "Runtime/Common/JsExtensionXmlModels.cs": "1943349b092ba55887cb26d00da7e106bb40f2f0d0f702a8fd09ad1b9c34a4f7",
+    "Runtime/Common/JsExtensionXmlRegistry.cs": "dc2a013537007e42cb65bde52a90a28ed99adeb9166c975c398bb0550f41412e",
+    "Runtime/Common/JsFileModuleLoader.cs": "eb7e7f1ecd86341433d95547194d00d0a9444b64896de5832b64c1115dd015c3",
+    "Runtime/Common/JsFramePump.cs": "ef271a96908be47e6e6bd5b1b5021f3a3376aad8763bed438dfd14c7df15d190",
+    "Runtime/Common/JsHostDetect.cs": "46eddd3cf660bd80c748f13e12f94161b3197d32707702300e1057fc64e9131a",
+    "Runtime/Common/JsMainThread.cs": "7203a9eb14bb96ebbfb77b531aa193998a8d3eaae621779dbc6d3324d3f8663f",
+    "Runtime/Common/JsMarshalAsAttribute.cs": "ac47fbd02154f928ce7f8e5682ab67fb71d33f28973e9f6603ad10b1fcb56c12",
+    "Runtime/Common/JsMarshalAsConfigurationException.cs": "b21835546798a6cda2890533d608f948f90dc34740bdab0923788491b16fc7c4",
+    "Runtime/Common/JsMarshalAsValidation.cs": "179ea2d14eff59d71613e409ab07633d7ae8f579ff3f4dab732045f4d3bbf5c5",
+    "Runtime/Common/JsMarshalAsXmlLoader.cs": "3c4fa1b7568e4b7af8794835a1886f29dd9650c2331b67238dfdfcf1cd05577e",
+    "Runtime/Common/JsMarshalAsXmlModels.cs": "88ad3d6fd9970acb2244dccefb7ea0100e189859e253667fa132a40ff915d43a",
+    "Runtime/Common/JsMarshalAsXmlRegistry.cs": "be047ffb5cbbcc7afe3f6ab3b1d3469784881e52f6f4f65465c2587bbcf4fccd",
+    "Runtime/Common/JsModuleSpecifier.cs": "02292618b627dcfa2370e294b0ecde7dedd818ff9da2124cdb5ec9d3ad5f4460",
+    "Runtime/Common/JsScriptException.cs": "2587bc52eeb28623b6d470192eff552d339483ff73a417b86f2e8a68b1bcbfd2",
+    "Runtime/Common/JsXmlPathUtil.cs": "86065882198ba77ad73bdca49bd6dcb937277c93c70b021c4e531758a77a455c",
+    "Runtime/Common/MonoJsCallbackAttribute.cs": "19ffacaab6d1dde346c5e24ba403424e71e5a3718594c35a64bf056f4b4fd01a",
+    "Runtime/Common/TsExportManifest.cs": "f8dc6ec50126a77309343f1252fa9bffeed1b7f122e5418fadd8079ce13f79d3",
+    "Runtime/HostJs/JsHostJsAppDomain.cs": "adc74f78a6044db746e7d5237414c8f01a9dfc62cdc61f056ea537f38a192a0c",
+    "Runtime/Il2Cpp/AssemblyInfo.cs": "f9402e7524496a000d037ce750a0008c86d9fc43fcec513dc5c0422693d0ba99",
+    "Runtime/Il2Cpp/JsIl2CppAppDomain.cs": "1ba4feb07d58035a8212cde50fe688ba58c9314e0b4d7c76d71a549a46860612",
+    "Runtime/Il2Cpp/JsMethod.cs": "f2aad6b7e1e91f4c8a8ebcff7585639b14c12952cab985089055015494a81e9b",
+    "Runtime/Mono/Binding/BindingPlan.cs": "3d0ca4b75341f04d18b593a6622b6e1899e5fd41d0cd064e311df35afa5dc7ce",
+    "Runtime/Mono/DelegateImpl/DynamicBridgeFactory.cs": "24cd2de7eb5f5721d41e0aae6461da93ab85c11b90d54e99af524bdb07fcf2b0",
+    "Runtime/Mono/DelegateImpl/JsDelegateBinder.cs": "b3ebade9a6b26de5152b5458c8e82f1f583470083dc19efd4cca9c5306f5be6f",
+    "Runtime/Mono/Emit/ArrayBinding.cs": "37c38006613f7529562d5b9ea4b4523d66c27a02a78f7c95e061111f1ac63e5c",
+    "Runtime/Mono/Emit/JsCallPlan.cs": "d7dd0a77b03135057cb0619bc84c3884936da0cf72bfb4a8432bf16a0ccfc0b8",
+    "Runtime/Mono/Emit/MetaBinding.cs": "d01ce3f20282e622603aa9709521a04ea183ef134a5463fa27af047714cea645",
+    "Runtime/Mono/Emit/MethodEmitter.cs": "c91b974a26653709283f5aa1dde949749f0f27bd99b731fe9046c1f52e6de047",
+    "Runtime/Mono/Emit/MethodTagRegistry.cs": "9b0ee49817ad1c26def91fb679e44f5e92b921ae17254ff0df28999a64c64a57",
+    "Runtime/Mono/Engine/EngineApi.cs": "2a2657b873627fef3acd2dba58efa29a9f8c989fcb5dc668137643a321f0571b",
+    "Runtime/Mono/Engine/EngineCallbacks.cs": "9b240d22492b50013d5cf585976ef1be62e219d9caf35446925eeb9f8de6691c",
+    "Runtime/Mono/Engine/EngineValue.cs": "174a259e3d060aafa23d8581fd6f708fc4bae07445888cc51ee176d4ebe19c8f",
+    "Runtime/Mono/Engine/V8/V8Callbacks.cs": "685dbd224feaebd8e5341c658a001fd76574b27ff7149fac2c62733aacf1a2f7",
+    "Runtime/Mono/Engine/V8/V8EngineBackend.cs": "346a076a4586a34a8d9640e1ad15ffc57bc5b1d9626b04cd37f24fa80ab1bd85",
+    "Runtime/Mono/Engine/V8/V8Native.cs": "ec02aaa1bd76c3a75d58cef66354a42149d8ef7cfc7da3ebe2c6a1e5cd7441df",
+    "Runtime/Mono/Jvm/JsEnv.cs": "5c274b529f5b2fefafbc05bb1f7243d864a8c09579e843c12db40ba351bddebb",
+    "Runtime/Mono/Jvm/JsMonoAppDomain.cs": "a5ecd29bdbb43903bbdc60d11068abeb0ed108c1845f95d7d0739c58e769d2ce",
+    "Runtime/Mono/Marshaling/ArrayMarshal.cs": "9da4d0c0c66fef228015821a91d36f6ddd1f267ba448ef47b2fd6bf9798d6a6f",
+    "Runtime/Mono/Marshaling/BytesMarshal.cs": "6d71528a4c11111114be8287e4426722ba75bfa79a282abf62b4967c3898ce61",
+    "Runtime/Mono/Marshaling/DelegateMarshal.cs": "aa5572795a5fe1bbc00d869bda75d83ced4093ab8a67692f71edb4c437fc129a",
+    "Runtime/Mono/Marshaling/EnumMarshal.cs": "e236e6f2239e342cc5840dce7835b92fc9b732231fa8b6f729869ee199a40ba0",
+    "Runtime/Mono/Marshaling/OpaqueParameterScope.cs": "cad673ba8c77ff60ff4980e24f3ee52a39c1a02481b73e13ee6aff9804332ea1",
+    "Runtime/Mono/Marshaling/OpaqueValue.cs": "9d1a68e50e3e859dd54ec402b5a1ba5698837e4bb9a48a0116cb6c3aced99e76",
+    "Runtime/Mono/Marshaling/PointerAwareInvoker.cs": "045c6a572631a9dadc80fef40b462eead91cf080408331e563bccc16b6947c87",
+    "Runtime/Mono/Marshaling/PointerHandle.cs": "cf1a2539b90f4cf3177bf59056a6f4f5486ab86fcc3cdd89e2ad4412d95ff482",
+    "Runtime/Mono/Marshaling/PointerMarshal.cs": "a2dc9f14b007c5e2ebf0db0d8f439f16f2362becd4a0c5c9e8c2f49486c93e87",
+    "Runtime/Mono/Marshaling/PrimitiveMarshal.cs": "26683b0368267d43aba596dade03cac33a9b3789de9bece65afbfd0a5746ce07",
+    "Runtime/Mono/Marshaling/StructMarshal.cs": "63156bd2d103cd59e973316abeed0f3123ef90f767121eed0c4c8e5287f2ae59",
+    "Runtime/Mono/Marshaling/TableMarshal.cs": "8e774ef2708b6c56b1a034e2041522f360304f51081fd7912d297715dfbaf1aa",
+    "Runtime/Mono/Marshaling/TypedMarshal.cs": "42ee0588870627f3b38dfd15c80e0fcf7ec6b6f79f63bb0a0c6b491fbe6024e7",
+    "Runtime/Mono/Mt/AssemblyRegistry.cs": "a47862af727d0fd4eb9a7c144ceb01c69dc28c760588602d32eb910549c11040",
+    "Runtime/Mono/Mt/ObjectRegistry.cs": "4a8dd9e5f20fd4ef0ddf7ba05120225509306150f6db3876839fa62c54dc22b8",
+    "Runtime/Mono/Mt/TypeRegistry.cs": "08d809f9ebd4f675ab6decc57c9bfb0bcd7e273e87c40971276d2ccb5c678cdb",
+    "Runtime/Mono/Utils/EditorSettingsAccess.cs": "9af22cd04fd66425a7651f28b363fc5c33f6f662b54d9eef02a676dd8d59becc",
+    "Runtime/Mono/Utils/JsPrintBuffer.cs": "c3b3b9e639f8d1bad696d3ae031bb1611bb03ba36c9e8c7cfe9618d16f9c0225",
+    "Runtime/Mono/Utils/NestedJsCallPendingError.cs": "5437515399bf1fddc359c7e612e1c05523077479d851935d361fe550598ad802",
+    "Runtime/Mono/ZentsLib.cs": "6e90e2c8ad3b2c8c8a8e93a797f98f2480f1024a157e53a670569883e886430b",
+    "ZenTS~/host-js/build-modules.mjs": "b99f2e6c3cf4eb0b684fe2a82c58fb59eeff0b7d973623b8a3c7b9bd3e9e2574",
+    "ZenTS~/host-js/run-webgl.mjs": "db279c9822e54950d0d84fb6c760bc3dce6ff974f45ca558b0a785bc9624c0bf",
+    "ZenTS~/zents-runtime/binding/BindingPlan.h": "ecf7b7dd4032a771c0795a9698c6456cb63a9c3cb8d30e6ecc5acec79dee0fb6",
+    "ZenTS~/zents-runtime/bridge/BridgeDefs.h": "266a97c2d4c778346fd63731b8ddb37ae85119e75577da8c6e46d658b593d808",
+    "ZenTS~/zents-runtime/bridge/MethodBridge.cpp": "1b41ecaf2b435e9a9ca20a5c92f5de2f1175fe26e7e2c8be3d146940ebf6f43f",
+    "ZenTS~/zents-runtime/bridge/MethodBridge.h": "4477e42a16f642760a3e3de4b38a9b97ba32ef6e8943cf6744774cbc41889c58",
+    "ZenTS~/zents-runtime/engine/EngineApi.h": "8d10030f8e1a5a320ac9577d1a818a29bac34218e339ade649f51a110a0aa8cd",
+    "ZenTS~/zents-runtime/engine/host/HostEngine.cpp": "a171f892d597f97ff557214dbd0ea7c845b8b3e054aab82a36e09dc9bec41fdf",
+    "ZenTS~/zents-runtime/engine/v8/V8Engine.cpp": "b7127d383de30c63e0d65231dd7e10b7122adb2e585a296ab020c21f1f799162",
+    "ZenTS~/zents-runtime/engine/v8/V8Libraries.h": "cdac584f4533cf609394b9347de0bd2610aee785c8fd0a8fcaa8cd11f862025d",
+    "ZenTS~/zents-runtime/engine/v8/V8Link.cpp": "458527d58aaf479f90160856129911172f4e950d81e406967effa716dd13e447",
+    "ZenTS~/zents-runtime/engine/v8/V8Mono.cpp": "caf1719e1766267451f2b6b4e536c9c1975b92b5d01d6162684aa59e658dc557",
+    "ZenTS~/zents-runtime/Il2CppCompatible.h": "23daa6c15c8a6819f94f5f6a7686ec45165dba23e019b05b83d78df32a42c499",
+    "ZenTS~/zents-runtime/jvm/HostModuleSource.cpp": "3e03e862651dd71abf4e8047d5e83675765ed58049ec5a3e9fefd8cd7740a3c4",
+    "ZenTS~/zents-runtime/jvm/JsAppDomain.cpp": "fbf529fd494ac820c372f74e510f1b6c09fa9e3470de61ec730e2fe574421d4c",
+    "ZenTS~/zents-runtime/jvm/JsAppDomain.h": "bc3661edf30fba54b06df2c72749ddd2aa31a7a4e29b18c4b22f5423f857f0f3",
+    "ZenTS~/zents-runtime/jvm/JsEnv.cpp": "00f62d9b4e9c9ee1eaefab567320c9dd38a6b44706d6495494a140e9eb394e3e",
+    "ZenTS~/zents-runtime/jvm/JsEnv.h": "20fbafa063159d0a989662b3b4976de6a9e5cc0dd4e3bd05ef0874cbb8aad739",
+    "ZenTS~/zents-runtime/jvm/JsGlobalRefs.cpp": "c1f1dd8998b72ea913f3cede7e600cce0ad0ad4520d96ac96c2c5c3154aef5ec",
+    "ZenTS~/zents-runtime/jvm/JsGlobalRefs.h": "778d7f1972c9b93018846508c909e019ba2a3d00a4e86ed0c0522e1b039d1792",
+    "ZenTS~/zents-runtime/jvm/JsInternalCalls.cpp": "0362de2ec9a89f5d509f339ec0b9aaa1a932925af776148c8ca8fc61591e7658",
+    "ZenTS~/zents-runtime/jvm/JsInternalCalls.h": "a9ac8a862dd46340f5ca9009504cde5291e9bc822fa778d6503585ba4337f05f",
+    "ZenTS~/zents-runtime/jvm/JsLib.cpp": "803b6d2240e711f3eca2e81f9e22a251c6f31d735ca3119e0547c87face470a7",
+    "ZenTS~/zents-runtime/jvm/JsLib.h": "c3c4d5e880f82b613f5cbdc01d547208553bae90db1497cdce7a03f98887e584",
+    "ZenTS~/zents-runtime/jvm/JsLoader.cpp": "8ff8f58f671da6f9b7c39873832fb2024c55210d78d983cdc193b277af43cb67",
+    "ZenTS~/zents-runtime/jvm/JsLoader.h": "5faf985f931c48dd7819ba8c3386c294f5db5c7fe41a10c9690876b51c44bbba",
+    "ZenTS~/zents-runtime/marshal/ArrayMarshal.cpp": "7f5b62ba23d54d3c0892704fa5c6e055f861b3465df06b06d4f8380814c73303",
+    "ZenTS~/zents-runtime/marshal/ArrayMarshal.h": "6427ff0b0294624a278ab59983ca8115e0d856da4a4d7b054d8cb940837b2a28",
+    "ZenTS~/zents-runtime/marshal/BytesMarshal.cpp": "9dbdc11bf56e6aeb5f070fcf14133271115674bf744fed55d06915e3b217009a",
+    "ZenTS~/zents-runtime/marshal/BytesMarshal.h": "52934429f88997bf00c9316809bbea6b9eef8ca7210f9c96dd07de872a7d1335",
+    "ZenTS~/zents-runtime/marshal/DelegateMarshal.cpp": "3d0affefa14077967bee28046bd782c6ff5182ea475ef7f61a9222bbb6ac4b06",
+    "ZenTS~/zents-runtime/marshal/DelegateMarshal.h": "39b22c0dc324f8e364493cf64ef70c532e3a5b86342be41c976a4f0714c706f4",
+    "ZenTS~/zents-runtime/marshal/MarshalAsXmlTable.cpp": "05bd97dfb988f1670d5b6d6f8884a1b9346e911d9c2a7b427a10d071016ae770",
+    "ZenTS~/zents-runtime/marshal/MarshalAsXmlTable.h": "85bde87a0893aaeda34998503cb956b29fc741d88862b951876029a023079eb8",
+    "ZenTS~/zents-runtime/marshal/MarshalDefs.h": "01b217f6ed1fb9757318879e9b530161925cd4b590296c6a1b89f623f6a57fb9",
+    "ZenTS~/zents-runtime/marshal/MarshalMeta.cpp": "93023eb108116bd82f131bc1f68f5f91819e6ef0a863d57d2348f47303efdbed",
+    "ZenTS~/zents-runtime/marshal/MarshalMeta.h": "121663bc4a45a642e930a727eb39c91b938a90386833e236a976843c698a8f87",
+    "ZenTS~/zents-runtime/marshal/MethodOverloadResolver.cpp": "af066345da9e5399dcb07b9daaf5839f047949ba9949c8be127fd1cc5d0cd968",
+    "ZenTS~/zents-runtime/marshal/MethodOverloadResolver.h": "595be2898842e28dc1fc1d08a80fd19e2f7f852c407e315a5c491c61ae99e227",
+    "ZenTS~/zents-runtime/marshal/ObjectMarshal.cpp": "bc0fb11e97310407157cbcc9e865a7a8105e39e305279be894fc1ffeb146e5de",
+    "ZenTS~/zents-runtime/marshal/ObjectMarshal.h": "15b82adc75a1ecc6550f36b1314c79a696194b664a1f8e6777fe97ee6a5a6de4",
+    "ZenTS~/zents-runtime/marshal/ObjectRegistry.cpp": "c59f72fda323b1fbffc76e9a797015a1bc61c0ec91765e1ca6c2275730f0188f",
+    "ZenTS~/zents-runtime/marshal/ObjectRegistry.h": "5fdb9b603de70003b818536daa3dc6c9e9b06b9666035a2eb84658fe38063e0f",
+    "ZenTS~/zents-runtime/marshal/OpaqueValueMarshal.cpp": "da0094e681a0f6058253a1c633e62755792238bcbe3c7a616498fd6e47bba425",
+    "ZenTS~/zents-runtime/marshal/OpaqueValueMarshal.h": "f2bdc3522efe9e81ba9d3aaa70c462196d2b6cd206dd36b5a8728c75d31abd65",
+    "ZenTS~/zents-runtime/marshal/PointerMarshal.cpp": "e53b053f14f3c8f73cc331c2be01cef7fa5ca7a5dc08a40671a0232745235a3e",
+    "ZenTS~/zents-runtime/marshal/PointerMarshal.h": "49c4b16b88f75855f47d7f7e1920222a8569734dd86f4a1e3db1ba3bedc9919f",
+    "ZenTS~/zents-runtime/marshal/PrimitiveMarshal.cpp": "13683907bb9ed2301e71b3689db6021b38d415fc550eb165b797800f1295e53e",
+    "ZenTS~/zents-runtime/marshal/PrimitiveMarshal.h": "dc8531ac4e6f67f08a2be8e50b0a13240f9c00d989396975bd769a463f4ef457",
+    "ZenTS~/zents-runtime/marshal/StructMarshal.cpp": "b1a2a05dbc9c4acf7d09aa8c9c38e772a182e127d9b6e45050cd45dbb6634c0b",
+    "ZenTS~/zents-runtime/marshal/StructMarshal.h": "df3d0397b6ec16191fac921b25659e37f259f41c6f4ea829237b6ef8c6a2a544",
+    "ZenTS~/zents-runtime/marshal/TableMarshal.cpp": "155150e4597696d24bc16a685cb4b019998cdc321de7372266630962ffa67698",
+    "ZenTS~/zents-runtime/marshal/TableMarshal.h": "d5e09d23e4f9a7e4c78cd937701c62a3b00746d9155cdeb507cc7551a44f9d2d",
+    "ZenTS~/zents-runtime/mt/AliasXmlTable.cpp": "b49e3546546f34842d27bd2932bd98aa84b71dd9af706bf5361ae83e7334a832",
+    "ZenTS~/zents-runtime/mt/AliasXmlTable.h": "7756b209f36aaa5ce8d8ceec9d1c4809d61876d322f8aca8ec3d9d5fe860c251",
+    "ZenTS~/zents-runtime/mt/ArrayBinding.cpp": "fb3d6a42a31138053967e83a1df37aff71ea3737533e8ed5bc012e15a06db039",
+    "ZenTS~/zents-runtime/mt/ArrayBinding.h": "8b09b76847394c9219a1f3d8d9e580a984a24e1e880f78e7d1653651024da4da",
+    "ZenTS~/zents-runtime/mt/ExtensionXmlTable.cpp": "1f90725d9cb62f4ea69af27370b54e44f0347f6cedae3bf05cb04a37098c93f5",
+    "ZenTS~/zents-runtime/mt/ExtensionXmlTable.h": "35531eedd6c30d0a0714675668876c797b104edae6e3739056b6f3b8353c9a15",
+    "ZenTS~/zents-runtime/mt/MetaBinding.cpp": "9b0dfad45b01176098b9a0f4e0be3fe648d6aae22dd892997f72480022785297",
+    "ZenTS~/zents-runtime/mt/MetaBinding.h": "2d25d0d5b2639063a5c63a437f54cdf20d1ea78bd4f64888db131910bed9e961",
+    "ZenTS~/zents-runtime/mt/TypeRegistry.cpp": "828815e4f36029649b8c32df0efb44c8fdec1d321da99894b369a923de7f14b0",
+    "ZenTS~/zents-runtime/mt/TypeRegistry.h": "c91964f90a63f4d0c790faf3106e73bcaa9ca30291dca00ef19be0baa0622ace",
+    "ZenTS~/zents-runtime/utils/CsStringHash.h": "777921f1047a5798dd7ef74a0d412b0d5b46fffc35b1ac7b4d0c4b2b44137291",
+    "ZenTS~/zents-runtime/utils/JsException.cpp": "409ae90b8d8212d0726efebbb113b1f82952f81d87975fc560fac05f9fc96270",
+    "ZenTS~/zents-runtime/utils/JsException.h": "f494088e53d4acf289e503140412aaf11a674d1577f7481fc76a4bdf653202a2",
+    "ZenTS~/zents-runtime/utils/MetadataUtil.cpp": "b3f972b68560581c6b62e73bd37e50a29ba24d169dd85f3e3572409b8005be3e",
+    "ZenTS~/zents-runtime/utils/MetadataUtil.h": "8491ea1082a76c885fd63625f91601fb403d14805e1b6910f06a48ce844d8900",
+    "ZenTS~/zents-runtime/utils/XmlBindingUtil.cpp": "39dc3a89ded201895506575b2cf7cf525045d1cabe452a1f59d4062d73dde538",
+    "ZenTS~/zents-runtime/utils/XmlBindingUtil.h": "7c59740e968b5ad52ad2f800c0010000f9bbd5bb038c8d616ac5d5c235166f01",
+    "ZenTS~/zents-runtime/ZenTSCommon.h": "5d55068687265b539d87cdb8b13acf4ba5f294e7bde7cf473e7d66e29a958b42"
+  },
+  "test_case_sha256": "da04240ab045d173e3d4ce7ba5e7c76930cf36ef0f50c6a0d58a3340d9315049",
+  "logs": {
+    "p4-webgl-build.log": {
+      "path": "D:\\workspace\\zts\\ZenTSTest\\p4-webgl-build.log",
+      "sha256": "9eadc09cbb62cd627414719222c4142e1f90d812106b5f710ccb813e87330e94"
+    },
+    "p4-webgl-browser.log": {
+      "path": "D:\\workspace\\zts\\ZenTSTest\\p4-webgl-browser.log",
+      "sha256": "e1764ec5f04c755bf4230b34971dd1636983cafbffa9546199a1c1e0e1c3b1cb"
+    },
+    "p4-editor.log": {
+      "path": "D:\\workspace\\zts\\ZenTSTest\\p4-editor.log",
+      "sha256": "4348f5406695481df91b697ffb0597e0603a01e74ac45fb63325c31206c2376d"
+    },
+    "p4-domain-reload.log": {
+      "path": "D:\\workspace\\zts\\ZenTSTest\\p4-domain-reload.log",
+      "sha256": "8edcd92c6bbea485a18aa6b41909f4da141da26df578c336cd6b53a44e983dc6"
+    },
+    "p4-msbuild.log": {
+      "path": "D:\\workspace\\zts\\ZenTSTest\\p4-msbuild.log",
+      "sha256": "e7680f1c6f5a031beed2c41977e4513bda5bcae7db0fed07049133f8c5bce42b"
+    },
+    "p4-player.log": {
+      "path": "D:\\workspace\\zts\\ZenTSTest\\p4-player.log",
+      "sha256": "0f47369952943c00e67b4a924204df3c03d5e72d6def1497e34a5158d640f2c7"
+    },
+    "p4-player-native.log": {
+      "path": "D:\\workspace\\zts\\ZenTSTest\\p4-player-native.log",
+      "sha256": "bc479121e40e8fe74422ed32c30461cf2bc060c79def9e98854e92060be0a331"
+    }
+  },
+  "not_verified": [
+    "WeChat",
+    "other browsers/devices",
+    "macOS",
+    "iOS",
+    "Android"
+  ]
+}

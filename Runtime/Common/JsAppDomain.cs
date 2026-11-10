@@ -118,6 +118,7 @@ namespace ZenTS
         /// </summary>
         internal static void FlushPendingReset()
         {
+            JsMainThread.EnsureMainThread();
             if (s_pendingResetLoader == null || s_runtime == null)
             {
                 return;
@@ -131,6 +132,7 @@ namespace ZenTS
 
         private static void EnsureRuntime()
         {
+            JsMainThread.EnsureMainThread();
             if (s_runtime != null)
             {
                 return;
@@ -139,6 +141,9 @@ namespace ZenTS
 #if UNITY_EDITOR
             const string typeName = "ZenTS.JsMonoAppDomain";
             const string assemblyName = "ZenTS.Mono";
+#elif UNITY_WEBGL || UNITY_WEIXINMINIGAME || WEIXINMINIGAME || ZENTS_HOST_JS
+            const string typeName = "ZenTS.JsHostJsAppDomain";
+            const string assemblyName = "ZenTS.HostJs";
 #else
             const string typeName = "ZenTS.JsIl2CppAppDomain";
             const string assemblyName = "ZenTS.Il2Cpp";

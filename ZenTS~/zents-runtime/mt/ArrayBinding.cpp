@@ -29,6 +29,7 @@
 #include "vm/Array.h"
 #include "vm/Class.h"
 #include "vm/Object.h"
+#include "gc/GarbageCollector.h"
 
 #include <cstring>
 #include <vector>
@@ -37,8 +38,8 @@ namespace zents
 {
 namespace
 {
-static JSClassID s_arrayCtxClassId = 0;
-static JSRuntime* s_arrayCtxRuntime = nullptr;
+static js::ClassID s_arrayCtxClassId = 0;
+static js::Runtime* s_arrayCtxRuntime = nullptr;
 
 struct ArrayCtx
 {
@@ -49,23 +50,23 @@ struct ArrayCtx
     int32_t elementSize;
 };
 
-static void EnsureArrayCtxClass(JSRuntime* rt)
+static void EnsureArrayCtxClass(js::Runtime* rt)
 {
     if (rt == nullptr || s_arrayCtxRuntime == rt)
         return;
-    JS_NewClassID(&s_arrayCtxClassId);
-    JSClassDef def = {};
+    js::NewClassID(&s_arrayCtxClassId);
+    js::ClassDef def = {};
     def.class_name = "ZentsArrayCtx";
-    JS_NewClass(rt, s_arrayCtxClassId, &def);
+    js::NewClass(rt, s_arrayCtxClassId, &def);
     s_arrayCtxRuntime = rt;
 }
 
-static ArrayCtx* CtxFromFuncData(JSValue* func_data)
+static ArrayCtx* CtxFromFuncData(js::Value* func_data)
 {
-    return reinterpret_cast<ArrayCtx*>(JS_GetOpaque(func_data[0], s_arrayCtxClassId));
+    return reinterpret_cast<ArrayCtx*>(js::GetOpaque(func_data[0], s_arrayCtxClassId));
 }
 
-static Il2CppArray* ArrayFromThis(JSContext* ctx, JSValueConst this_val)
+static Il2CppArray* ArrayFromThis(js::Context* ctx, js::ValueConst this_val)
 {
     Il2CppObject* obj = ObjectRegistry::Get(ctx, this_val);
     if (obj == nullptr || obj->klass == nullptr || obj->klass->rank < 1)
@@ -73,7 +74,7 @@ static Il2CppArray* ArrayFromThis(JSContext* ctx, JSValueConst this_val)
     return reinterpret_cast<Il2CppArray*>(obj);
 }
 
-static bool ReadIndices(JSContext* ctx, int argc, JSValueConst* argv, int32_t rank, std::vector<int32_t>& out)
+static bool ReadIndices(js::Context* ctx, int argc, js::ValueConst* argv, int32_t rank, std::vector<int32_t>& out)
 {
     if (argc < rank)
         return false;
@@ -81,52 +82,66 @@ static bool ReadIndices(JSContext* ctx, int argc, JSValueConst* argv, int32_t ra
     for (int32_t i = 0; i < rank; ++i)
     {
         int32_t idx = 0;
-        if (JS_ToInt32(ctx, &idx, argv[i]))
+        if (js::ToInt32(ctx, &idx, argv[i]))
             return false;
         out[(size_t)i] = idx;
     }
     return true;
 }
 
-static JSValue ArrayLengthGet(
-    JSContext* ctx, JSValueConst this_val, int /*argc*/, JSValueConst* /*argv*/, int /*magic*/, JSValue* /*func_data*/)
+// Address calculation macros do not check bounds. Validate every dimension
+// before touching storage, including rank-one arrays with nonzero lower bounds.
+static bool CheckedArrayIndex(js::Context* ctx, Il2CppArray* arr,
+    const std::vector<int32_t>& indices, il2cpp_array_size_t& flat)
+{
+    flat = 0;
+    for (size_t i = 0; i < indices.size(); ++i)
+    {
+        int64_t lower = arr->bounds != nullptr ? arr->bounds[i].lower_bound : 0;
+        il2cpp_array_size_t length = arr->bounds != nullptr ? arr->bounds[i].length : arr->max_length;
+        int64_t offset = static_cast<int64_t>(indices[i]) - lower;
+        if (offset < 0 || static_cast<uint64_t>(offset) >= length)
+        {
+            js::ThrowRangeError(ctx, "zents: array index out of bounds");
+            return false;
+        }
+        flat = flat * length + static_cast<il2cpp_array_size_t>(offset);
+    }
+    return true;
+}
+
+static js::Value ArrayLengthGet(
+    js::Context* ctx, js::ValueConst this_val, int /*argc*/, js::ValueConst* /*argv*/, int /*magic*/, js::Value* /*func_data*/)
 {
     Il2CppArray* arr = ArrayFromThis(ctx, this_val);
     if (arr == nullptr)
-        return JS_ThrowTypeError(ctx, "zents: length: not an array");
-    return JS_NewInt32(ctx, (int32_t)il2cpp::vm::Array::GetLength(arr));
+        return js::ThrowTypeError(ctx, "zents: length: not an array");
+    return js::NewInt32(ctx, (int32_t)il2cpp::vm::Array::GetLength(arr));
 }
 
-static JSValue ArrayLengthSet(
-    JSContext* ctx, JSValueConst /*this_val*/, int /*argc*/, JSValueConst* /*argv*/, int /*magic*/, JSValue* /*func_data*/)
+static js::Value ArrayLengthSet(
+    js::Context* ctx, js::ValueConst /*this_val*/, int /*argc*/, js::ValueConst* /*argv*/, int /*magic*/, js::Value* /*func_data*/)
 {
-    return JS_ThrowTypeError(ctx, "zents: array length is read-only");
+    return js::ThrowTypeError(ctx, "zents: array length is read-only");
 }
 
-static JSValue ArrayGet(
-    JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv, int /*magic*/, JSValue* func_data)
+static js::Value ArrayGet(
+    js::Context* ctx, js::ValueConst this_val, int argc, js::ValueConst* argv, int /*magic*/, js::Value* func_data)
 {
     ArrayCtx* actx = CtxFromFuncData(func_data);
     Il2CppArray* arr = ArrayFromThis(ctx, this_val);
     if (actx == nullptr || arr == nullptr)
-        return JS_ThrowTypeError(ctx, "zents: get: not an array");
+        return js::ThrowTypeError(ctx, "zents: get: not an array");
     if (actx->elementMeta == nullptr)
-        return JS_ThrowTypeError(ctx, "zents: array element type not supported yet");
+        return js::ThrowTypeError(ctx, "zents: array element type not supported yet");
 
     std::vector<int32_t> indices;
     if (!ReadIndices(ctx, argc, argv, actx->rank, indices))
-        return JS_ThrowTypeError(ctx, "zents: get expects %d index argument(s)", actx->rank);
+        return js::ThrowTypeError(ctx, "zents: get expects %d index argument(s)", actx->rank);
 
-    void* slot = nullptr;
-    if (actx->rank == 1)
-    {
-        slot = il2cpp_array_addr_with_size(arr, actx->elementSize, indices[0]);
-    }
-    else
-    {
-        il2cpp_array_size_t flat = ArrayIndexFromIndices(arr, indices.data());
-        slot = il2cpp_array_addr_with_size(arr, actx->elementSize, (int32_t)flat);
-    }
+    il2cpp_array_size_t flat = 0;
+    if (!CheckedArrayIndex(ctx, arr, indices, flat)) return js::Exception();
+    void* slot = il2cpp_array_addr_with_size(arr, actx->elementSize, flat);
 
     void* tempStorage = nullptr;
     void* storage = actx->elementMeta->passByValue ? &tempStorage : alloca((size_t)actx->elementMeta->size);
@@ -137,59 +152,47 @@ static JSValue ArrayGet(
     return actx->elementMeta->cs2jsWriter(ctx, storage, actx->elementMeta);
 }
 
-static JSValue ArraySet(
-    JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv, int /*magic*/, JSValue* func_data)
+static js::Value ArraySet(
+    js::Context* ctx, js::ValueConst this_val, int argc, js::ValueConst* argv, int /*magic*/, js::Value* func_data)
 {
     ArrayCtx* actx = CtxFromFuncData(func_data);
     Il2CppArray* arr = ArrayFromThis(ctx, this_val);
     if (actx == nullptr || arr == nullptr)
-        return JS_ThrowTypeError(ctx, "zents: set: not an array");
+        return js::ThrowTypeError(ctx, "zents: set: not an array");
     if (actx->elementMeta == nullptr)
-        return JS_ThrowTypeError(ctx, "zents: array element type not supported yet");
+        return js::ThrowTypeError(ctx, "zents: array element type not supported yet");
     if (argc < actx->rank + 1)
-        return JS_ThrowTypeError(ctx, "zents: set expects %d index(es) and a value", actx->rank);
+        return js::ThrowTypeError(ctx, "zents: set expects %d index(es) and a value", actx->rank);
 
     std::vector<int32_t> indices;
     if (!ReadIndices(ctx, argc, argv, actx->rank, indices))
-        return JS_ThrowTypeError(ctx, "zents: set: invalid indices");
+        return js::ThrowTypeError(ctx, "zents: set: invalid indices");
 
-    if (actx->rank != 1)
-    {
-        il2cpp_array_size_t flat = ArrayIndexFromIndices(arr, indices.data());
-        void* slot = il2cpp_array_addr_with_size(arr, actx->elementSize, (int32_t)flat);
-        void* tempStorage = nullptr;
-        void* storage = actx->elementMeta->passByValue ? &tempStorage : alloca((size_t)actx->elementMeta->size);
-        actx->elementMeta->js2csWriter(ctx, argv[actx->rank], storage, actx->elementMeta);
-        if (JS_HasException(ctx))
-            return JS_EXCEPTION;
-        if (actx->elementMeta->passByValue)
-            *reinterpret_cast<void**>(slot) = tempStorage;
-        else
-            std::memcpy(slot, storage, (size_t)actx->elementMeta->size);
-        return JS_UNDEFINED;
-    }
-
-    void* slot = il2cpp_array_addr_with_size(arr, actx->elementSize, indices[0]);
+    il2cpp_array_size_t flat = 0;
+    if (!CheckedArrayIndex(ctx, arr, indices, flat)) return js::Exception();
+    void* slot = il2cpp_array_addr_with_size(arr, actx->elementSize, flat);
     void* tempStorage = nullptr;
     void* storage = actx->elementMeta->passByValue ? &tempStorage : alloca((size_t)actx->elementMeta->size);
     actx->elementMeta->js2csWriter(ctx, argv[actx->rank], storage, actx->elementMeta);
-    if (JS_HasException(ctx))
-        return JS_EXCEPTION;
+    if (js::HasException(ctx))
+        return js::Exception();
 
     if (actx->elementMeta->passByValue)
         *reinterpret_cast<void**>(slot) = tempStorage;
     else
         std::memcpy(slot, storage, (size_t)actx->elementMeta->size);
-    return JS_UNDEFINED;
+    if (arr->klass->has_references)
+        il2cpp::gc::GarbageCollector::SetWriteBarrier(reinterpret_cast<void**>(slot), (size_t)actx->elementSize);
+    return js::Undefined();
 }
 } // namespace
 
-void ArrayBinding::AttachMembers(JSContext* ctx, JSValue proto, TypeBinding* binding, Il2CppClass* arrayKlass)
+void ArrayBinding::AttachMembers(js::Context* ctx, js::Value proto, TypeBinding* binding, Il2CppClass* arrayKlass)
 {
     if (ctx == nullptr || arrayKlass == nullptr || arrayKlass->rank < 1)
         return;
 
-    EnsureArrayCtxClass(JS_GetRuntime(ctx));
+    EnsureArrayCtxClass(js::GetRuntime(ctx));
     auto* actx = new ArrayCtx();
     actx->binding = binding;
     actx->arrayKlass = arrayKlass;
@@ -197,20 +200,20 @@ void ArrayBinding::AttachMembers(JSContext* ctx, JSValue proto, TypeBinding* bin
     actx->elementSize = il2cpp::vm::Class::GetArrayElementSize(arrayKlass->element_class);
     actx->elementMeta = MarshalMeta::TryCreateDefault(&arrayKlass->element_class->byval_arg);
 
-    JSValue holder = JS_NewObjectClass(ctx, s_arrayCtxClassId);
-    JS_SetOpaque(holder, actx);
+    js::Value holder = js::NewObjectClass(ctx, s_arrayCtxClassId);
+    js::SetOpaque(holder, actx);
 
-    JSValue getFn = JS_NewCFunctionData(ctx, ArrayGet, actx->rank, 0, 1, &holder);
-    JSValue setFn = JS_NewCFunctionData(ctx, ArraySet, actx->rank + 1, 0, 1, &holder);
-    JS_SetPropertyStr(ctx, proto, "get", getFn);
-    JS_SetPropertyStr(ctx, proto, "set", setFn);
+    js::Value getFn = js::NewCFunctionData(ctx, ArrayGet, actx->rank, 0, 1, &holder);
+    js::Value setFn = js::NewCFunctionData(ctx, ArraySet, actx->rank + 1, 0, 1, &holder);
+    js::SetPropertyStr(ctx, proto, "get", getFn);
+    js::SetPropertyStr(ctx, proto, "set", setFn);
 
-    JSValue lengthGet = JS_NewCFunctionData(ctx, ArrayLengthGet, 0, 0, 1, &holder);
-    JSValue lengthSet = JS_NewCFunctionData(ctx, ArrayLengthSet, 1, 0, 1, &holder);
-    JSAtom atom = JS_NewAtom(ctx, "length");
-    JS_DefinePropertyGetSet(ctx, proto, atom, lengthGet, lengthSet, JS_PROP_C_W_E);
-    JS_FreeAtom(ctx, atom);
-    JS_FreeValue(ctx, holder);
+    js::Value lengthGet = js::NewCFunctionData(ctx, ArrayLengthGet, 0, 0, 1, &holder);
+    js::Value lengthSet = js::NewCFunctionData(ctx, ArrayLengthSet, 1, 0, 1, &holder);
+    js::Atom atom = js::NewAtom(ctx, "length");
+    js::DefinePropertyGetSet(ctx, proto, atom, lengthGet, lengthSet, js::PropertyConfigurableWritableEnumerable);
+    js::FreeAtom(ctx, atom);
+    js::FreeValue(ctx, holder);
 
     if (binding != nullptr)
     {

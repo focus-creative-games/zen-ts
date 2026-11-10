@@ -46,6 +46,7 @@ struct OpaqueParameterData
     HandleGenerationType generation;
     const Il2CppType* type;
     void* valueAddress;
+    const MarshalMetaInfo* meta;
 };
 
 static std::vector<OpaqueParameterData> s_opaqueParameterDataStack;
@@ -62,28 +63,28 @@ static void ExtractHandle(OpaqueParameterHandleType handle, HandleGenerationType
     index = (HandleIndexType)handle;
 }
 
-static OpaqueParameterHandleType AllocateOpaqueParameterHandle(const Il2CppType* type, void* valueAddress)
+static OpaqueParameterHandleType AllocateOpaqueParameterHandle(const Il2CppType* type, void* valueAddress, const MarshalMetaInfo* meta)
 {
     HandleIndexType index = (HandleIndexType)s_opaqueParameterDataStack.size();
-    s_opaqueParameterDataStack.push_back(OpaqueParameterData{s_handleGeneration, type, valueAddress});
+    s_opaqueParameterDataStack.push_back(OpaqueParameterData{s_handleGeneration, type, valueAddress, meta});
     return ComposeHandle(s_handleGeneration, index);
 }
 
-static bool TryGetData(JSContext* ctx, JSValueConst handle, OpaqueParameterData** outData)
+static bool TryGetData(js::Context* ctx, js::ValueConst handle, OpaqueParameterData** outData)
 {
-    if (outData == nullptr || !JS_IsObject(handle))
+    if (outData == nullptr || !js::IsObject(handle))
         return false;
 
-    JSValue flag = JS_GetPropertyStr(ctx, handle, "__zents_opaque");
-    bool isOpaque = JS_IsBool(flag) && JS_ToBool(ctx, flag);
-    JS_FreeValue(ctx, flag);
+    js::Value flag = js::GetPropertyStr(ctx, handle, "__zents_opaque");
+    bool isOpaque = js::IsBool(flag) && js::ToBool(ctx, flag);
+    js::FreeValue(ctx, flag);
     if (!isOpaque)
         return false;
 
-    JSValue hv = JS_GetPropertyStr(ctx, handle, "__zents_handle");
+    js::Value hv = js::GetPropertyStr(ctx, handle, "__zents_handle");
     int64_t raw = 0;
-    bool ok = JS_IsNumber(hv) && JS_ToInt64(ctx, &raw, hv) == 0;
-    JS_FreeValue(ctx, hv);
+    bool ok = js::IsNumber(hv) && js::ToInt64(ctx, &raw, hv) == 0;
+    js::FreeValue(ctx, hv);
     if (!ok)
         return false;
 
@@ -103,10 +104,7 @@ static void ResolveSlot(const OpaqueParameterData& data, const Il2CppType** outT
 {
     if (data.type->byref)
     {
-        static thread_local Il2CppType s_deref;
-        s_deref = *data.type;
-        s_deref.byref = false;
-        *outType = &s_deref;
+        *outType = &il2cpp::vm::Class::FromIl2CppType(data.type)->byval_arg;
         *outAddr = *reinterpret_cast<void**>(data.valueAddress);
     }
     else
@@ -138,58 +136,58 @@ void OpaqueParameterScope::Reset()
         s_handleGeneration = 1;
 }
 
-JSValue OpaqueValueMarshal::Push(JSContext* ctx, void* valueAddress, const Il2CppType* type)
+js::Value OpaqueValueMarshal::Push(js::Context* ctx, void* valueAddress, const Il2CppType* type, const MarshalMetaInfo* meta)
 {
-    OpaqueParameterHandleType handle = AllocateOpaqueParameterHandle(type, valueAddress);
-    JSValue obj = JS_NewObject(ctx);
-    JS_SetPropertyStr(ctx, obj, "__zents_opaque", JS_NewBool(ctx, 1));
-    JS_SetPropertyStr(ctx, obj, "__zents_handle", JS_NewInt64(ctx, (int64_t)handle));
+    OpaqueParameterHandleType handle = AllocateOpaqueParameterHandle(type, valueAddress, meta);
+    js::Value obj = js::NewObject(ctx);
+    js::SetPropertyStr(ctx, obj, "__zents_opaque", js::NewBool(ctx, 1));
+    js::SetPropertyStr(ctx, obj, "__zents_handle", js::NewInt64(ctx, (int64_t)handle));
     return obj;
 }
 
-bool OpaqueValueMarshal::IsOpaqueHandle(JSContext* ctx, JSValueConst value)
+bool OpaqueValueMarshal::IsOpaqueHandle(js::Context* ctx, js::ValueConst value)
 {
-    if (ctx == nullptr || !JS_IsObject(value))
+    if (ctx == nullptr || !js::IsObject(value))
         return false;
-    JSValue flag = JS_GetPropertyStr(ctx, value, "__zents_opaque");
-    bool isOpaque = JS_IsBool(flag) && JS_ToBool(ctx, flag);
-    JS_FreeValue(ctx, flag);
+    js::Value flag = js::GetPropertyStr(ctx, value, "__zents_opaque");
+    bool isOpaque = js::IsBool(flag) && js::ToBool(ctx, flag);
+    js::FreeValue(ctx, flag);
     return isOpaque;
 }
 
-JSValue OpaqueValueMarshal::GetValue(JSContext* ctx, JSValueConst handle)
+js::Value OpaqueValueMarshal::GetValue(js::Context* ctx, js::ValueConst handle)
 {
     if (!IsOpaqueHandle(ctx, handle))
-        return JS_ThrowTypeError(ctx, "zents: invalid opaque parameter handle");
+        return js::ThrowTypeError(ctx, "zents: invalid opaque parameter handle");
 
     OpaqueParameterData* data = nullptr;
     if (!TryGetData(ctx, handle, &data))
-        return JS_ThrowTypeError(ctx, "zents: invalid opaque parameter handle (expired)");
+        return js::ThrowTypeError(ctx, "zents: invalid opaque parameter handle (expired)");
 
     const Il2CppType* type = nullptr;
     void* addr = nullptr;
     ResolveSlot(*data, &type, &addr);
     if (addr == nullptr)
-        return JS_NULL;
+        return js::Null();
 
-    const MarshalMetaInfo* meta = MarshalMeta::TryCreateDefault(type);
+    const MarshalMetaInfo* meta = data->meta != nullptr && data->meta->marshalAsKind != MarshalAsKind::OpaqueValue ? data->meta : MarshalMeta::TryCreateDefault(type);
     if (meta == nullptr)
-        return JS_ThrowTypeError(ctx, "zents: opaque value type not supported yet");
+        return js::ThrowTypeError(ctx, "zents: opaque value type not supported yet");
     return meta->cs2jsWriter(ctx, addr, meta);
 }
 
-void OpaqueValueMarshal::SetValue(JSContext* ctx, JSValueConst handle, JSValueConst value)
+void OpaqueValueMarshal::SetValue(js::Context* ctx, js::ValueConst handle, js::ValueConst value)
 {
     if (!IsOpaqueHandle(ctx, handle))
     {
-        JS_ThrowTypeError(ctx, "zents: invalid opaque parameter handle");
+        js::ThrowTypeError(ctx, "zents: invalid opaque parameter handle");
         return;
     }
 
     OpaqueParameterData* data = nullptr;
     if (!TryGetData(ctx, handle, &data))
     {
-        JS_ThrowTypeError(ctx, "zents: invalid opaque parameter handle (expired)");
+        js::ThrowTypeError(ctx, "zents: invalid opaque parameter handle (expired)");
         return;
     }
 
@@ -198,40 +196,40 @@ void OpaqueValueMarshal::SetValue(JSContext* ctx, JSValueConst handle, JSValueCo
     ResolveSlot(*data, &type, &addr);
     if (addr == nullptr)
     {
-        JS_ThrowTypeError(ctx, "zents: opaque value target is null");
+        js::ThrowTypeError(ctx, "zents: opaque value target is null");
         return;
     }
 
-    const MarshalMetaInfo* meta = MarshalMeta::TryCreateDefault(type);
+    const MarshalMetaInfo* meta = data->meta != nullptr && data->meta->marshalAsKind != MarshalAsKind::OpaqueValue ? data->meta : MarshalMeta::TryCreateDefault(type);
     if (meta == nullptr)
     {
-        JS_ThrowTypeError(ctx, "zents: opaque value type not supported yet");
+        js::ThrowTypeError(ctx, "zents: opaque value type not supported yet");
         return;
     }
 
     void* tempStorage = nullptr;
     void* dest = meta->passByValue ? &tempStorage : addr;
     meta->js2csWriter(ctx, value, dest, meta);
-    if (JS_HasException(ctx))
+    if (js::HasException(ctx))
         return;
     if (meta->passByValue)
         *reinterpret_cast<void**>(addr) = tempStorage;
 }
 
-JSValue OpaqueValueMarshal::ToUserData(JSContext* ctx, JSValueConst handle)
+js::Value OpaqueValueMarshal::ToUserData(js::Context* ctx, js::ValueConst handle)
 {
     if (!IsOpaqueHandle(ctx, handle))
-        return JS_ThrowTypeError(ctx, "zents: invalid opaque parameter handle");
+        return js::ThrowTypeError(ctx, "zents: invalid opaque parameter handle");
 
     OpaqueParameterData* data = nullptr;
     if (!TryGetData(ctx, handle, &data))
-        return JS_ThrowTypeError(ctx, "zents: invalid opaque parameter handle (expired)");
+        return js::ThrowTypeError(ctx, "zents: invalid opaque parameter handle (expired)");
 
     const Il2CppType* type = nullptr;
     void* addr = nullptr;
     ResolveSlot(*data, &type, &addr);
     if (addr == nullptr)
-        return JS_ThrowTypeError(ctx, "zents: to_user_data: null target");
+        return js::ThrowTypeError(ctx, "zents: to_user_data: null target");
 
     Il2CppClass* klass = il2cpp::vm::Class::FromIl2CppType(type);
     if (klass == nullptr || !il2cpp::vm::Class::IsValuetype(klass) || klass->enumtype
@@ -242,15 +240,15 @@ JSValue OpaqueValueMarshal::ToUserData(JSContext* ctx, JSValueConst handle)
         || klass == il2cpp_defaults.int64_class || klass == il2cpp_defaults.uint64_class
         || klass == il2cpp_defaults.single_class || klass == il2cpp_defaults.double_class
         || klass == il2cpp_defaults.int_class || klass == il2cpp_defaults.uint_class)
-        return JS_ThrowTypeError(ctx, "zents: to_user_data expects a struct opaque value");
+        return js::ThrowTypeError(ctx, "zents: to_user_data expects a struct opaque value");
 
-    const MarshalMetaInfo* meta = MarshalMeta::TryCreateDefault(type);
+    const MarshalMetaInfo* meta = data->meta != nullptr && data->meta->marshalAsKind != MarshalAsKind::OpaqueValue ? data->meta : MarshalMeta::TryCreateDefault(type);
     if (meta == nullptr)
-        return JS_ThrowTypeError(ctx, "zents: to_user_data type not supported");
+        return js::ThrowTypeError(ctx, "zents: to_user_data type not supported");
     return StructMarshal::Cs2JsStruct(ctx, addr, meta);
 }
 
-bool OpaqueValueMarshal::TryGetValueAddress(JSContext* ctx, JSValueConst handle, void** outAddr)
+bool OpaqueValueMarshal::TryGetValueAddress(js::Context* ctx, js::ValueConst handle, void** outAddr, const Il2CppType* expectedType)
 {
     if (outAddr == nullptr || !IsOpaqueHandle(ctx, handle))
         return false;
@@ -261,8 +259,9 @@ bool OpaqueValueMarshal::TryGetValueAddress(JSContext* ctx, JSValueConst handle,
     if (data->valueAddress == nullptr)
         return false;
 
-    /* Push stores the invoker arg slot pointer; byref MethodBridge needs that same address. */
-    *outAddr = data->valueAddress;
+    const Il2CppType* element=nullptr;void* slot=nullptr;ResolveSlot(*data,&element,&slot);
+    if(expectedType && il2cpp::vm::Class::FromIl2CppType(expectedType)!=il2cpp::vm::Class::FromIl2CppType(element))return false;
+    *outAddr = slot;
     return true;
 }
 }

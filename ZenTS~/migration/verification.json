@@ -1,0 +1,95 @@
+{
+  "verified_utc": "2026-11-08T04:49:56.061326+00:00",
+  "engine": "QuickJsTransition",
+  "scope": "P0/P1, not V8/HostJs runtime acceptance",
+  "editor": {
+    "unity": "2022.3.62f3",
+    "host": "Windows x64",
+    "exit_code": 0,
+    "smoke": {
+      "total": 8,
+      "passed": 8
+    },
+    "js_suites": {
+      "total": 55,
+      "passed": 55
+    }
+  },
+  "player": {
+    "target": "Win64 Debug, existing exported C#",
+    "exit_code": 0,
+    "smoke": {
+      "total": 10,
+      "passed": 10
+    },
+    "js_suites": {
+      "total": 55,
+      "passed": 55
+    },
+    "typescript_demos": {
+      "total": 3,
+      "passed": 3
+    }
+  },
+  "native_build": "passed",
+  "local_install": "passed",
+  "architecture_guard": "passed",
+  "sdk_independent_cpp17_contract": "passed",
+  "v8_recipe_dry_runs": 5,
+  "v8_unpinned_revision_rejected": true,
+  "v8_artifact_hash_test": "passed",
+  "actual_v8_build": false,
+  "hostjs_runtime_tested": false,
+  "platforms_not_tested": [
+    "macOS",
+    "Android",
+    "iOS",
+    "WebGL",
+    "WeChat"
+  ],
+  "source_test_expectations_edited": false,
+  "runtime_sync": {
+    "exported_win64": {
+      "runtime_sources_match": true,
+      "mismatches": []
+    },
+    "local_install": {
+      "runtime_sources_match": true,
+      "mismatches": []
+    }
+  },
+  "logs": {
+    "p0-player-baseline.log": {
+      "path": "D:\\workspace\\zts\\ZenTSTest\\p0-player-baseline.log",
+      "sha256": "86e2432eb83be99d28367da9f5ccf809680c990ad66b334fbdc227ec53eab09b"
+    },
+    "p1-msbuild.log": {
+      "path": "D:\\workspace\\zts\\ZenTSTest\\p1-msbuild.log",
+      "sha256": "62ffd5a0b7202e0bedf568f8fb236a4c935819031c3b4e168f2e8e09b8d9043a"
+    },
+    "p1-player.log": {
+      "path": "D:\\workspace\\zts\\ZenTSTest\\p1-player.log",
+      "sha256": "56764c84dbf733a09450acddc6277d1fcbd015434693c5c6eae494f2acbbd53d"
+    },
+    "p1-editor.log": {
+      "path": "D:\\workspace\\zts\\ZenTSTest\\p1-editor.log",
+      "sha256": "5e9ac657051f1837174c92a99f40a5ed7593ae0ff62f126a6326dd37fadf66e8"
+    },
+    "p1-install.log": {
+      "path": "D:\\workspace\\zts\\ZenTSTest\\p1-install.log",
+      "sha256": "791cb3c21e10d6b20cfdce2cb8216040a4f4cd42b74ffcdb712d0c3397dea0d1"
+    },
+    "p1-contract.log": {
+      "path": "D:\\workspace\\zts\\ZenTSTest\\p1-contract.log",
+      "sha256": "2594f760decb12b82f62dce28a13433ac901b9eae9b79a0f405e740673a2ea5b"
+    },
+    "p1-boundaries.log": {
+      "path": "D:\\workspace\\zts\\ZenTSTest\\p1-boundaries.log",
+      "sha256": "1c51cd0154b213258e5df0994c0897af2f53093e13f951169340730086523f5d"
+    },
+    "p1-v8-recipes.json": {
+      "path": "D:\\workspace\\zts\\ZenTSTest\\p1-v8-recipes.json",
+      "sha256": "52c11ad8633a7ba6a62c3d168b36fc8121790c8937590d2fc07bbe9999eb99a8"
+    }
+  }
+}

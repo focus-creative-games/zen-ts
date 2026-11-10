@@ -123,12 +123,14 @@ namespace zents
 
         /// Reads [JsMarshalAs] or MarshalAs XML fallback; returns kind matching JsMarshalType ordinals.
         /// Members filled for Table / UnpackedValues. Attribute always wins over XML.
+        static bool TryReadFieldMarshalAs(FieldInfo* field, int32_t* kind, std::vector<std::string>* members);
         static bool TryReadJsMarshalAs(
             const MethodInfo* method,
             int paramIndex,
             int32_t* outKind,
             std::vector<std::string>* outMembers);
 
+        static bool MethodGenericTypeArgsSatisfyConstraints(const MethodInfo* open, const Il2CppType* const* types, uint32_t count);
         static bool IsParamsParameter(const MethodInfo* method, int paramIndex);
     };
 }

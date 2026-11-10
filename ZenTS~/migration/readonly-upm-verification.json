@@ -1,0 +1,135 @@
+{
+  "date": "2026-11-10T04:57:10.900593+00:00",
+  "package": "Packages/com.code-philosophy.zen-ts",
+  "fixture": {
+    "dependency": "git+file:///D:/Temp/zents-v8-official/readonly-fixture/repo#5249f6db732171cb36e8a0654cfd326bf8091393",
+    "package_source": "Git",
+    "resolved_in": "Library/PackageCache",
+    "os_acl": "Read/Execute only during tests; both new-file and existing-source write denied; restored after tests",
+    "package_files_sha256_unchanged": 472,
+    "generated_assets_repair_stable_guid": true,
+    "native_build_from_readonly_package": true,
+    "rebuilt_sdk_full_editor_tests": true,
+    "invalid_abi_rejected": true,
+    "corrupt_sdk_rejected": true,
+    "loaded_plugin_replacement_blocked": true
+  },
+  "platforms": [
+    {
+      "name": "windows-editor",
+      "js": "56/56",
+      "smoke": "8/8",
+      "ts": "3/3",
+      "log": "readonly-editor-final.log",
+      "log_sha256": "53c6d604862c7e0d0094973746b0e419d50ac2d92cc019f5f1fd35931512a91e"
+    },
+    {
+      "name": "windows-player",
+      "js": "56/56",
+      "smoke": "10/10",
+      "ts": "3/3",
+      "log": "p5-player.log",
+      "log_sha256": "44fce0db419468370824e1591d9187ee7625b0d1dcc0274c79451f1b763730d1"
+    },
+    {
+      "name": "android-x64",
+      "js": "56/56",
+      "smoke": "10/10",
+      "ts": "3/3",
+      "log": "p5-android-x64-player.log",
+      "log_sha256": "369d30068a3271ca1bf3a5bb0272846a80c638094e080f6a4b115837334cd327"
+    },
+    {
+      "name": "android-arm64",
+      "js": "56/56",
+      "smoke": "10/10",
+      "ts": "3/3",
+      "log": "p5-android-arm64-player.log",
+      "log_sha256": "a801457e33793f9502e7ca06e3f55cd301f0dd329b659ba705cf80dda9226558"
+    },
+    {
+      "name": "webgl",
+      "js": "56/56",
+      "smoke": "10/10",
+      "ts": "3/3",
+      "log": "p4-webgl-browser.log",
+      "log_sha256": "7b6524880ea5152f85eaac0d98b83a3438a9617f308d4c0c40aa3439cc4c05be"
+    },
+    {
+      "name": "macos-editor",
+      "js": "56/56",
+      "smoke": "8/8",
+      "ts": "3/3",
+      "log": "readonly-evidence/macos/readonly-editor.log",
+      "log_sha256": "a5c2aab291f3352193f2d93551e100358bdba1a92a0e57110c2cdd20d68c5b10"
+    },
+    {
+      "name": "macos-arm64",
+      "js": "56/56",
+      "smoke": "10/10",
+      "ts": "3/3",
+      "log": "readonly-evidence/macos/readonly-mac-arm64-player.log",
+      "log_sha256": "24cc18927950e7b9691347eb3b297ce67048ed03eb6356314f3d3a6a5f4cd8fd"
+    },
+    {
+      "name": "macos-x64",
+      "js": "56/56",
+      "smoke": "10/10",
+      "ts": "3/3",
+      "log": "readonly-evidence/macos/readonly-mac-x64-player.log",
+      "log_sha256": "4a291313b69d01b10c02a023b23e6f88705097a6f21e19e1ee55d13ebb0553e2"
+    },
+    {
+      "name": "ios-simulator-x64",
+      "js": "56/56",
+      "smoke": "10/10",
+      "ts": "3/3",
+      "log": "readonly-evidence/macos/readonly-ios-simulator-player.log",
+      "log_sha256": "59294c18dd10904c4556a979b23ba1f76f73d6775037e0ac10b0e0df4e629314"
+    }
+  ],
+  "ios_device": {
+    "result": "unsigned Xcode build succeeded",
+    "runtime": "not tested; no physical device"
+  },
+  "windows_domain_reload": "1 -> 0 -> 1 PASS",
+  "macos_domain_reload": "1 -> 0 -> 1 PASS",
+  "evidence_root": "readonly-evidence",
+  "limitations": [
+    "iOS physical device runtime not tested; unsigned device build succeeded",
+    "macOS x64 Player ran through Rosetta on M1; Intel macOS Editor not installed",
+    "Android tests ran on MuMu API 32; ARM64 uses emulator translation",
+    "Remote Unity 2022.3.56f1c1 on macOS 26 can stall in Unity Curl shutdown after Domain Reload PASS; sampled and terminated only after assertions passed",
+    "WeChat Developer Tools and Tuanjie were not rerun in this installation-focused change"
+  ],
+  "sdks": {
+    "android-arm64": "af47bd0c3185e2c7b48e6cecf272efcadedab168f4ed2b3090b51aa73962dbc0",
+    "android-x64": "df0d803fe6a680f1d310599eb931e4b1780e7030a5ef51d61fa67431744e8c9d",
+    "ios-arm64": "ac84addea1c0a3698970338351466b9f1e33bda7581b4bfefc034a23ea7ef798",
+    "ios-simulator-x64": "f1bdd51f47938f7936532137855628f33284e7327af8c09cb6f4b5096f050e12",
+    "macos-arm64": "d4df4073102addf15620ef4694a43692895dd0e99af942240f23c0d8294b5e60",
+    "macos-x64": "29ea8e097c8c6f377915717418bdef71a408650bb97fb0b311f3669bd30fa115",
+    "windows-x64": "aeba25338073386388a33ed8839f3bda90c01a9db0660c48bfdb48cae183e4f9"
+  },
+  "evidence": {
+    "readonly-evidence/final-readonly.log": "a9aaf827890a93fb24862e35c52566630fb2e3fd6d95f626415ea9fa3bec501a",
+    "readonly-evidence/readonly-native-build.log": "a3895a9e359dc1621380a0797fe5d5d23b76cb82aaded28e82efd0512206997e",
+    "readonly-evidence/readonly-run.log": "94de4eb6f61a213331929b1550856bd78bcb5df9f3d10c79b8990a9621081e61",
+    "readonly-evidence/rebuilt-sdk-readonly.log": "1388bbd89fcfba17488483b74758eaf358e090894e16e0aaf54fbf99d087e11f",
+    "readonly-evidence/repair-run.log": "e8d1d60e865b3e0b6aca0e1e771bcb2faee04bef236366738dc5b4faed2c7681",
+    "readonly-evidence/safety.log": "3341fece9c3a099ac3c6f74c6faabb1586f0e5f3802b229adc1df4ba5a6c1f2c",
+    "readonly-evidence/macos/readonly-domain-quit-sample.txt": "0982335e7606834eeaac50ae25cb4b741f7b063a050e44e7d596dffbcac1af34",
+    "readonly-evidence/macos/readonly-domain-reload.log": "a3962a508fd91a1d1fc5a36c4967ebc50c11d6ea7cf27fc52447c16aca7d8078",
+    "readonly-evidence/macos/readonly-editor.log": "a5c2aab291f3352193f2d93551e100358bdba1a92a0e57110c2cdd20d68c5b10",
+    "readonly-evidence/macos/readonly-ios-device-export.log": "f593f67fc72de39acb87e8359fd4d4ac954474fd1374d06fae7c599f85235771",
+    "readonly-evidence/macos/readonly-ios-device-xcode.log": "4708a04a9b4de137d63b3f103fddde9f769ca50a2219b399ab35cebd252aeeed",
+    "readonly-evidence/macos/readonly-ios-simulator-export.log": "c510a967699984fd16e7e883b1bb4dd57a3c09002537a97c60f0257a3086a4e8",
+    "readonly-evidence/macos/readonly-ios-simulator-player.log": "59294c18dd10904c4556a979b23ba1f76f73d6775037e0ac10b0e0df4e629314",
+    "readonly-evidence/macos/readonly-ios-simulator-xcode.log": "c38dbb3dbf1f7b5003b0aabdb25e053f853d1ed932afee7b1cc53f2e23afcd70",
+    "readonly-evidence/macos/readonly-ios.log": "21733483e2415dfa4124aca9c7a0cf5be6d32912386f9a8129c22713b3c78869",
+    "readonly-evidence/macos/readonly-mac-arm64-build.log": "696d751fc0718638c2fb49e2354b9f74c7bb0864c3ba373aa6b864cbef392e34",
+    "readonly-evidence/macos/readonly-mac-arm64-player.log": "24cc18927950e7b9691347eb3b297ce67048ed03eb6356314f3d3a6a5f4cd8fd",
+    "readonly-evidence/macos/readonly-mac-x64-build.log": "168ce5161f7ddffef2c35bb7f5bf2cf9d9a771219726e7e4c3b653cbebd4dac8",
+    "readonly-evidence/macos/readonly-mac-x64-player.log": "4a291313b69d01b10c02a023b23e6f88705097a6f21e19e1ee55d13ebb0553e2"
+  }
+}

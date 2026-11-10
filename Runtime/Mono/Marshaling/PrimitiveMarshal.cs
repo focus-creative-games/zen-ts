@@ -26,7 +26,7 @@ namespace ZenTS.Marshaling
 {
     internal static class PrimitiveMarshal
     {
-        public static JSValue Push(IntPtr ctx, object value)
+        public static JsValue Push(IntPtr ctx, object value)
         {
             if (value == null)
             {
@@ -52,7 +52,7 @@ namespace ZenTS.Marshaling
                 case double d:
                     return JsValueUtil.NewFloat64(d);
                 case string s:
-                    return QuickJsDll.NewString(ctx, s);
+                    return EngineApi.NewString(ctx, s);
                 case long l:
                     if (l >= int.MinValue && l <= int.MaxValue)
                     {
@@ -76,7 +76,7 @@ namespace ZenTS.Marshaling
             }
         }
 
-        public static object Pop(IntPtr ctx, JSValue jsValue)
+        public static object Pop(IntPtr ctx, JsValue jsValue)
         {
             int tag = JsValueUtil.GetNormTag(jsValue);
             switch (tag)
@@ -86,9 +86,9 @@ namespace ZenTS.Marshaling
                 case JsValueUtil.TagUndefined:
                     return DBNull.Value;
                 case JsValueUtil.TagBool:
-                    return jsValue.UInt64 != 0;
+                    return JsValueUtil.GetUInt64(jsValue) != 0;
                 case JsValueUtil.TagInt:
-                    return (int)jsValue.UInt64;
+                    return (int)JsValueUtil.GetUInt64(jsValue);
                 case JsValueUtil.TagFloat64:
                     return JsValueUtil.GetFloat64(jsValue);
                 case JsValueUtil.TagObject:
@@ -97,7 +97,7 @@ namespace ZenTS.Marshaling
                         return obj;
                     }
 
-                    if (QuickJsDll.JS_IsArray(ctx, jsValue) != 0)
+                    if (EngineApi.IsArray(ctx, jsValue) != 0)
                     {
                         return ArrayMarshal.FromJsArray(ctx, jsValue);
                     }
@@ -106,7 +106,7 @@ namespace ZenTS.Marshaling
                 default:
                     if (tag == JsValueUtil.TagString)
                     {
-                        IntPtr cstr = QuickJsDll.JS_ToCStringLen2(ctx, out UIntPtr len, jsValue, 0);
+                        IntPtr cstr = EngineApi.ToCStringLen2(ctx, out UIntPtr len, jsValue, 0);
                         if (cstr == IntPtr.Zero)
                         {
                             return string.Empty;
@@ -118,7 +118,7 @@ namespace ZenTS.Marshaling
                         }
                         finally
                         {
-                            QuickJsDll.JS_FreeCString(ctx, cstr);
+                            EngineApi.FreeCString(ctx, cstr);
                         }
                     }
 
@@ -126,10 +126,9 @@ namespace ZenTS.Marshaling
             }
         }
 
-        public static void RejectBigInt(JSValue jsValue)
+        public static void RejectBigInt(JsValue jsValue)
         {
-            if (JsValueUtil.GetTag(jsValue) == JsValueUtil.TagBigInt ||
-                JsValueUtil.GetTag(jsValue) == JsValueUtil.TagFirst)
+            if (JsValueUtil.GetTag(jsValue) == JsValueUtil.TagBigInt)
             {
                 throw new JsScriptException("zents: BigInt marshal is not supported.");
             }

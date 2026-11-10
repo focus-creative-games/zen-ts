@@ -19,6 +19,7 @@
 // SOFTWARE.
 
 #include "StructMarshal.h"
+#include "gc/GarbageCollector.h"
 #include "MarshalMeta.h"
 #include "ObjectRegistry.h"
 
@@ -52,20 +53,20 @@ void NullableSetHasValue(void* dataAddr)
 }
 } // namespace
 
-void StructMarshal::Js2CsStruct(JSContext* ctx, JSValueConst value, void* address, const MarshalMetaInfo* meta)
+void StructMarshal::Js2CsStruct(js::Context* ctx, js::ValueConst value, void* address, const MarshalMetaInfo* meta)
 {
     if (meta == nullptr || meta->typeKlass == nullptr)
     {
-        JS_ThrowTypeError(ctx, "zents: missing struct marshal meta");
+        js::ThrowTypeError(ctx, "zents: missing struct marshal meta");
         return;
     }
 
     Il2CppClass* klass = meta->typeKlass;
     size_t size = (size_t)(klass->instance_size - sizeof(Il2CppObject));
 
-    if (JS_IsNull(value) || JS_IsUndefined(value))
+    if (js::IsNull(value) || js::IsUndefined(value))
     {
-        JS_ThrowTypeError(ctx, "zents: struct argument cannot be null");
+        js::ThrowTypeError(ctx, "zents: struct argument cannot be null");
         return;
     }
 
@@ -74,7 +75,7 @@ void StructMarshal::Js2CsStruct(JSContext* ctx, JSValueConst value, void* addres
         Il2CppObject* obj = ObjectRegistry::Get(ctx, value);
         if (obj == nullptr || !il2cpp::vm::Class::IsAssignableFrom(klass, obj->klass))
         {
-            JS_ThrowTypeError(
+            js::ThrowTypeError(
                 ctx,
                 "zents: argument mismatch: expected struct %s",
                 MetadataUtil::GetTypeFullName(klass));
@@ -82,19 +83,20 @@ void StructMarshal::Js2CsStruct(JSContext* ctx, JSValueConst value, void* addres
         }
         void* src = ObjectUnbox(obj);
         std::memcpy(address, src, size);
+        if(klass->has_references)il2cpp::gc::GarbageCollector::SetWriteBarrier(reinterpret_cast<void**>(address),size);
         return;
     }
 
-    JS_ThrowTypeError(
+    js::ThrowTypeError(
         ctx,
         "zents: argument mismatch: expected struct %s",
         MetadataUtil::GetTypeFullName(klass));
 }
 
-JSValue StructMarshal::Cs2JsStruct(JSContext* ctx, void* address, const MarshalMetaInfo* meta)
+js::Value StructMarshal::Cs2JsStruct(js::Context* ctx, void* address, const MarshalMetaInfo* meta)
 {
     if (meta == nullptr || meta->typeKlass == nullptr)
-        return JS_ThrowTypeError(ctx, "zents: missing struct marshal meta");
+        return js::ThrowTypeError(ctx, "zents: missing struct marshal meta");
 
     Il2CppClass* klass = meta->typeKlass;
     Il2CppObject* boxed = il2cpp::vm::Object::Box(klass, address);
@@ -102,16 +104,16 @@ JSValue StructMarshal::Cs2JsStruct(JSContext* ctx, void* address, const MarshalM
     return ObjectRegistry::PushByVal(ctx, boxed, binding);
 }
 
-void StructMarshal::Js2CsNullable(JSContext* ctx, JSValueConst value, void* address, const MarshalMetaInfo* meta)
+void StructMarshal::Js2CsNullable(js::Context* ctx, js::ValueConst value, void* address, const MarshalMetaInfo* meta)
 {
     if (meta == nullptr || meta->typeKlass == nullptr)
     {
-        JS_ThrowTypeError(ctx, "zents: missing nullable marshal meta");
+        js::ThrowTypeError(ctx, "zents: missing nullable marshal meta");
         return;
     }
 
     Il2CppClass* nullableKlass = meta->typeKlass;
-    if (JS_IsNull(value) || JS_IsUndefined(value))
+    if (js::IsNull(value) || js::IsUndefined(value))
     {
         NullableClear(nullableKlass, address);
         return;
@@ -121,30 +123,30 @@ void StructMarshal::Js2CsNullable(JSContext* ctx, JSValueConst value, void* addr
     const MarshalMetaInfo* elemMeta = MarshalMeta::TryCreateDefault(&element->byval_arg);
     if (elemMeta == nullptr)
     {
-        JS_ThrowTypeError(ctx, "zents: nullable element type not supported");
+        js::ThrowTypeError(ctx, "zents: nullable element type not supported");
         return;
     }
 
     void* valueAddr = NullableValueAddr(nullableKlass, address);
     elemMeta->js2csWriter(ctx, value, valueAddr, elemMeta);
-    if (JS_HasException(ctx))
+    if (js::HasException(ctx))
         return;
     NullableSetHasValue(address);
 }
 
-JSValue StructMarshal::Cs2JsNullable(JSContext* ctx, void* address, const MarshalMetaInfo* meta)
+js::Value StructMarshal::Cs2JsNullable(js::Context* ctx, void* address, const MarshalMetaInfo* meta)
 {
     if (meta == nullptr || meta->typeKlass == nullptr)
-        return JS_ThrowTypeError(ctx, "zents: missing nullable marshal meta");
+        return js::ThrowTypeError(ctx, "zents: missing nullable marshal meta");
 
     Il2CppClass* nullableKlass = meta->typeKlass;
     if (!il2cpp::vm::Object::NullableHasValue(nullableKlass, address))
-        return JS_NULL;
+        return js::Null();
 
     Il2CppClass* element = il2cpp::vm::Class::GetNullableArgument(nullableKlass);
     const MarshalMetaInfo* elemMeta = MarshalMeta::TryCreateDefault(&element->byval_arg);
     if (elemMeta == nullptr)
-        return JS_ThrowTypeError(ctx, "zents: nullable element type not supported");
+        return js::ThrowTypeError(ctx, "zents: nullable element type not supported");
     return elemMeta->cs2jsWriter(ctx, NullableValueAddr(nullableKlass, address), elemMeta);
 }
 }

@@ -1,4 +1,10 @@
 <linker>
   <assembly fullname="ZenTS.Common" preserve="all" />
   <assembly fullname="ZenTS.Il2Cpp" preserve="all" />
+  <assembly fullname="ZenTS.HostJs" preserve="all" />
+  <assembly fullname="UnityEngine.CoreModule">
+    <type fullname="UnityEngine.GameObject"><method name="GetComponent"/></type>
+    <type fullname="UnityEngine.Component"><method name="GetComponent"/></type>
+    <type fullname="UnityEngine.Transform"><property name="childCount"/></type>
+  </assembly>
 </linker>

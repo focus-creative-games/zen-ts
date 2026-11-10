@@ -31,7 +31,7 @@ namespace ZenTS.Emit
 {
     /// <summary>
     /// Builds a callable type object (STO) + instance prototype (IEO) and keeps them alive
-    /// via <see cref="TypeRegistry"/> strong JSValue holds.
+    /// via <see cref="TypeRegistry"/> strong JsValue holds.
     /// </summary>
     internal static class MetaBinding
     {
@@ -42,13 +42,13 @@ namespace ZenTS.Emit
 
             if (type.IsGenericTypeDefinition)
             {
-                JSValue stub = QuickJsDll.JS_NewObject(ctx);
-                QuickJsDll.JS_SetPropertyStr(ctx, stub, "__zents_type_name", QuickJsDll.NewString(ctx, type.FullName ?? type.Name));
+                JsValue stub = EngineApi.NewObject(ctx);
+                EngineApi.SetPropertyStr(ctx, stub, "__zents_type_name", EngineApi.NewString(ctx, type.FullName ?? type.Name));
                 int typeSlot = ObjectRegistry.Register(type, typeof(Type));
-                QuickJsDll.JS_SetPropertyStr(ctx, stub, "__zents_id", JsValueUtil.NewInt32(typeSlot));
+                EngineApi.SetPropertyStr(ctx, stub, "__zents_id", JsValueUtil.NewInt32(typeSlot));
                 binding.TypeObject = stub;
                 binding.TypeObjectRaw = JsValueUtil.Dup(stub);
-                binding.InstanceProto = QuickJsDll.JS_NewObject(ctx);
+                binding.InstanceProto = EngineApi.NewObject(ctx);
                 binding.HasJsValues = true;
                 return binding;
             }
@@ -59,19 +59,19 @@ namespace ZenTS.Emit
                 return BuildNullableTypeObject(env, type, nullableUnderlying);
             }
 
-            JSValue proto = QuickJsDll.JS_NewObject(ctx);
+            JsValue proto = EngineApi.NewObject(ctx);
             bool isStruct = type.IsValueType && !type.IsEnum && type != typeof(void);
-            JSValue byValProto = default;
-            JSValue ctor = ConstructorEmitter.Emit(env, type, proto);
-            JSValue typeObjectRaw = JsValueUtil.Dup(ctor);
+            JsValue byValProto = default;
+            JsValue ctor = ConstructorEmitter.Emit(env, type, proto);
+            JsValue typeObjectRaw = JsValueUtil.Dup(ctor);
 
             // Tag type object with Type identity for zents.typeof / cast.
             int ctorTypeSlot = ObjectRegistry.Register(type, typeof(Type));
-            QuickJsDll.JS_SetPropertyStr(ctx, ctor, "__zents_id", JsValueUtil.NewInt32(ctorTypeSlot));
-            QuickJsDll.JS_SetPropertyStr(ctx, ctor, "__zents_type_name", QuickJsDll.NewString(ctx, type.FullName ?? type.Name));
+            EngineApi.SetPropertyStr(ctx, ctor, "__zents_id", JsValueUtil.NewInt32(ctorTypeSlot));
+            EngineApi.SetPropertyStr(ctx, ctor, "__zents_type_name", EngineApi.NewString(ctx, type.FullName ?? type.Name));
 
-            QuickJsDll.JS_SetConstructorBit(ctx, ctor, 1);
-            QuickJsDll.JS_SetPropertyStr(ctx, ctor, "prototype", JsValueUtil.Dup(proto));
+            EngineApi.SetConstructorBit(ctx, ctor, 1);
+            EngineApi.SetPropertyStr(ctx, ctor, "prototype", JsValueUtil.Dup(proto));
 
             var seenMethods = new HashSet<string>(StringComparer.Ordinal);
             var seenFields = new HashSet<string>(StringComparer.Ordinal);
@@ -92,7 +92,7 @@ namespace ZenTS.Emit
 
             if (isStruct)
             {
-                byValProto = QuickJsDll.JS_NewObject(ctx);
+                byValProto = EngineApi.NewObject(ctx);
                 var seenByValMethods = new HashSet<string>(StringComparer.Ordinal);
                 var seenByValFields = new HashSet<string>(StringComparer.Ordinal);
                 var seenByValProps = new HashSet<string>(StringComparer.Ordinal);
@@ -110,9 +110,9 @@ namespace ZenTS.Emit
                     BindOrMergeExtension(env, binding, type, byValProto, seenByValMethods, key, ext, isByVal: true);
                 }
 
-                QuickJsDll.JS_SetPropertyStr(ctx, ctor, "__struct", JsValueUtil.NewBool(true));
-                QuickJsDll.JS_SetPropertyStr(ctx, ctor, "__byvalInstanceProto", JsValueUtil.Dup(byValProto));
-                QuickJsDll.JS_SetPropertyStr(ctx, ctor, "__byobjInstanceProto", JsValueUtil.Dup(proto));
+                EngineApi.SetPropertyStr(ctx, ctor, "__struct", JsValueUtil.NewBool(true));
+                EngineApi.SetPropertyStr(ctx, ctor, "__byvalInstanceProto", JsValueUtil.Dup(byValProto));
+                EngineApi.SetPropertyStr(ctx, ctor, "__byobjInstanceProto", JsValueUtil.Dup(proto));
                 binding.ByValInstanceProto = byValProto;
                 binding.ByObjInstanceProto = proto;
             }
@@ -124,7 +124,7 @@ namespace ZenTS.Emit
                 {
                     binding.MemberKeys.Add(name);
                     object value = Enum.Parse(type, name);
-                    QuickJsDll.JS_SetPropertyStr(ctx, ctor, name, JsValueUtil.NewInt32(Convert.ToInt32(value)));
+                    EngineApi.DefinePropertyValueStr(ctx, ctor, name, EnumMarshal.Push(ctx,value), 4);
                 }
             }
 
@@ -132,7 +132,7 @@ namespace ZenTS.Emit
             if (type.IsValueType && !type.IsEnum && type != typeof(void))
             {
                 binding.MemberKeys.Add("_default");
-                JSValue defaultFn = JsCallbackGate.NewCFunction(
+                JsValue defaultFn = JsCallbackGate.NewCFunction(
                     ctx,
                     (c, thisVal, argc, argv) =>
                     {
@@ -148,12 +148,12 @@ namespace ZenTS.Emit
                     },
                     "_default",
                     0);
-                QuickJsDll.JS_SetPropertyStr(ctx, ctor, "_default", defaultFn);
+                EngineApi.SetPropertyStr(ctx, ctor, "_default", defaultFn);
             }
 
             // Strict miss on STO (type object). Instance miss is applied in PushByObj.
-            // Keep TypeObjectRaw for host APIs (register_method) that must mutate the STO tables.
-            if (TryWrapMiss(env, ctor, out JSValue wrappedCtor))
+            // Keep TypeObjectRaw for bind-time initialization and signature caching.
+            if (TryWrapMiss(env, ctor, out JsValue wrappedCtor))
             {
                 JsValueUtil.Free(ctx, ctor);
                 ctor = wrappedCtor;
@@ -171,17 +171,17 @@ namespace ZenTS.Emit
             IntPtr ctx = env.Context;
             var binding = new TypeBinding { Type = nullableType, IsNullable = true };
 
-            JSValue ctor = NullableConstructorEmitter.Emit(env, nullableType, underlyingType);
-            JSValue typeObjectRaw = JsValueUtil.Dup(ctor);
+            JsValue ctor = NullableConstructorEmitter.Emit(env, nullableType, underlyingType);
+            JsValue typeObjectRaw = JsValueUtil.Dup(ctor);
 
             int ctorTypeSlot = ObjectRegistry.Register(nullableType, typeof(Type));
-            QuickJsDll.JS_SetPropertyStr(ctx, ctor, "__zents_id", JsValueUtil.NewInt32(ctorTypeSlot));
-            QuickJsDll.JS_SetPropertyStr(ctx, ctor, "__zents_type_name", QuickJsDll.NewString(ctx, nullableType.FullName ?? nullableType.Name));
-            QuickJsDll.JS_SetPropertyStr(ctx, ctor, "__nullable", JsValueUtil.NewBool(true));
+            EngineApi.SetPropertyStr(ctx, ctor, "__zents_id", JsValueUtil.NewInt32(ctorTypeSlot));
+            EngineApi.SetPropertyStr(ctx, ctor, "__zents_type_name", EngineApi.NewString(ctx, nullableType.FullName ?? nullableType.Name));
+            EngineApi.SetPropertyStr(ctx, ctor, "__nullable", JsValueUtil.NewBool(true));
 
-            QuickJsDll.JS_SetConstructorBit(ctx, ctor, 1);
+            EngineApi.SetConstructorBit(ctx, ctor, 1);
 
-            if (TryWrapMiss(env, ctor, out JSValue wrappedCtor))
+            if (TryWrapMiss(env, ctor, out JsValue wrappedCtor))
             {
                 JsValueUtil.Free(ctx, ctor);
                 ctor = wrappedCtor;
@@ -193,44 +193,43 @@ namespace ZenTS.Emit
             return binding;
         }
 
-        private static bool TryWrapMiss(JsEnv env, JSValue target, out JSValue wrapped)
+        private static bool TryWrapMiss(JsEnv env, JsValue target, out JsValue wrapped)
         {
             return TryWrapMissPublic(env, target, out wrapped);
         }
 
         /// <summary>Used by <see cref="Marshaling.TypedMarshal"/> to wrap instance handles.</summary>
-        internal static bool TryWrapMissPublic(JsEnv env, JSValue target, out JSValue wrapped) =>
+        internal static bool TryWrapMissPublic(JsEnv env, JsValue target, out JsValue wrapped) =>
             TryCallGlobalWrap(env, "__zents_wrap_miss", target, out wrapped);
 
         /// <summary>Make CLR Delegate exotic callable as <c>d(...)</c> (spec marshal/09-FUNCTION §3.2).</summary>
-        internal static bool TryWrapDelegateCallPublic(JsEnv env, JSValue target, out JSValue wrapped) =>
+        internal static bool TryWrapDelegateCallPublic(JsEnv env, JsValue target, out JsValue wrapped) =>
             TryCallGlobalWrap(env, "__zents_wrap_delegate_call", target, out wrapped);
 
-        private static bool TryCallGlobalWrap(JsEnv env, string globalFnName, JSValue target, out JSValue wrapped)
+        private static bool TryCallGlobalWrap(JsEnv env, string globalFnName, JsValue target, out JsValue wrapped)
         {
             wrapped = default;
             IntPtr ctx = env.Context;
-            JSValue global = QuickJsDll.JS_GetGlobalObject(ctx);
+            JsValue global = EngineApi.GetGlobalObject(ctx);
             try
             {
-                JSValue wrap = QuickJsDll.JS_GetPropertyStr(ctx, global, globalFnName);
+                JsValue wrap = EngineApi.GetPropertyStr(ctx, global, globalFnName);
                 try
                 {
-                    if (QuickJsDll.JS_IsFunction(ctx, wrap) == 0)
+                    if (EngineApi.IsFunction(ctx, wrap) == 0)
                     {
                         return false;
                     }
 
                     unsafe
                     {
-                        JSValue arg = target;
-                        JSValue result = QuickJsDll.JS_Call(ctx, wrap, JsValueUtil.Undefined, 1, (IntPtr)(&arg));
+                        JsValue arg = target;
+                        JsValue result = EngineApi.Call(ctx, wrap, JsValueUtil.Undefined, 1, (IntPtr)(&arg));
                         if (JsValueUtil.IsException(result))
                         {
                             return false;
                         }
 
-                        // Proxy / function / object are all TagObject in QuickJS.
                         if (JsValueUtil.GetNormTag(result) != JsValueUtil.TagObject)
                         {
                             JsValueUtil.Free(ctx, result);
@@ -267,22 +266,22 @@ namespace ZenTS.Emit
             JsEnv env,
             TypeBinding binding,
             Type ownerType,
-            JSValue proto,
+            JsValue proto,
             HashSet<string> seenMethods,
             string key,
             MethodInfo ext,
             bool isByVal)
         {
             IntPtr ctx = env.Context;
-            if (seenMethods.Add(key))
+            if (seenMethods.Add("I:" + key))
             {
                 if (!isByVal)
                 {
                     binding.MemberKeys.Add(key);
                 }
 
-                JSValue fn = MethodEmitter.EmitMethod(env, ext, ownerType, isByVal);
-                QuickJsDll.JS_SetPropertyStr(ctx, proto, key, fn);
+                JsValue fn = MethodEmitter.EmitMethod(env, ext, ownerType, isByVal);
+                EngineApi.SetPropertyStr(ctx, proto, key, fn);
                 return;
             }
 
@@ -326,10 +325,10 @@ namespace ZenTS.Emit
                 merged.Add(ext);
             }
 
-            JSValue group = merged.Count == 1
+            JsValue group = merged.Count == 1
                 ? MethodEmitter.EmitMethod(env, merged[0], ownerType, isByVal)
                 : MethodEmitter.EmitOverloadGroup(env, key, merged, ownerType, isByVal);
-            QuickJsDll.JS_SetPropertyStr(ctx, proto, key, group);
+            EngineApi.SetPropertyStr(ctx, proto, key, group);
         }
 
         private static void BindMethods(
@@ -337,15 +336,17 @@ namespace ZenTS.Emit
             TypeBinding binding,
             Type ownerType,
             Type t,
-            JSValue ctor,
-            JSValue proto,
+            JsValue ctor,
+            JsValue proto,
             HashSet<string> seen,
             bool isByVal,
             bool instanceOnly = false)
         {
             IntPtr ctx = env.Context;
             const BindingFlags flags = BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static | BindingFlags.DeclaredOnly;
-            MethodInfo[] methods = t.GetMethods(flags);
+            if (t != ownerType) return;
+            MethodInfo[] methods = EnumerateTypeChain(ownerType).SelectMany(x => x.GetMethods(flags))
+                .GroupBy(m => (m.IsStatic, FormatFullSignatureKey(m))).Select(g => g.First()).ToArray();
 
             // Group overloads by resolved name
             var groups = new Dictionary<string, List<MethodInfo>>(StringComparer.Ordinal);
@@ -366,7 +367,7 @@ namespace ZenTS.Emit
                     continue;
                 }
 
-                string key = ResolveMemberName(method);
+                string key = (method.IsStatic ? "S:" : "I:") + ResolveMemberName(method);
                 if (!groups.TryGetValue(key, out List<MethodInfo> list))
                 {
                     list = new List<MethodInfo>();
@@ -378,7 +379,8 @@ namespace ZenTS.Emit
 
             foreach (KeyValuePair<string, List<MethodInfo>> kv in groups)
             {
-                bool isStatic = kv.Value.All(m => m.IsStatic);
+                string name = kv.Key.Substring(2);
+                bool isStatic = kv.Key.StartsWith("S:", StringComparison.Ordinal);
                 if (instanceOnly && isStatic)
                 {
                     continue;
@@ -391,36 +393,17 @@ namespace ZenTS.Emit
 
                 if (!isByVal)
                 {
-                    binding.MemberKeys.Add(kv.Key);
+                    binding.MemberKeys.Add(name);
                 }
 
-                JSValue fn = kv.Value.Count == 1
+                JsValue fn = kv.Value.Count == 1
                     ? MethodEmitter.EmitMethod(env, kv.Value[0], ownerType, isByVal)
-                    : MethodEmitter.EmitOverloadGroup(env, kv.Key, kv.Value, ownerType, isByVal);
+                    : MethodEmitter.EmitOverloadGroup(env, name, kv.Value, ownerType, isByVal);
 
-                JSValue target = isStatic ? ctor : proto;
-                QuickJsDll.JS_SetPropertyStr(ctx, target, kv.Key, fn);
+                JsValue target = isStatic ? ctor : proto;
+                EngineApi.SetPropertyStr(ctx, target, name, fn);
 
-                // Docs/spec/04-METHOD-OVERLOAD §3.7: conflict → also bind full-signature direct keys.
-                if (kv.Value.Count >= 2)
-                {
-                    foreach (MethodInfo method in kv.Value)
-                    {
-                        string sigKey = FormatFullSignatureKey(method);
-                        if (!seen.Add(sigKey))
-                        {
-                            continue;
-                        }
 
-                        if (!isByVal)
-                        {
-                            binding.MemberKeys.Add(sigKey);
-                        }
-
-                        QuickJsDll.JS_SetPropertyStr(
-                            ctx, target, sigKey, MethodEmitter.EmitMethod(env, method, ownerType, isByVal));
-                    }
-                }
             }
         }
 
@@ -429,7 +412,7 @@ namespace ZenTS.Emit
         /// </summary>
         internal static string FormatFullSignatureKey(MethodInfo method)
         {
-            ParameterInfo[] ps = method.GetParameters();
+            ParameterInfo[] ps = MethodOverloadDispatcher.GetJsFacingParameters(method);
             if (ps.Length == 0)
             {
                 return method.Name + "()";
@@ -454,7 +437,7 @@ namespace ZenTS.Emit
         }
 
         private static void BindFieldsAsMethods(
-            JsEnv env, TypeBinding binding, Type t, JSValue ctor, JSValue proto, HashSet<string> seen,
+            JsEnv env, TypeBinding binding, Type t, JsValue ctor, JsValue proto, HashSet<string> seen,
             bool isByVal, bool instanceOnly = false)
         {
             IntPtr ctx = env.Context;
@@ -476,20 +459,20 @@ namespace ZenTS.Emit
                     binding.MemberKeys.Add(field.Name);
                 }
 
-                JSValue target = field.IsStatic ? ctor : proto;
+                JsValue target = field.IsStatic ? ctor : proto;
                 if (field.IsLiteral)
                 {
                     if (!isByVal)
                     {
                         object lit = field.GetRawConstantValue();
-                        QuickJsDll.JS_SetPropertyStr(ctx, ctor, field.Name, Marshaling.PrimitiveMarshal.Push(ctx, lit));
+                        EngineApi.SetPropertyStr(ctx, ctor, field.Name, Marshaling.PrimitiveMarshal.Push(ctx, lit));
                     }
 
                     continue;
                 }
 
-                JSValue getter = FieldEmitter.EmitGetter(env, field);
-                JSValue setter = field.IsInitOnly || field.IsLiteral
+                JsValue getter = FieldEmitter.EmitGetter(env, field);
+                JsValue setter = field.IsInitOnly || field.IsLiteral
                     ? JsCallbackGate.NewCFunction(
                         ctx,
                         (c, thisVal, argc, argv) => JsCallbackGate.ReturnErrorSentinel(c, $"zents: field '{field.Name}' is read-only."),
@@ -501,7 +484,7 @@ namespace ZenTS.Emit
         }
 
         private static void BindPropertiesAsMethods(
-            JsEnv env, TypeBinding binding, Type t, JSValue ctor, JSValue proto, HashSet<string> seen,
+            JsEnv env, TypeBinding binding, Type t, JsValue ctor, JsValue proto, HashSet<string> seen,
             bool isByVal, bool instanceOnly = false)
         {
             IntPtr ctx = env.Context;
@@ -522,7 +505,7 @@ namespace ZenTS.Emit
 
                             if (!(instanceOnly && get.IsStatic))
                             {
-                                QuickJsDll.JS_SetPropertyStr(
+                                EngineApi.SetPropertyStr(
                                     ctx, get.IsStatic ? ctor : proto, "get_Item", MethodEmitter.EmitMethod(env, get, t, isByVal));
                             }
                         }
@@ -540,7 +523,7 @@ namespace ZenTS.Emit
 
                             if (!(instanceOnly && set.IsStatic))
                             {
-                                QuickJsDll.JS_SetPropertyStr(
+                                EngineApi.SetPropertyStr(
                                     ctx, set.IsStatic ? ctor : proto, "set_Item", MethodEmitter.EmitMethod(env, set, t, isByVal));
                             }
                         }
@@ -565,15 +548,15 @@ namespace ZenTS.Emit
                     continue;
                 }
 
-                JSValue target = isStatic ? ctor : proto;
-                JSValue getter = property.CanRead
+                JsValue target = isStatic ? ctor : proto;
+                JsValue getter = property.CanRead
                     ? PropertyEmitter.EmitGetter(env, property)
                     : JsCallbackGate.NewCFunction(
                         ctx,
                         (c, thisVal, argc, argv) => JsCallbackGate.ReturnErrorSentinel(c, $"zents: property '{property.Name}' has no getter."),
                         "get_" + property.Name,
                         0);
-                JSValue setter = property.CanWrite
+                JsValue setter = property.CanWrite
                     ? PropertyEmitter.EmitSetter(env, property)
                     : JsCallbackGate.NewCFunction(
                         ctx,
@@ -587,12 +570,12 @@ namespace ZenTS.Emit
         private const int PropConfigurable = 1 << 0;
         private const int PropEnumerable = 1 << 2;
 
-        private static void DefineGetSet(IntPtr ctx, JSValue target, string name, JSValue getter, JSValue setter)
+        private static void DefineGetSet(IntPtr ctx, JsValue target, string name, JsValue getter, JsValue setter)
         {
-            uint atom = QuickJsDll.JS_NewAtom(ctx, name);
-            QuickJsDll.JS_DefinePropertyGetSet(
+            uint atom = EngineApi.NewAtom(ctx, name);
+            EngineApi.DefinePropertyGetSet(
                 ctx, target, atom, getter, setter, PropConfigurable | PropEnumerable);
-            QuickJsDll.JS_FreeAtom(ctx, atom);
+            EngineApi.FreeAtom(ctx, atom);
         }
 
         internal static string ResolveMemberName(MemberInfo member)

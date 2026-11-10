@@ -29,7 +29,7 @@ namespace zents
 class TypeRegistry
 {
 public:
-    static JSValue PushTypeObject(JSContext* ctx, Il2CppClass* klass);
-    static void Reset(JSContext* ctx);
+    static js::Value PushTypeObject(js::Context* ctx, Il2CppClass* klass);
+    static void Reset(js::Context* ctx);
 };
 }

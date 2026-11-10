@@ -26,11 +26,11 @@ namespace ZenTS.Marshaling
 {
     internal static class StructMarshal
     {
-        public static JSValue PushByVal(IntPtr ctx, object structValue)
+        public static JsValue PushByVal(IntPtr ctx, object structValue)
         {
             Type type = structValue.GetType();
             // Box as CLR object handle with value-type instance proto (copy semantics via slot).
-            JSValue proto = default;
+            JsValue proto = default;
             if (TypeRegistry.TryGetBinding(type, out TypeBinding binding))
             {
                 proto = JsValueUtil.GetNormTag(binding.ByValInstanceProto) == JsValueUtil.TagObject
@@ -56,11 +56,11 @@ namespace ZenTS.Marshaling
             // Store a boxed copy so mutations don't affect caller's stack copy unexpectedly
             // unless they go through the same handle.
             object copy = structValue;
-            JSValue handle = ObjectRegistry.PushObject(ctx, copy, type, proto, udKind: "byval");
+            JsValue handle = ObjectRegistry.PushObject(ctx, copy, type, proto, udKind: "byval");
             try
             {
                 JsEnv env2 = JsEnv.FromContext(ctx);
-                if (Emit.MetaBinding.TryWrapMissPublic(env2, handle, out JSValue wrapped))
+                if (Emit.MetaBinding.TryWrapMissPublic(env2, handle, out JsValue wrapped))
                 {
                     JsValueUtil.Free(ctx, handle);
                     return wrapped;

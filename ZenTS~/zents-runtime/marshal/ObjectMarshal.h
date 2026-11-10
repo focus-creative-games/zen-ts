@@ -27,7 +27,7 @@ namespace zents
 class ObjectMarshal
 {
 public:
-    static void Js2CsObject(JSContext* ctx, JSValueConst value, void* address, const MarshalMetaInfo* meta);
-    static JSValue Cs2JsObject(JSContext* ctx, void* address, const MarshalMetaInfo* meta);
+    static void Js2CsObject(js::Context* ctx, js::ValueConst value, void* address, const MarshalMetaInfo* meta);
+    static js::Value Cs2JsObject(js::Context* ctx, void* address, const MarshalMetaInfo* meta);
 };
 }

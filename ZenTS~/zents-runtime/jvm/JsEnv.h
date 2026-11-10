@@ -34,16 +34,16 @@ namespace zents
         static void Shutdown();
         static bool IsAlive();
 
-        static JSRuntime* GetRuntime();
-        static JSContext* GetContext();
+        static js::Runtime* GetRuntime();
+        static js::Context* GetContext();
         static int GetGeneration();
 
         static void DrainPendingJobs();
-        static JSValue LoadModuleNamespace(const char* moduleName);
-        static JSValue GetModuleExport(const char* moduleName, const char* exportName);
+        static js::Value LoadModuleNamespace(const char* moduleName);
+        static js::Value GetModuleExport(const char* moduleName, const char* exportName);
 
         static void ThrowPendingException();
-        static std::string FormatJsValue(JSContext* ctx, JSValue val);
+        static std::string FormatJsValue(js::Context* ctx, js::Value val);
 
     private:
         static void ClearModuleNamespaceCache();

@@ -32,7 +32,7 @@ namespace ZenTS.Marshaling
     /// </summary>
     internal static class TypedMarshal
     {
-        public static JSValue Push(IntPtr ctx, object value, Type declaredType = null, JsMarshalAsAttribute marshalAs = null)
+        public static JsValue Push(IntPtr ctx, object value, Type declaredType = null, JsMarshalAsAttribute marshalAs = null)
         {
             if (value == null)
             {
@@ -49,6 +49,18 @@ namespace ZenTS.Marshaling
 
             if (marshalAs != null)
             {
+                if (marshalAs.JsMarshalType == JsMarshalType.Object && pushAs == typeof(string)) return PushByObj(ctx,value,pushAs);
+                if (marshalAs.JsMarshalType == JsMarshalType.ActualTypeUserData)
+                    return PushByObj(ctx, value, runtimeType);
+                if (marshalAs.JsMarshalType == JsMarshalType.BigInt)
+                {
+                    if (pushAs != typeof(long) && pushAs != typeof(ulong)) throw new JsScriptException("zents: BigInt requires Int64 or UInt64");
+                    JsValue global=EngineApi.GetGlobalObject(ctx), fn=EngineApi.GetPropertyStr(ctx,global,"BigInt");
+                    JsValue arg=EngineApi.NewString(ctx,Convert.ToString(value,CultureInfo.InvariantCulture));
+                    try { unsafe { JsValue v=arg; return EngineApi.Call(ctx,fn,JsValueUtil.Undefined,1,(IntPtr)(&v)); } }
+                    finally { JsValueUtil.Free(ctx,arg); JsValueUtil.Free(ctx,fn); JsValueUtil.Free(ctx,global); }
+                }
+
                 if (marshalAs.JsMarshalType == JsMarshalType.Bytes)
                 {
                     if (value is byte[] bytes)
@@ -67,7 +79,7 @@ namespace ZenTS.Marshaling
 
                 if (marshalAs.JsMarshalType == JsMarshalType.OpaqueValue)
                 {
-                    return OpaqueParameterScope.Push(ctx, value);
+                    return OpaqueParameterScope.Push(ctx, value, pushAs);
                 }
             }
 
@@ -85,7 +97,7 @@ namespace ZenTS.Marshaling
 
             if (underlying.IsEnum)
             {
-                return JsValueUtil.NewInt32(Convert.ToInt32(value));
+                return EnumMarshal.Push(ctx,value);
             }
 
             switch (Type.GetTypeCode(underlying))
@@ -134,7 +146,7 @@ namespace ZenTS.Marshaling
                 case TypeCode.Decimal:
                     throw new JsScriptException("zents: System.Decimal marshal is not supported.");
                 case TypeCode.String:
-                    return QuickJsDll.NewString(ctx, (string)value);
+                    return EngineApi.NewString(ctx, (string)value);
                 case TypeCode.DateTime:
                     throw new JsScriptException("zents: System.DateTime marshal is not supported.");
             }
@@ -171,15 +183,15 @@ namespace ZenTS.Marshaling
             // Delegate: JsMethod roundtrip → original JS function; else exotic + [[Call]].
             if (value is Delegate del)
             {
-                if (DelegateImpl.DynamicBridgeFactory.TryGetBoundJsFunction(del, out JSValue boundFn))
+                if (DelegateImpl.DynamicBridgeFactory.TryGetBoundJsFunction(del, out JsValue boundFn))
                 {
                     return JsValueUtil.Dup(boundFn);
                 }
 
                 Type delView = typeof(Delegate).IsAssignableFrom(underlying) ? underlying : runtimeType;
-                JSValue delHandle = PushByObj(ctx, value, delView);
+                JsValue delHandle = PushByObj(ctx, value, delView);
                 if (JsEnvFromContext(ctx) is JsEnv delEnv &&
-                    Emit.MetaBinding.TryWrapDelegateCallPublic(delEnv, delHandle, out JSValue callable))
+                    Emit.MetaBinding.TryWrapDelegateCallPublic(delEnv, delHandle, out JsValue callable))
                 {
                     JsValueUtil.Free(ctx, delHandle);
                     return callable;
@@ -198,7 +210,7 @@ namespace ZenTS.Marshaling
             return PushByObj(ctx, value, view);
         }
 
-        public static object Pop(IntPtr ctx, JSValue jsValue, Type expectedType, JsMarshalAsAttribute marshalAs = null)
+        public static object Pop(IntPtr ctx, JsValue jsValue, Type expectedType, JsMarshalAsAttribute marshalAs = null)
         {
             if (expectedType == null)
             {
@@ -208,11 +220,23 @@ namespace ZenTS.Marshaling
             Type underlying = Nullable.GetUnderlyingType(expectedType) ?? expectedType;
             if (marshalAs != null)
             {
+                if (marshalAs.JsMarshalType == JsMarshalType.BigInt)
+                {
+                    // Borrowed ref/in/out payloads take precedence over element conversion.
+                    if (OpaqueParameterScope.TryPop(ctx,jsValue,out object borrowed)) return Coerce(borrowed,underlying);
+                    if (JsValueUtil.GetNormTag(jsValue)!=JsValueUtil.TagBigInt) throw new JsScriptException("zents: BigInt slot requires bigint");
+                    string text=ZenTS.Emit.JsCallPlan.ReadText(ctx,jsValue);
+                    if (underlying==typeof(long)) return long.Parse(text,CultureInfo.InvariantCulture);
+                    if (underlying==typeof(ulong)) return ulong.Parse(text,CultureInfo.InvariantCulture);
+                    throw new JsScriptException("zents: BigInt requires Int64 or UInt64");
+                }
+
                 if (marshalAs.JsMarshalType == JsMarshalType.Object && underlying == typeof(object))
                 {
                     return PopObjectMarshal(ctx, jsValue);
                 }
 
+                if (marshalAs.JsMarshalType == JsMarshalType.UnpackedValues) return TableMarshal.PopPacked(ctx,jsValue,expectedType,marshalAs);
                 if (marshalAs.JsMarshalType == JsMarshalType.Table)
                 {
                     return TableMarshal.Pop(ctx, jsValue, expectedType, marshalAs);
@@ -282,10 +306,13 @@ namespace ZenTS.Marshaling
                 return Coerce(opaqueTarget, underlying);
             }
 
+            if ((underlying.IsPrimitive || underlying.IsEnum || underlying==typeof(string) || underlying==typeof(IntPtr) || underlying==typeof(UIntPtr)) &&
+                ZenTS.Emit.JsCallPlan.MatchValue(ctx,jsValue,expectedType,marshalAs)<0)
+                throw new JsScriptException("zents: cannot convert value to "+expectedType.FullName);
             if (underlying.IsEnum)
             {
-                object num = PrimitiveMarshal.Pop(ctx, jsValue);
-                return Enum.ToObject(underlying, Convert.ToInt32(num, CultureInfo.InvariantCulture));
+                object num=PrimitiveMarshal.Pop(ctx,jsValue);
+                return Enum.ToObject(underlying,Convert.ChangeType(num,Enum.GetUnderlyingType(underlying),CultureInfo.InvariantCulture));
             }
 
             if (underlying.IsArray)
@@ -295,10 +322,18 @@ namespace ZenTS.Marshaling
                     return Coerce(clrArr, underlying);
                 }
 
-                if (QuickJsDll.JS_IsArray(ctx, jsValue) != 0)
+                if (EngineApi.IsArray(ctx, jsValue) != 0)
                 {
-                    object arr = ArrayMarshal.FromJsArray(ctx, jsValue);
-                    return CoerceArray((object[])arr, underlying.GetElementType());
+                    Type element=underlying.GetElementType();JsValue lengthValue=EngineApi.GetPropertyStr(ctx,jsValue,"length");int length;
+                    try{length=Convert.ToInt32(PrimitiveMarshal.Pop(ctx,lengthValue));}finally{JsValueUtil.Free(ctx,lengthValue);}
+                    Array result=Array.CreateInstance(element,length);
+                    for(int i=0;i<length;++i)
+                    {
+                        if(EngineApi.HasOwnProperty(ctx,jsValue,i.ToString(CultureInfo.InvariantCulture))!=1)throw new JsScriptException("zents: array holes are not supported");
+                        JsValue item=EngineApi.GetPropertyUint32(ctx,jsValue,(uint)i);
+                        try{result.SetValue(Pop(ctx,item,element),i);}finally{JsValueUtil.Free(ctx,item);}
+                    }
+                    return result;
                 }
 
                 throw new JsScriptException($"zents: expected CLR array or JS Array for {underlying.FullName}.");
@@ -329,7 +364,7 @@ namespace ZenTS.Marshaling
             return Coerce(raw, underlying);
         }
 
-        private static object PopObjectMarshal(IntPtr ctx, JSValue jsValue)
+        private static object PopObjectMarshal(IntPtr ctx, JsValue jsValue)
         {
             int tag = JsValueUtil.GetNormTag(jsValue);
             if (tag == JsValueUtil.TagUndefined)
@@ -364,7 +399,7 @@ namespace ZenTS.Marshaling
 
             if (target.IsEnum)
             {
-                return Enum.ToObject(target, Convert.ToInt32(value, CultureInfo.InvariantCulture));
+                return Enum.ToObject(target, Convert.ChangeType(value,Enum.GetUnderlyingType(target), CultureInfo.InvariantCulture));
             }
 
             if (target == typeof(IntPtr))
@@ -408,9 +443,9 @@ namespace ZenTS.Marshaling
             return result;
         }
 
-        private static JSValue PushByObj(IntPtr ctx, object value, Type view)
+        private static JsValue PushByObj(IntPtr ctx, object value, Type view)
         {
-            JSValue proto = default;
+            JsValue proto = default;
             // Avoid EnsureBinding(typeof(Type)) — reflection surface is enormous.
             if (view == typeof(Type))
             {
@@ -443,11 +478,11 @@ namespace ZenTS.Marshaling
                     : ensured.InstanceProto;
             }
 
-            JSValue handle = ObjectRegistry.PushObject(ctx, value, view, proto);
+            JsValue handle = ObjectRegistry.PushObject(ctx, value, view, proto);
             // Instance miss Proxy (metatable/02-INDEX) — do not put Proxy on IEO itself
             // (JS_NewObjectProto(Proxy) is unreliable); wrap the instance handle instead.
             if (JsEnvFromContext(ctx) is JsEnv wrapEnv &&
-                Emit.MetaBinding.TryWrapMissPublic(wrapEnv, handle, out JSValue wrapped))
+                Emit.MetaBinding.TryWrapMissPublic(wrapEnv, handle, out JsValue wrapped))
             {
                 JsValueUtil.Free(ctx, handle);
                 return wrapped;

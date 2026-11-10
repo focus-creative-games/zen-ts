@@ -38,6 +38,21 @@ namespace ZenTS
         private static JsEnv _env;
         private static int _generation;
 
+#if UNITY_EDITOR
+        static JsMonoAppDomain()
+        {
+            UnityEditor.AssemblyReloadEvents.beforeAssemblyReload += Shutdown;
+            UnityEditor.EditorApplication.quitting += Shutdown;
+            UnityEditor.EditorApplication.playModeStateChanged += state =>
+            {
+                if (state == UnityEditor.PlayModeStateChange.ExitingEditMode ||
+                    state == UnityEditor.PlayModeStateChange.ExitingPlayMode)
+                    Shutdown();
+            };
+        }
+#endif
+
+
         public static JsEnv Env
         {
             get
@@ -68,13 +83,20 @@ namespace ZenTS
             CreateEnv(moduleLoader);
         }
 
+        private static Action _ensureEditorPlugins;
         private static void CreateEnv(Func<string, object> moduleLoader)
         {
+#if UNITY_EDITOR
+            if (_ensureEditorPlugins == null)
+                _ensureEditorPlugins = (Action)Delegate.CreateDelegate(typeof(Action),
+                    Type.GetType("ZenTS.NativeEditorPlugins, ZenTS.Editor", true).GetMethod("Ensure"));
+            _ensureEditorPlugins();
+#endif
             _generation++;
 #if UNITY_EDITOR
-            LoadJsMarshalAsXmlFromSettings();
-            LoadJsAliasXmlFromSettings();
-            LoadJsExtensionXmlFromSettings();
+            if (!JsMarshalAsXmlRegistry.IsLoaded) LoadJsMarshalAsXmlFromSettings();
+            if (!JsAliasXmlRegistry.IsLoaded) LoadJsAliasXmlFromSettings();
+            if (!JsExtensionXmlRegistry.IsLoaded) LoadJsExtensionXmlFromSettings();
 #endif
             _env = new JsEnv();
             _env.Initialize(moduleLoader, _generation);
@@ -96,7 +118,7 @@ namespace ZenTS
                     return;
                 }
 
-                EditorSettingsAccess.TryGetField(settings, settingsType, "marshalAsXmlPaths", out string[] paths);
+                EditorSettingsAccess.TryGetField(settings, settingsType, "EffectiveMarshalAsXmlPaths", out string[] paths);
                 string projectRoot = Path.GetDirectoryName(Application.dataPath);
                 JsMarshalAsXmlRegistry.Load(paths, projectRoot);
             }
@@ -116,7 +138,7 @@ namespace ZenTS
                     return;
                 }
 
-                EditorSettingsAccess.TryGetField(settings, settingsType, "jsAliasXmlPaths", out string[] paths);
+                EditorSettingsAccess.TryGetField(settings, settingsType, "EffectiveAliasXmlPaths", out string[] paths);
                 string projectRoot = Path.GetDirectoryName(Application.dataPath);
                 JsAliasXmlRegistry.Load(paths, projectRoot);
             }
@@ -157,8 +179,7 @@ namespace ZenTS
 
             TryJsDebuggerStop();
             ProcessPendingRefReleases();
-            // Drop every managed JSValue hold before FreeContext/FreeRuntime, otherwise
-            // JS_FreeRuntime asserts on a non-empty gc_obj_list (quickjs_build.c ~2481).
+            // Release all managed value handles before destroying the V8 context/runtime.
             IntPtr ctx = _env.Context;
             Marshaling.OpaqueParameterScope.Leave(ctx);
             Marshaling.OpaqueParameterScope.Reset();
@@ -180,6 +201,7 @@ namespace ZenTS
 
         private static void ProcessPendingRefReleases()
         {
+            if (_env != null && _env.IsAlive) _env.DrainPendingJobs();
             ObjectRegistry.ProcessPending();
         }
 
@@ -229,39 +251,39 @@ namespace ZenTS
         /// <summary>Batch diagnostic: NewRuntime/NewContext only.</summary>
         public static void SmokeNativeContext()
         {
-            IntPtr rt = QuickJsDll.JS_NewRuntime();
+            IntPtr rt = EngineApi.NewRuntime();
             if (rt == IntPtr.Zero)
             {
                 throw new JsScriptException("zents: JS_NewRuntime failed");
             }
 
-            IntPtr ctx = QuickJsDll.JS_NewContext(rt);
+            IntPtr ctx = EngineApi.NewContext(rt);
             if (ctx == IntPtr.Zero)
             {
-                QuickJsDll.JS_FreeRuntime(rt);
+                EngineApi.FreeRuntime(rt);
                 throw new JsScriptException("zents: JS_NewContext failed");
             }
 
-            QuickJsDll.JS_FreeContext(ctx);
-            QuickJsDll.JS_FreeRuntime(rt);
+            EngineApi.FreeContext(ctx);
+            EngineApi.FreeRuntime(rt);
         }
 
-        /// <summary>Batch diagnostic: JSValue out-shims (NewObject / GetGlobalObject).</summary>
+        /// <summary>Batch diagnostic: JsValue out-shims (NewObject / GetGlobalObject).</summary>
         public static void SmokeJsValueAbi()
         {
-            IntPtr rt = QuickJsDll.JS_NewRuntime();
-            IntPtr ctx = QuickJsDll.JS_NewContext(rt);
+            IntPtr rt = EngineApi.NewRuntime();
+            IntPtr ctx = EngineApi.NewContext(rt);
             try
             {
-                JSValue obj = QuickJsDll.JS_NewObject(ctx);
-                JSValue global = QuickJsDll.JS_GetGlobalObject(ctx);
+                JsValue obj = EngineApi.NewObject(ctx);
+                JsValue global = EngineApi.GetGlobalObject(ctx);
                 JsValueUtil.Free(ctx, obj);
                 JsValueUtil.Free(ctx, global);
             }
             finally
             {
-                QuickJsDll.JS_FreeContext(ctx);
-                QuickJsDll.JS_FreeRuntime(rt);
+                EngineApi.FreeContext(ctx);
+                EngineApi.FreeRuntime(rt);
             }
         }
 
@@ -269,38 +291,38 @@ namespace ZenTS
         public static void SmokeInitSteps()
         {
             UnityEngine.Debug.Log("[ZenTS] step1 NewRuntime");
-            IntPtr rt = QuickJsDll.JS_NewRuntime();
-            QuickJsDll.js_std_init_handlers(rt);
+            IntPtr rt = EngineApi.NewRuntime();
+            EngineApi.StdInitHandlers(rt);
             UnityEngine.Debug.Log("[ZenTS] step2 NewContext");
-            IntPtr ctx = QuickJsDll.JS_NewContext(rt);
+            IntPtr ctx = EngineApi.NewContext(rt);
             UnityEngine.Debug.Log("[ZenTS] step3 SetContextOpaque/helpers");
-            QuickJsDll.JS_SetContextOpaque(ctx, System.Runtime.InteropServices.GCHandle.ToIntPtr(System.Runtime.InteropServices.GCHandle.Alloc("smoke")));
-            QuickJsDll.js_std_add_helpers(ctx, 0, IntPtr.Zero);
+            EngineApi.SetContextOpaque(ctx, System.Runtime.InteropServices.GCHandle.ToIntPtr(System.Runtime.InteropServices.GCHandle.Alloc("smoke")));
+            EngineApi.StdAddHelpers(ctx, 0, IntPtr.Zero);
             UnityEngine.Debug.Log("[ZenTS] step4 JsCallbackGate.EnsureInitialized");
             ZenTS.Utils.JsCallbackGate.EnsureInitialized(ctx);
             UnityEngine.Debug.Log("[ZenTS] step5 EvalScript");
             var env = new JsEnv();
             // minimal eval via raw API
             byte[] bytes = System.Text.Encoding.UTF8.GetBytes("1+1");
-            JSValue r = QuickJsDll.JS_Eval(ctx, bytes, (UIntPtr)bytes.Length, "<smoke>", QuickJsDll.JsEvalTypeGlobal);
-            UnityEngine.Debug.Log($"[ZenTS] step5 eval tag={r.Tag} int={r.UInt64}");
+            JsValue r = EngineApi.Eval(ctx, bytes, (UIntPtr)bytes.Length, "<smoke>", EngineApi.JsEvalTypeGlobal);
+            UnityEngine.Debug.Log($"[ZenTS] step5 eval tag={JsValueUtil.GetTag(r)} int={JsValueUtil.GetUInt64(r)}");
             JsValueUtil.Free(ctx, r);
             UnityEngine.Debug.Log("[ZenTS] step6 NewObject/SetProperty");
-            JSValue obj = QuickJsDll.JS_NewObject(ctx);
-            JSValue global = QuickJsDll.JS_GetGlobalObject(ctx);
-            QuickJsDll.JS_SetPropertyStr(ctx, global, "CSharp", obj); // consumes obj
+            JsValue obj = EngineApi.NewObject(ctx);
+            JsValue global = EngineApi.GetGlobalObject(ctx);
+            EngineApi.SetPropertyStr(ctx, global, "CSharp", obj); // consumes obj
             UnityEngine.Debug.Log("[ZenTS] step7 NewCFunction via gate");
-            JSValue fn = ZenTS.Utils.JsCallbackGate.NewCFunction(ctx, SmokeCb, "smoke_cb", 0);
-            QuickJsDll.JS_SetPropertyStr(ctx, global, "smoke_cb", JsValueUtil.Dup(fn));
+            JsValue fn = ZenTS.Utils.JsCallbackGate.NewCFunction(ctx, SmokeCb, "smoke_cb", 0);
+            EngineApi.SetPropertyStr(ctx, global, "smoke_cb", JsValueUtil.Dup(fn));
             UnityEngine.Debug.Log("[ZenTS] step8 call smoke_cb");
-            JSValue callRet = QuickJsDll.JS_Call(ctx, fn, JsValueUtil.Undefined, 0, IntPtr.Zero);
-            UnityEngine.Debug.Log($"[ZenTS] step8 callRet tag={callRet.Tag} val={callRet.UInt64}");
+            JsValue callRet = EngineApi.Call(ctx, fn, JsValueUtil.Undefined, 0, IntPtr.Zero);
+            UnityEngine.Debug.Log($"[ZenTS] step8 callRet tag={JsValueUtil.GetTag(callRet)} val={JsValueUtil.GetUInt64(callRet)}");
             JsValueUtil.Free(ctx, callRet);
             JsValueUtil.Free(ctx, fn);
             JsValueUtil.Free(ctx, global);
-            QuickJsDll.JS_FreeContext(ctx);
-            QuickJsDll.js_std_free_handlers(rt);
-            QuickJsDll.JS_FreeRuntime(rt);
+            EngineApi.FreeContext(ctx);
+            EngineApi.StdFreeHandlers(rt);
+            EngineApi.FreeRuntime(rt);
             UnityEngine.Debug.Log("[ZenTS] step9 Eval EmbeddedJs");
             var embedded = @"
 globalThis.zents = globalThis.zents ?? {};
@@ -322,11 +344,11 @@ zents.register_method = function(name, fn) {
 };
 ";
             byte[] emb = System.Text.Encoding.UTF8.GetBytes(embedded);
-            JSValue er = QuickJsDll.JS_Eval(ctx, emb, (UIntPtr)emb.Length, "zentslib.js", QuickJsDll.JsEvalTypeGlobal | QuickJsDll.JsEvalFlagStrict);
-            UnityEngine.Debug.Log($"[ZenTS] step9 embedded tag={er.Tag} isExc={JsValueUtil.IsException(er)}");
+            JsValue er = EngineApi.Eval(ctx, emb, (UIntPtr)emb.Length, "zentslib.js", EngineApi.JsEvalTypeGlobal | EngineApi.JsEvalFlagStrict);
+            UnityEngine.Debug.Log($"[ZenTS] step9 embedded tag={JsValueUtil.GetTag(er)} isExc={JsValueUtil.IsException(er)}");
             if (JsValueUtil.IsException(er))
             {
-                JSValue ex = QuickJsDll.JS_GetException(ctx);
+                JsValue ex = EngineApi.GetException(ctx);
                 UnityEngine.Debug.LogError("[ZenTS] embedded exception");
                 JsValueUtil.Free(ctx, ex);
             }
@@ -335,7 +357,7 @@ zents.register_method = function(name, fn) {
         }
 
         [AOT.MonoPInvokeCallback(typeof(JsCFunction))]
-        private static JSValue SmokeCb(IntPtr ctx, JSValue thisVal, int argc, IntPtr argv)
+        private static JsValue SmokeCb(IntPtr ctx, JsValue thisVal, int argc, IntPtr argv)
         {
             return JsValueUtil.NewInt32(42);
         }

@@ -19,10 +19,12 @@
 // SOFTWARE.
 
 #include "MetadataUtil.h"
+#include "JsException.h"
 
 #include "../marshal/MarshalAsXmlTable.h"
 
 #include "vm/Assembly.h"
+#include "metadata/GenericMetadata.h"
 #include "vm/Class.h"
 #include "vm/Method.h"
 #include "vm/Array.h"
@@ -465,28 +467,12 @@ bool MetadataUtil::ParameterHasBytesMarshal(const MethodInfo* method, int paramI
     return kind == 2; /* JsMarshalType.Bytes */
 }
 
-bool MetadataUtil::TryReadJsMarshalAs(
-    const MethodInfo* method, int paramIndex, int32_t* outKind, std::vector<std::string>* outMembers)
+static bool ReadMarshalAttribute(const Il2CppImage* image,uint32_t token,int32_t* outKind,std::vector<std::string>* outMembers)
 {
-    if (outKind == nullptr || method == nullptr)
-        return false;
-    *outKind = 0;
-    if (outMembers != nullptr)
-        outMembers->clear();
-
-    if (s_jsMarshalAsAttributeClass == nullptr)
-        Initialize();
-    if (s_jsMarshalAsAttributeClass == nullptr)
-        return false;
-
-    uint32_t token = il2cpp::vm::Method::GetParameterToken(method, paramIndex);
-    if (token != 0)
-    {
-        Il2CppMetadataCustomAttributeHandle handle =
-            il2cpp::vm::MetadataCache::GetCustomAttributeTypeToken(method->klass->image, token);
-        Il2CppObject* attr = il2cpp::vm::Reflection::GetCustomAttribute(handle, s_jsMarshalAsAttributeClass);
-        if (attr != nullptr)
-        {
+    if(!image||!token||!s_jsMarshalAsAttributeClass)return false;
+    auto handle=il2cpp::vm::MetadataCache::GetCustomAttributeTypeToken(image,token);
+    Il2CppObject* attr=il2cpp::vm::Reflection::GetCustomAttribute(handle,s_jsMarshalAsAttributeClass);
+    if(!attr)return false;
             const PropertyInfo* kindProp = il2cpp::vm::Class::GetPropertyFromName(attr->klass, "JsMarshalType");
             if (kindProp == nullptr || kindProp->get == nullptr)
                 return false;
@@ -520,20 +506,72 @@ bool MetadataUtil::TryReadJsMarshalAs(
                 }
             }
             return true;
-        }
-    }
-
-    // Attribute missing → MarshalAs XML table (Il2Cpp Player does not read XML files).
-    JsMarshalAsResolvedData xml;
-    if (!MarshalAsXmlTable::TryGetForMethodSlot(method, paramIndex, xml))
-        return false;
-
-    *outKind = static_cast<int32_t>(xml.marshalType);
-    if (outMembers != nullptr)
+}
+// Open generic XML slots are validated again against their closed CLR type.
+static void ValidateClosedXmlMarshal(const Il2CppType* type,int32_t kind,bool isReturn=false)
+{
+    if(!type || il2cpp::metadata::GenericMetadata::ContainsGenericParameters(type))return;
+    Il2CppClass* klass=il2cpp::vm::Class::FromIl2CppType(type);
+    if(!klass)return;
+    const bool nullable=klass->nullabletype;
+    Il2CppClass* effective=nullable?klass->element_class:klass;
+    const Il2CppType* value=&effective->byval_arg;
+    const bool decimal=std::strcmp(effective->namespaze,"System")==0&&std::strcmp(effective->name,"Decimal")==0;
+    const bool primitive=(value->type>=IL2CPP_TYPE_BOOLEAN&&value->type<=IL2CPP_TYPE_R8)
+        ||value->type==IL2CPP_TYPE_I||value->type==IL2CPP_TYPE_U||decimal;
+    const bool pointer=value->type==IL2CPP_TYPE_PTR||value->type==IL2CPP_TYPE_FNPTR;
+    const bool structure=il2cpp::vm::Class::IsValuetype(effective)&&!effective->enumtype&&!primitive;
+    bool valid=true;
+    switch(kind)
     {
-        outMembers->assign(xml.members.begin(), xml.members.end());
+    case 0:break;
+    case 1:valid=!primitive&&!effective->enumtype&&!pointer;break;
+    case 2:valid=value->type==IL2CPP_TYPE_SZARRAY&&effective->element_class==il2cpp_defaults.byte_class;break;
+    case 3:valid=!primitive||decimal||value->type==IL2CPP_TYPE_TYPEDBYREF;break;
+    case 4:valid=structure&&!nullable;break;
+    case 5:valid=structure;break;
+    case 6:valid=isReturn&&!il2cpp::vm::Class::IsValuetype(klass)&&type->type!=IL2CPP_TYPE_STRING
+        &&!il2cpp::vm::Class::IsAssignableFrom(il2cpp_defaults.multicastdelegate_class,klass);break;
+    case 7:valid=!nullable&&(value->type==IL2CPP_TYPE_I8||value->type==IL2CPP_TYPE_U8);break;
+    default:valid=false;break;
     }
-    return true;
+    if(!valid)JsException::Throw("zents: invalid XML MarshalAs on closed member");
+}
+static bool ReadXmlMember(const Il2CppImage* image,uint32_t token,int32_t* kind,std::vector<std::string>* members)
+{
+    JsMarshalAsResolvedData rule;if(!MarshalAsXmlTable::TryGet(image,token,rule))return false;
+    *kind=(int32_t)rule.marshalType;if(members)members->assign(rule.members.begin(),rule.members.end());return true;
+}
+static bool ReadTypeMarshal(const Il2CppType* type,int32_t* kind,std::vector<std::string>* members)
+{
+    Il2CppClass* klass=il2cpp::vm::Class::FromIl2CppType(type);
+    if(!klass || il2cpp::vm::Class::IsGeneric(klass) || klass->generic_class)return false;
+    if(ReadMarshalAttribute(klass->image,klass->token,kind,members))return true;
+    return ReadXmlMember(klass->image,klass->token,kind,members);
+}
+bool MetadataUtil::TryReadFieldMarshalAs(FieldInfo* field,int32_t* kind,std::vector<std::string>* members)
+{
+    Initialize();*kind=0;if(members)members->clear();
+    if(ReadMarshalAttribute(field->parent->image,field->token,kind,members))return true;
+    if(ReadXmlMember(field->parent->image,field->token,kind,members))
+    {ValidateClosedXmlMarshal(field->type,*kind);return true;}
+    return ReadTypeMarshal(field->type,kind,members);
+}
+bool MetadataUtil::TryReadJsMarshalAs(const MethodInfo* method,int paramIndex,int32_t* kind,std::vector<std::string>* members)
+{
+    if(!method||!kind)return false;Initialize();*kind=0;if(members)members->clear();
+    uint32_t token=il2cpp::vm::Method::GetParameterToken(method,paramIndex);
+    if(ReadMarshalAttribute(method->klass->image,token,kind,members))return true;
+    const PropertyInfo* property=nullptr;
+    void* iterator=nullptr;
+    while(const PropertyInfo* p=il2cpp::vm::Class::GetProperties(method->klass,&iterator))
+        if((paramIndex<0&&p->get==method)||(paramIndex==method->parameters_count-1&&p->set==method)){property=p;break;}
+    if(property&&ReadMarshalAttribute(method->klass->image,property->token,kind,members))return true;
+    JsMarshalAsResolvedData xml;
+    if(MarshalAsXmlTable::TryGetForMethodSlot(method,paramIndex,xml)){*kind=(int32_t)xml.marshalType;ValidateClosedXmlMarshal(paramIndex<0?method->return_type:method->parameters[paramIndex],*kind,paramIndex<0);if(members)members->assign(xml.members.begin(),xml.members.end());return true;}
+    if(property&&ReadXmlMember(method->klass->image,property->token,kind,members)){ValidateClosedXmlMarshal(paramIndex<0?method->return_type:method->parameters[paramIndex],*kind,paramIndex<0);return true;}
+    const Il2CppType* type=paramIndex<0?method->return_type:method->parameters[paramIndex];
+    return ReadTypeMarshal(type,kind,members);
 }
 
 bool MetadataUtil::IsParamsParameter(const MethodInfo* method, int paramIndex)
@@ -554,4 +592,90 @@ bool MetadataUtil::IsParamsParameter(const MethodInfo* method, int paramIndex)
     Il2CppObject* attr = il2cpp::vm::Reflection::GetCustomAttribute(handle, s_paramArrayAttributeClass);
     return attr != nullptr;
 }
+}
+namespace zents {
+static bool HasPublicDefaultCtor(Il2CppClass* klass)
+{
+    if(il2cpp::vm::Class::IsValuetype(klass))return true;
+    if(klass->flags & TYPE_ATTRIBUTE_ABSTRACT)return false;
+    il2cpp::vm::Class::SetupMethods(klass);
+    for(uint16_t i=0;i<klass->method_count;++i){const MethodInfo* m=klass->methods[i];if(MetadataUtil::IsPublicMethod(m)&&std::strcmp(m->name,".ctor")==0&&m->parameters_count==0)return true;}
+    return false;
+}
+bool MetadataUtil::MethodGenericTypeArgsSatisfyConstraints(const MethodInfo* openMethod, const Il2CppType* const* typeArgs, uint32_t typeArgCount)
+{
+    if (openMethod == nullptr || typeArgs == nullptr)
+        return false;
+
+    Il2CppMetadataGenericContainerHandle container = openMethod->genericContainerHandle;
+    if (!container && openMethod->methodMetadataHandle) container = il2cpp::vm::MetadataCache::GetGenericContainerFromMethod(openMethod->methodMetadataHandle);
+    if (container == nullptr)
+        return false;
+
+    if (il2cpp::vm::MetadataCache::GetGenericContainerCount(container) != typeArgCount)
+        return false;
+
+    for (uint32_t i = 0; i < typeArgCount; ++i)
+    {
+        Il2CppMetadataGenericParameterHandle gp =
+            il2cpp::vm::MetadataCache::GetGenericParameterFromIndex(container, (GenericContainerParameterIndex)i);
+        Il2CppClass* argKlass = il2cpp::vm::Class::FromIl2CppType(typeArgs[i]);
+        if (argKlass == nullptr)
+            return false;
+        il2cpp::vm::Class::Init(argKlass);
+
+        const uint16_t flags = il2cpp::vm::MetadataCache::GetGenericParameterFlags(gp);
+        if ((flags & IL2CPP_GENERIC_PARAMETER_ATTRIBUTE_REFERENCE_TYPE_CONSTRAINT) != 0)
+        {
+            if (il2cpp::vm::Class::IsValuetype(argKlass))
+                return false;
+        }
+        if ((flags & IL2CPP_GENERIC_PARAMETER_ATTRIBUTE_NOT_NULLABLE_VALUE_TYPE_CONSTRAINT) != 0)
+        {
+            // where T : struct — value type and not Nullable<T>
+            if (!il2cpp::vm::Class::IsValuetype(argKlass) || argKlass->nullabletype)
+                return false;
+        }
+        if ((flags & IL2CPP_GENERIC_PARAMETER_ATTRIBUTE_DEFAULT_CONSTRUCTOR_CONSTRAINT) != 0)
+        {
+            if (!HasPublicDefaultCtor(argKlass))
+                return false;
+        }
+
+        const int16_t constraintCount = il2cpp::vm::MetadataCache::GetGenericConstraintCount(gp);
+        for (int16_t c = 0; c < constraintCount; ++c)
+        {
+            const Il2CppType* constraintType =
+                il2cpp::vm::MetadataCache::GetGenericParameterConstraintFromIndex(gp, (GenericParameterConstraintIndex)c);
+            if (constraintType == nullptr)
+                continue;
+
+            // Inflate constraints that refer to other method type parameters.
+            const Il2CppType* effectiveConstraint = constraintType;
+            if (constraintType->type == IL2CPP_TYPE_MVAR || constraintType->type == IL2CPP_TYPE_VAR)
+            {
+                Il2CppMetadataGenericParameterHandle constraintGp =
+                    il2cpp::vm::MetadataCache::GetGenericParameterFromType(constraintType);
+                Il2CppGenericParameterInfo info = il2cpp::vm::MetadataCache::GetGenericParameterInfo(constraintGp);
+                if ((uint32_t)info.num >= typeArgCount)
+                    return false;
+                effectiveConstraint = typeArgs[info.num];
+            }
+
+            Il2CppClass* constraintKlass = il2cpp::vm::Class::FromIl2CppType(effectiveConstraint);
+            if (constraintKlass == nullptr)
+                return false;
+            il2cpp::vm::Class::Init(constraintKlass);
+
+            // System.Object / ValueType / Enum appear as special flags; ValueType/Enum as type
+            // constraints still require assignability (struct → ValueType, not string).
+            if (!il2cpp::vm::Class::IsAssignableFrom(constraintKlass, argKlass))
+                return false;
+        }
+    }
+
+    return true;
+}
+
+
 }

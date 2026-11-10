@@ -28,6 +28,7 @@
 
 #include "../utils/MetadataUtil.h"
 #include "../utils/JsException.h"
+#include "../utils/XmlBindingUtil.h"
 
 #include "gc/GarbageCollector.h"
 #include "vm/Class.h"
@@ -155,15 +156,15 @@ static bool IsValueTypeParam(const Il2CppType* type)
     }
 }
 
-static JSValue PushArg(
-    JSContext* ctx,
+static js::Value PushArg(
+    js::Context* ctx,
     const MethodMarshalCtx* mctx,
     uint8_t paramIndex,
     const Il2CppType* type,
     void* argSlot)
 {
     if (type->byref)
-        return OpaqueValueMarshal::Push(ctx, argSlot, type);
+        return OpaqueValueMarshal::Push(ctx, argSlot, type, mctx != nullptr ? mctx->paramsMeta[paramIndex] : nullptr);
 
     if (mctx != nullptr && mctx->paramsMeta != nullptr && mctx->paramsMeta[paramIndex] != nullptr)
         return mctx->paramsMeta[paramIndex]->cs2jsWriter(ctx, argSlot, mctx->paramsMeta[paramIndex]);
@@ -173,11 +174,11 @@ static JSValue PushArg(
         return meta->cs2jsWriter(ctx, argSlot, meta);
 
     JsException::ThrowFormat("zents: unsupported delegate param type %d", (int)type->type);
-    return JS_UNDEFINED;
+    return js::Undefined();
 }
 
 static void PopRet(
-    JSContext* ctx, const MethodMarshalCtx* mctx, const Il2CppType* type, JSValue value, void* __ret)
+    js::Context* ctx, const MethodMarshalCtx* mctx, const Il2CppType* type, js::Value value, void* __ret)
 {
     if (type->type == IL2CPP_TYPE_VOID)
         return;
@@ -190,7 +191,7 @@ static void PopRet(
     void* tempStorage = nullptr;
     void* dest = meta->passByValue ? &tempStorage : __ret;
     meta->js2csWriter(ctx, value, dest, meta);
-    if (JS_HasException(ctx))
+    if (js::HasException(ctx))
         JsEnv::ThrowPendingException();
     if (meta->passByValue)
         *reinterpret_cast<void**>(__ret) = tempStorage;
@@ -200,7 +201,7 @@ static void PopRet(
 static void JsDelegateInvoke(Il2CppMethodPointer /*methodPtr*/, const MethodInfo* method, void* __this, void** __args, void* __ret)
 {
     JsMethod* target = reinterpret_cast<JsMethod*>(__this);
-    JSContext* ctx = JsEnv::GetContext();
+    js::Context* ctx = JsEnv::GetContext();
     if (target == nullptr || target->disposed || ctx == nullptr)
     {
         il2cpp::vm::Exception::Raise(
@@ -208,50 +209,35 @@ static void JsDelegateInvoke(Il2CppMethodPointer /*methodPtr*/, const MethodInfo
                 "zents: JS runtime was reset; re-bind GetFunction delegates."));
     }
 
+    if(method->parameters_count && MetadataUtil::IsParamsParameter(method,method->parameters_count-1))
+        JsException::ThrowFormat("zents: delegate/GetFunction bridge does not support params expansion");
     OpaqueParameterScope opaqueScope;
 
-    JSValue func = JsGlobalRefs::Get(target->funcRef);
+    js::Value func = JsGlobalRefs::Get(target->funcRef);
     const MethodMarshalCtx* mctx = reinterpret_cast<const MethodMarshalCtx*>(target->methodMarshalCtx);
-    const uint8_t argc = method->parameters_count;
-
-    /* Prefer stack for typical delegate arity; heap only for unusually large Invoke. */
-    constexpr uint8_t kStackArgc = 16;
-    JSValue stackArgv[kStackArgc];
-    JSValue* argv = nullptr;
-    bool heapArgv = false;
-    if (argc > 0)
+    std::vector<js::Value> argv;
+    for(uint8_t i=0;i<method->parameters_count;++i)
     {
-        if (argc <= kStackArgc)
-            argv = stackArgv;
-        else
+        const Il2CppType* type=method->parameters[i];
+        void* data=IsValueTypeParam(type)?__args[i]:&__args[i];if(type->byref)data=&__args[i];
+        const MarshalMetaInfo* meta=mctx?mctx->paramsMeta[i]:nullptr;
+        js::Value value=PushArg(ctx,mctx,i,type,data);
+        if(!type->byref&&meta&&meta->marshalAsKind==MarshalAsKind::UnpackedValues)
         {
-            argv = (JSValue*)il2cpp::utils::Memory::Malloc(sizeof(JSValue) * argc);
-            heapArgv = true;
+            for(int k=0;k<meta->jsArgSlots;++k)argv.push_back(js::GetPropertyUint32(ctx,value,(uint32_t)k));
+            js::FreeValue(ctx,value);
         }
+        else argv.push_back(value);
+        if(js::HasException(ctx)){for(auto arg:argv)js::FreeValue(ctx,arg);JsEnv::ThrowPendingException();}
     }
+    js::Value result=js::Call(ctx,func,js::Undefined(),(int)argv.size(),argv.empty()?nullptr:argv.data());
+    for(auto arg:argv)js::FreeValue(ctx,arg);
 
-    for (uint8_t i = 0; i < argc; i++)
-    {
-        const Il2CppType* pt = method->parameters[i];
-        void* data = IsValueTypeParam(pt) ? __args[i] : &__args[i];
-        if (pt->byref)
-            data = &__args[i];
-        argv[i] = PushArg(ctx, mctx, i, pt, data);
-    }
-
-    JSValue thisVal = JS_UNDEFINED;
-    JSValue result = JS_Call(ctx, func, thisVal, argc, argv);
-
-    for (uint8_t i = 0; i < argc; i++)
-        JS_FreeValue(ctx, argv[i]);
-    if (heapArgv)
-        il2cpp::utils::Memory::Free(argv);
-
-    if (JS_IsException(result))
+    if (js::IsException(result))
         JsEnv::ThrowPendingException();
 
     PopRet(ctx, mctx, method->return_type, result, __ret);
-    JS_FreeValue(ctx, result);
+    js::FreeValue(ctx, result);
 }
 
 // Closed-delegate invoke_impl trampolines (Win64 ABI; ≤4-byte ints share i4 slots).
@@ -284,11 +270,29 @@ static void Trampoline_Action_i4_i4(Il2CppObject* target, int32_t a, int32_t b, 
     JsDelegateInvoke(nullptr, method, target, args, nullptr);
 }
 
+// Mixed integer/floating-point slots must retain their native ABI classes;
+// this includes arguments that spill to the stack after the register slots.
+static void Trampoline_Action_i4_i4_r4_r8_i8(Il2CppObject* target,
+    int32_t a, int32_t b, float c, double d, int64_t e, const MethodInfo* method)
+{
+    void* args[5] = { &a, &b, &c, &d, &e };
+    JsDelegateInvoke(nullptr, method, target, args, nullptr);
+}
+
+// A wasm i32 result must already carry the CLR small integer sign/zero extension.
+static int32_t NormalizeI4Return(int32_t value,const Il2CppType* type)
+{
+    if(type->type==IL2CPP_TYPE_VALUETYPE)type=il2cpp::vm::Type::GetUnderlyingType(type);
+    switch(type->type){case IL2CPP_TYPE_I1:return (int8_t)value;case IL2CPP_TYPE_U1:return (uint8_t)value;
+    case IL2CPP_TYPE_I2:return (int16_t)value;case IL2CPP_TYPE_CHAR:case IL2CPP_TYPE_U2:return (uint16_t)value;
+    case IL2CPP_TYPE_BOOLEAN:return value!=0;default:return value;}
+}
+
 static int32_t Trampoline_Func_i4(Il2CppObject* target, const MethodInfo* method)
 {
     int32_t ret = 0;
     JsDelegateInvoke(nullptr, method, target, nullptr, &ret);
-    return ret;
+    return NormalizeI4Return(ret,method->return_type);
 }
 
 static int64_t Trampoline_Func_i8(Il2CppObject* target, const MethodInfo* method)
@@ -324,7 +328,7 @@ static int32_t Trampoline_Func_i4_i4(Il2CppObject* target, int32_t a, const Meth
     int32_t ret = 0;
     void* args[1] = { &a };
     JsDelegateInvoke(nullptr, method, target, args, &ret);
-    return ret;
+    return NormalizeI4Return(ret,method->return_type);
 }
 
 static int64_t Trampoline_Func_i8_i8(Il2CppObject* target, int64_t a, const MethodInfo* method)
@@ -364,7 +368,7 @@ static int32_t Trampoline_Func_i4_obj(Il2CppObject* target, Il2CppObject* v, con
     int32_t ret = 0;
     void* args[1] = { v };
     JsDelegateInvoke(nullptr, method, target, args, &ret);
-    return ret;
+    return NormalizeI4Return(ret,method->return_type);
 }
 
 static int32_t Trampoline_Func_i4_i4_i4(Il2CppObject* target, int32_t a, int32_t b, const MethodInfo* method)
@@ -372,7 +376,7 @@ static int32_t Trampoline_Func_i4_i4_i4(Il2CppObject* target, int32_t a, int32_t
     int32_t ret = 0;
     void* args[2] = { &a, &b };
     JsDelegateInvoke(nullptr, method, target, args, &ret);
-    return ret;
+    return NormalizeI4Return(ret,method->return_type);
 }
 
 static int32_t Trampoline_Func_i4_byref_i4(Il2CppObject* target, int32_t* a, const MethodInfo* method)
@@ -380,7 +384,7 @@ static int32_t Trampoline_Func_i4_byref_i4(Il2CppObject* target, int32_t* a, con
     int32_t ret = 0;
     void* args[1] = { a };
     JsDelegateInvoke(nullptr, method, target, args, &ret);
-    return ret;
+    return NormalizeI4Return(ret,method->return_type);
 }
 
 static int32_t Trampoline_Func_i4_byref_i4_i4(Il2CppObject* target, int32_t* a, int32_t b, const MethodInfo* method)
@@ -388,16 +392,25 @@ static int32_t Trampoline_Func_i4_byref_i4_i4(Il2CppObject* target, int32_t* a, 
     int32_t ret = 0;
     void* args[2] = { a, &b };
     JsDelegateInvoke(nullptr, method, target, args, &ret);
-    return ret;
+    return NormalizeI4Return(ret,method->return_type);
 }
 
 /* Small valuetype (≤8 bytes) closed-delegate arg — Win64 passes as integer register. */
+#if defined(__EMSCRIPTEN__)
+// wasm C ABI passes an aggregate by an address, not a Win64 integer register.
+static int32_t Trampoline_Func_i4_vt8(Il2CppObject* target, void* vtAddress, const MethodInfo* method)
+#else
 static int32_t Trampoline_Func_i4_vt8(Il2CppObject* target, uint64_t vtBits, const MethodInfo* method)
+#endif
 {
     int32_t ret = 0;
+#if defined(__EMSCRIPTEN__)
+    void* args[1] = { vtAddress };
+#else
     void* args[1] = { &vtBits };
+#endif
     JsDelegateInvoke(nullptr, method, target, args, &ret);
-    return ret;
+    return NormalizeI4Return(ret,method->return_type);
 }
 
 static bool ParamIs(const Il2CppType* t, Il2CppTypeEnum expected)
@@ -421,6 +434,7 @@ static bool ParamIsEnum(const Il2CppType* t)
 /* bool/char/i1/u1/i2/u2/i4/u4/enum — Win64 closed-delegate slot as i4. */
 static bool ParamIsI4Like(const Il2CppType* t)
 {
+    if(t&&!t->byref&&(t->type==IL2CPP_TYPE_I||t->type==IL2CPP_TYPE_U))return sizeof(intptr_t)==4;
     if (t == nullptr || t->byref)
         return false;
     switch (t->type)
@@ -441,6 +455,7 @@ static bool ParamIsI4Like(const Il2CppType* t)
 
 static bool ParamIsI8Like(const Il2CppType* t)
 {
+    if(t&&!t->byref&&(t->type==IL2CPP_TYPE_I||t->type==IL2CPP_TYPE_U))return sizeof(intptr_t)==8;
     if (t == nullptr || t->byref)
         return false;
     switch (t->type)
@@ -488,11 +503,95 @@ static bool ParamIsSmallValueType(const Il2CppType* t, size_t maxBytes)
     return sz > 0 && sz <= maxBytes;
 }
 
+#if defined(__EMSCRIPTEN__) && ZENTS_UNITY_VERSION >= 20220000
+// OptimizeSize lowers open generic delegate slots to pointers, including primitive T.
+// The delegate's Invoke body calls invoke_impl with that shared ABI, not its inflated CLR signature.
+static bool SharedSlot(const Il2CppType* type)
+{
+    return !type->byref&&(type->type==IL2CPP_TYPE_VAR||type->type==IL2CPP_TYPE_MVAR||
+        (type->type==IL2CPP_TYPE_GENERICINST&&IsValueTypeParam(type)));
+}
+static void SharedDelegateInvoke(Il2CppObject* target,const MethodInfo* method,void** words,void* result)
+{
+    const MethodInfo* definition=XmlBindingUtil::NormalizeMethodForToken(method);
+    void* args[16]={};uint32_t values[16]={};
+    for(uint8_t i=0;i<method->parameters_count;++i)
+    {
+        const Il2CppType* actual=method->parameters[i];
+        const Il2CppType* declared=definition->parameters[i];
+        if(actual->byref)args[i]=words[i];
+        else if(SharedSlot(declared))args[i]=words[i];
+        else if(IsValueTypeParam(actual)){values[i]=(uint32_t)(uintptr_t)words[i];args[i]=&values[i];}
+        else args[i]=words[i];
+    }
+    JsDelegateInvoke(nullptr,method,target,args,result);
+}
+template<size_t... I> struct SharedIndices {};
+template<size_t N,size_t... I> struct MakeSharedIndices:MakeSharedIndices<N-1,N-1,I...>{};
+template<size_t... I> struct MakeSharedIndices<0,I...>{typedef SharedIndices<I...> type;};
+template<size_t> struct SharedWord{typedef void* type;};
+template<typename Sequence> struct SharedDelegate;
+template<size_t... I> struct SharedDelegate<SharedIndices<I...>>
+{
+    static void Indirect(Il2CppObject* target,typename SharedWord<I>::type... values,void* result,const MethodInfo* method)
+    {void* words[sizeof...(I)+1]={values...,nullptr};SharedDelegateInvoke(target,method,words,result);}
+    static void Void(Il2CppObject* target,typename SharedWord<I>::type... values,const MethodInfo* method)
+    {void* words[sizeof...(I)+1]={values...,nullptr};SharedDelegateInvoke(target,method,words,nullptr);}
+    template<typename R> static R Direct(Il2CppObject* target,typename SharedWord<I>::type... values,const MethodInfo* method)
+    {void* words[sizeof...(I)+1]={values...,nullptr};R result{};SharedDelegateInvoke(target,method,words,&result);return result;}
+    static int32_t I4(Il2CppObject* target,typename SharedWord<I>::type... values,const MethodInfo* method)
+    {return NormalizeI4Return(Direct<int32_t>(target,values...,method),method->return_type);}
+};
+template<size_t N> static Il2CppMethodPointer SelectSharedDelegate(const MethodInfo* invoke)
+{
+    typedef SharedDelegate<typename MakeSharedIndices<N>::type> T;
+    const Il2CppType* declared=XmlBindingUtil::NormalizeMethodForToken(invoke)->return_type;
+    const Il2CppType* actual=invoke->return_type;
+    if(SharedSlot(declared))return (Il2CppMethodPointer)T::Indirect;
+    if(ParamIs(actual,IL2CPP_TYPE_VOID))return (Il2CppMethodPointer)T::Void;
+    if(ParamIsI4Like(actual))return (Il2CppMethodPointer)T::I4;
+    if(ParamIsI8Like(actual))return (Il2CppMethodPointer)T::template Direct<int64_t>;
+    if(ParamIs(actual,IL2CPP_TYPE_R4))return (Il2CppMethodPointer)T::template Direct<float>;
+    if(ParamIs(actual,IL2CPP_TYPE_R8))return (Il2CppMethodPointer)T::template Direct<double>;
+    if(ParamIsObjRef(actual))return (Il2CppMethodPointer)T::template Direct<Il2CppObject*>;
+    JsException::Throw("zents: unsupported non-generic return ABI in fully shared delegate");return nullptr;
+}
+static Il2CppMethodPointer ResolveSharedDelegate(const MethodInfo* invoke)
+{
+    const MethodInfo* definition=XmlBindingUtil::NormalizeMethodForToken(invoke);
+    for(uint8_t i=0;i<invoke->parameters_count;++i)
+    {
+        const Il2CppType* declared=definition->parameters[i];
+        if(!declared->byref&&!SharedSlot(declared)&&!ParamIsI4Like(declared)&&
+            !ParamIsObjRef(declared)&&declared->type!=IL2CPP_TYPE_I&&declared->type!=IL2CPP_TYPE_U)
+            JsException::Throw("zents: fully shared delegate has a non-generic parameter requiring a generated ABI stub");
+    }
+    switch(invoke->parameters_count)
+    {
+#define SHARED_CASE(N) case N:return SelectSharedDelegate<N>(invoke);
+        SHARED_CASE(0) SHARED_CASE(1) SHARED_CASE(2) SHARED_CASE(3) SHARED_CASE(4)
+        SHARED_CASE(5) SHARED_CASE(6) SHARED_CASE(7) SHARED_CASE(8) SHARED_CASE(9)
+        SHARED_CASE(10) SHARED_CASE(11) SHARED_CASE(12) SHARED_CASE(13) SHARED_CASE(14)
+        SHARED_CASE(15) SHARED_CASE(16)
+#undef SHARED_CASE
+    }
+    JsException::Throw("zents: fully shared delegate exceeds 16 parameters");return nullptr;
+}
+#endif
+
 static Il2CppMethodPointer ResolveClosedInvokeImpl(const MethodInfo* invoke)
 {
+#if defined(__EMSCRIPTEN__) && ZENTS_UNITY_VERSION >= 20220000
+    if(il2cpp::vm::Method::HasFullGenericSharingSignature(invoke))return ResolveSharedDelegate(invoke);
+#endif
     const Il2CppType* ret = invoke->return_type;
     const uint8_t n = invoke->parameters_count;
 
+    if (n == 5 && ParamIs(ret, IL2CPP_TYPE_VOID)
+        && ParamIsI4Like(invoke->parameters[0]) && ParamIsI4Like(invoke->parameters[1])
+        && ParamIs(invoke->parameters[2], IL2CPP_TYPE_R4) && ParamIs(invoke->parameters[3], IL2CPP_TYPE_R8)
+        && ParamIsI8Like(invoke->parameters[4]))
+        return (Il2CppMethodPointer)Trampoline_Action_i4_i4_r4_r8_i8;
     if (n == 0 && ParamIs(ret, IL2CPP_TYPE_VOID))
         return (Il2CppMethodPointer)Trampoline_Action;
     if (n == 1 && ParamIs(ret, IL2CPP_TYPE_VOID) && ParamIsI4Like(invoke->parameters[0]))
@@ -564,7 +663,7 @@ static const TsDelegateCtorCache* GetOrCreateCtor(Il2CppClass* delegateClass)
     return cache;
 }
 
-Il2CppDelegate* DelegateMarshal::CreateFromFuncRef(JSContext* ctx, Il2CppClass* delegateClass, int funcRef)
+Il2CppDelegate* DelegateMarshal::CreateFromFuncRef(js::Context* ctx, Il2CppClass* delegateClass, int funcRef)
 {
     const TsDelegateCtorCache* cache = GetOrCreateCtor(delegateClass);
     Il2CppClass* methodClass = MetadataUtil::GetJsMethodClass();
@@ -589,12 +688,12 @@ Il2CppDelegate* DelegateMarshal::CreateFromFuncRef(JSContext* ctx, Il2CppClass* 
 }
 
 Il2CppDelegate* DelegateMarshal::GetOrCreateFromJsFunction(
-    JSContext* ctx, Il2CppClass* delegateClass, JSValueConst jsFunc)
+    js::Context* ctx, Il2CppClass* delegateClass, js::ValueConst jsFunc)
 {
-    if (ctx == nullptr || delegateClass == nullptr || !JS_IsFunction(ctx, jsFunc))
+    if (ctx == nullptr || delegateClass == nullptr || !js::IsFunction(ctx, jsFunc))
         return nullptr;
 
-    JsDelegateCacheKey key{ delegateClass, JS_VALUE_GET_PTR(jsFunc) };
+    JsDelegateCacheKey key{ delegateClass, js::GetIdentity(jsFunc) };
     auto it = s_jsFuncToDelegate.find(key);
     if (it != s_jsFuncToDelegate.end())
         return it->second;
@@ -610,7 +709,7 @@ Il2CppDelegate* DelegateMarshal::GetOrCreateFromJsFunction(
     return del;
 }
 
-bool DelegateMarshal::TryGetBoundJsFunction(JSContext* ctx, Il2CppDelegate* del, JSValue* outFn)
+bool DelegateMarshal::TryGetBoundJsFunction(js::Context* ctx, Il2CppDelegate* del, js::Value* outFn)
 {
     if (ctx == nullptr || del == nullptr || outFn == nullptr || del->target == nullptr)
         return false;
@@ -623,27 +722,27 @@ bool DelegateMarshal::TryGetBoundJsFunction(JSContext* ctx, Il2CppDelegate* del,
     if (tm->disposed)
         return false;
 
-    JSValue fn = JsGlobalRefs::Get(tm->funcRef);
-    if (!JS_IsFunction(ctx, fn))
+    js::Value fn = JsGlobalRefs::Get(tm->funcRef);
+    if (!js::IsFunction(ctx, fn))
         return false;
 
-    *outFn = JS_DupValue(ctx, fn);
+    *outFn = js::DupValue(ctx, fn);
     return true;
 }
 
-JSValue DelegateMarshal::PushToJs(JSContext* ctx, Il2CppDelegate* del, Il2CppClass* viewKlass)
+js::Value DelegateMarshal::PushToJs(js::Context* ctx, Il2CppDelegate* del, Il2CppClass* viewKlass)
 {
     if (ctx == nullptr || del == nullptr)
-        return JS_NULL;
+        return js::Null();
 
-    JSValue bound = JS_UNDEFINED;
+    js::Value bound = js::Undefined();
     if (TryGetBoundJsFunction(ctx, del, &bound))
         return bound;
 
     Il2CppClass* view = viewKlass != nullptr ? viewKlass : del->object.klass;
     TypeBinding* binding = MetaBinding::EnsureBinding(ctx, view);
-    JSValue handle = ObjectRegistry::Push(ctx, reinterpret_cast<Il2CppObject*>(del), binding);
-    if (JS_IsException(handle))
+    js::Value handle = ObjectRegistry::Push(ctx, reinterpret_cast<Il2CppObject*>(del), binding);
+    if (js::IsException(handle))
         return handle;
     return MetaBinding::WrapDelegateCall(ctx, handle);
 }

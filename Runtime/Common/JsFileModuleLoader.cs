@@ -54,7 +54,7 @@ namespace ZenTS
             }
 #endif
 
-#if !UNITY_EDITOR && (UNITY_ANDROID || UNITY_WEBGL)
+#if !UNITY_EDITOR && (UNITY_ANDROID || UNITY_WEBGL || UNITY_WEIXINMINIGAME || WEIXINMINIGAME || ZENTS_HOST_JS)
             TextAsset asset = Resources.Load<TextAsset>(resourcePath);
             if (asset != null)
             {

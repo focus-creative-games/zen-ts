@@ -24,7 +24,7 @@
 
 namespace zents
 {
-static std::vector<JSValue> s_refs;
+static std::vector<js::Value> s_refs;
 static std::vector<int> s_freeList;
 static bool s_initialized = false;
 
@@ -42,25 +42,25 @@ void JsGlobalRefs::Clear()
     s_initialized = false;
 }
 
-void JsGlobalRefs::ClearAndFreeAll(JSContext* ctx)
+void JsGlobalRefs::ClearAndFreeAll(js::Context* ctx)
 {
     if (ctx != nullptr)
     {
         for (size_t i = 0; i < s_refs.size(); i++)
         {
-            if (!JS_IsUndefined(s_refs[i]))
-                JS_FreeValue(ctx, s_refs[i]);
+            if (!js::IsUndefined(s_refs[i]))
+                js::FreeValue(ctx, s_refs[i]);
         }
     }
     Clear();
 }
 
-int JsGlobalRefs::Store(JSContext* ctx, JSValue value)
+int JsGlobalRefs::Store(js::Context* ctx, js::Value value)
 {
     if (!s_initialized)
         Initialize();
 
-    JSValue dup = JS_DupValue(ctx, value);
+    js::Value dup = js::DupValue(ctx, value);
     if (!s_freeList.empty())
     {
         int idx = s_freeList.back();
@@ -74,21 +74,21 @@ int JsGlobalRefs::Store(JSContext* ctx, JSValue value)
     return idx;
 }
 
-JSValue JsGlobalRefs::Get(int refIndex)
+js::Value JsGlobalRefs::Get(int refIndex)
 {
     if (refIndex < 0 || (size_t)refIndex >= s_refs.size())
-        return JS_UNDEFINED;
+        return js::Undefined();
     return s_refs[(size_t)refIndex];
 }
 
-void JsGlobalRefs::FreeAndRelease(JSContext* ctx, int refIndex)
+void JsGlobalRefs::FreeAndRelease(js::Context* ctx, int refIndex)
 {
     if (refIndex < 0 || (size_t)refIndex >= s_refs.size())
         return;
-    JSValue v = s_refs[(size_t)refIndex];
-    s_refs[(size_t)refIndex] = JS_UNDEFINED;
+    js::Value v = s_refs[(size_t)refIndex];
+    s_refs[(size_t)refIndex] = js::Undefined();
     s_freeList.push_back(refIndex);
-    if (ctx != nullptr && !JS_IsUndefined(v))
-        JS_FreeValue(ctx, v);
+    if (ctx != nullptr && !js::IsUndefined(v))
+        js::FreeValue(ctx, v);
 }
 }

@@ -97,11 +97,11 @@ static bool PointerTypesMatch(const Il2CppType* actual, const Il2CppType* expect
     return a != nullptr && e != nullptr && a->type == e->type;
 }
 
-static bool HasPointerFlag(JSContext* ctx, JSValueConst value)
+static bool HasPointerFlag(js::Context* ctx, js::ValueConst value)
 {
-    JSValue flag = JS_GetPropertyStr(ctx, value, "__zents_pointer");
-    bool ok = JS_IsBool(flag) && JS_ToBool(ctx, flag);
-    JS_FreeValue(ctx, flag);
+    js::Value flag = js::GetPropertyStr(ctx, value, "__zents_pointer");
+    bool ok = js::IsBool(flag) && js::ToBool(ctx, flag);
+    js::FreeValue(ctx, flag);
     return ok;
 }
 } // namespace
@@ -132,63 +132,63 @@ const MarshalMetaInfo* PointerMarshal::Create(const Il2CppType* ptrType)
     return meta;
 }
 
-JSValue PointerMarshal::Push(JSContext* ctx, void* address, const Il2CppType* ptrType)
+js::Value PointerMarshal::Push(js::Context* ctx, void* address, const Il2CppType* ptrType)
 {
     if (address == nullptr)
-        return JS_NULL;
+        return js::Null();
 
     uint32_t slot = AllocSlot(address, ptrType);
-    JSValue obj = JS_NewObject(ctx);
-    JS_SetPropertyStr(ctx, obj, "__zents_id", JS_NewInt32(ctx, (int32_t)slot));
-    JS_SetPropertyStr(ctx, obj, "__zents_pointer", JS_NewBool(ctx, 1));
+    js::Value obj = js::NewObject(ctx);
+    js::SetPropertyStr(ctx, obj, "__zents_pointer_id", js::NewInt32(ctx, (int32_t)slot));
+    js::SetPropertyStr(ctx, obj, "__zents_pointer", js::NewBool(ctx, 1));
     return obj;
 }
 
-void* PointerMarshal::Pop(JSContext* ctx, JSValueConst value, const Il2CppType* expectedPtrType)
+void* PointerMarshal::Pop(js::Context* ctx, js::ValueConst value, const Il2CppType* expectedPtrType)
 {
-    if (JS_IsNull(value))
+    if (js::IsNull(value))
         return nullptr;
 
-    if (JS_IsUndefined(value))
+    if (js::IsUndefined(value))
     {
-        JS_ThrowTypeError(ctx, "zents: undefined is not assignable to Pointer (use null for null pointer)");
+        js::ThrowTypeError(ctx, "zents: undefined is not assignable to Pointer (use null for null pointer)");
         return nullptr;
     }
 
-    if (!JS_IsObject(value) || !HasPointerFlag(ctx, value))
+    if (!js::IsObject(value) || !HasPointerFlag(ctx, value))
     {
-        JS_ThrowTypeError(ctx, "zents: expected Pointer handle");
+        js::ThrowTypeError(ctx, "zents: expected Pointer handle");
         return nullptr;
     }
 
-    JSValue idVal = JS_GetPropertyStr(ctx, value, "__zents_id");
+    js::Value idVal = js::GetPropertyStr(ctx, value, "__zents_pointer_id");
     int32_t id = -1;
-    bool ok = JS_IsNumber(idVal) && JS_ToInt32(ctx, &id, idVal) == 0;
-    JS_FreeValue(ctx, idVal);
+    bool ok = js::IsNumber(idVal) && js::ToInt32(ctx, &id, idVal) == 0;
+    js::FreeValue(ctx, idVal);
     if (!ok || id < 0 || s_slots == nullptr || id >= s_next || s_slots[id].pointerType == nullptr)
     {
-        JS_ThrowTypeError(ctx, "zents: expected Pointer handle");
+        js::ThrowTypeError(ctx, "zents: expected Pointer handle");
         return nullptr;
     }
 
     if (!PointerTypesMatch(s_slots[id].pointerType, expectedPtrType))
     {
-        JS_ThrowTypeError(ctx, "zents: Pointer type mismatch");
+        js::ThrowTypeError(ctx, "zents: Pointer type mismatch");
         return nullptr;
     }
 
     return s_slots[id].address;
 }
 
-void PointerMarshal::Js2CsPointer(JSContext* ctx, JSValueConst value, void* address, const MarshalMetaInfo* meta)
+void PointerMarshal::Js2CsPointer(js::Context* ctx, js::ValueConst value, void* address, const MarshalMetaInfo* meta)
 {
     void* ptr = Pop(ctx, value, meta->type);
-    if (JS_HasException(ctx))
+    if (js::HasException(ctx))
         return;
     *reinterpret_cast<void**>(address) = ptr;
 }
 
-JSValue PointerMarshal::Cs2JsPointer(JSContext* ctx, void* address, const MarshalMetaInfo* meta)
+js::Value PointerMarshal::Cs2JsPointer(js::Context* ctx, void* address, const MarshalMetaInfo* meta)
 {
     void* ptr = *reinterpret_cast<void**>(address);
     return Push(ctx, ptr, meta->type);

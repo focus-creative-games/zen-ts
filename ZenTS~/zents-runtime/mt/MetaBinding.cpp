@@ -41,6 +41,9 @@
 #include "vm/Field.h"
 #include "vm/Object.h"
 #include "vm/Parameter.h"
+#include "vm/MetadataCache.h"
+#include "vm/Reflection.h"
+#include "vm/Runtime.h"
 
 #include <cstring>
 #include <list>
@@ -57,93 +60,112 @@
 namespace zents
 {
 static std::unordered_map<Il2CppClass*, TypeBinding*> s_bindings;
-static JSClassID s_methodCtxClassId = 0;
-static JSRuntime* s_methodCtxRuntime = nullptr;
+static std::unordered_map<const MethodInfo*, MethodMarshalCtx*> s_methodPlans;
+static void CollectExtensionMethods(Il2CppClass* klass, std::vector<const MethodInfo*>& outMethods);
+static js::ClassID s_methodCtxClassId = 0;
+static js::Runtime* s_methodCtxRuntime = nullptr;
 
-static void EnsureMethodCtxClass(JSRuntime* rt)
+static void EnsureMethodCtxClass(js::Runtime* rt)
 {
     if (rt == nullptr)
         return;
     if (s_methodCtxRuntime == rt)
         return;
-    JS_NewClassID(&s_methodCtxClassId);
-    JSClassDef def = {};
+    js::NewClassID(&s_methodCtxClassId);
+    js::ClassDef def = {};
     def.class_name = "ZentsMethodCtx";
-    JS_NewClass(rt, s_methodCtxClassId, &def);
+    js::NewClass(rt, s_methodCtxClassId, &def);
     s_methodCtxRuntime = rt;
 }
 
-static JSValue InvokeStaticMethod(
-    JSContext* ctx, JSValueConst /*this_val*/, int argc, JSValueConst* argv, int /*magic*/, JSValue* func_data)
+static js::Value InvokeStaticMethod(
+    js::Context* ctx, js::ValueConst /*this_val*/, int argc, js::ValueConst* argv, int /*magic*/, js::Value* func_data)
 {
     MethodMarshalCtx* mctx =
-        reinterpret_cast<MethodMarshalCtx*>(JS_GetOpaque(func_data[0], s_methodCtxClassId));
+        reinterpret_cast<MethodMarshalCtx*>(js::GetOpaque(func_data[0], s_methodCtxClassId));
     if (mctx == nullptr)
-        return JS_ThrowInternalError(ctx, "zents: missing method context");
+        return js::ThrowInternalError(ctx, "zents: missing method context");
     if (mctx->method != nullptr && mctx->method->is_generic)
-        return JS_ThrowTypeError(ctx, "zents: open generic method; use zents.make_generic_method");
+    {
+        int prefix=0;auto* closed=MetaBinding::ResolveGtap(ctx,{mctx},argc,argv,&prefix);
+        if(!closed)return js::HasException(ctx)?js::Exception():js::ThrowTypeError(ctx,"zents: open generic requires System.Type GTAP prefix or zents.inflate");
+        mctx=closed;argc-=prefix;argv+=prefix;
+    }
     return MethodBridge::InvokeJs2Cs(ctx, nullptr, argc, argv, mctx);
 }
 
-static JSValue InvokeInstanceMethod(
-    JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv, int /*magic*/, JSValue* func_data)
+static js::Value InvokeInstanceMethod(
+    js::Context* ctx, js::ValueConst this_val, int argc, js::ValueConst* argv, int magic, js::Value* func_data)
 {
+    if(magic!=0 && ObjectRegistry::IsByVal(ctx,this_val)!=(magic==1))return js::ThrowTypeError(ctx,"zents: incompatible ByVal/ByObj receiver");
+
     MethodMarshalCtx* mctx =
-        reinterpret_cast<MethodMarshalCtx*>(JS_GetOpaque(func_data[0], s_methodCtxClassId));
+        reinterpret_cast<MethodMarshalCtx*>(js::GetOpaque(func_data[0], s_methodCtxClassId));
     if (mctx == nullptr)
-        return JS_ThrowInternalError(ctx, "zents: missing method context");
+        return js::ThrowInternalError(ctx, "zents: missing method context");
     if (mctx->method != nullptr && mctx->method->is_generic)
-        return JS_ThrowTypeError(ctx, "zents: open generic method; use zents.make_generic_method");
+    {
+        int prefix=0;auto* closed=MetaBinding::ResolveGtap(ctx,{mctx},argc,argv,&prefix);
+        if(!closed)return js::HasException(ctx)?js::Exception():js::ThrowTypeError(ctx,"zents: open generic requires System.Type GTAP prefix or zents.inflate");
+        mctx=closed;argc-=prefix;argv+=prefix;
+    }
     Il2CppObject* target = ObjectRegistry::Get(ctx, this_val);
     if (target == nullptr)
-        return JS_ThrowTypeError(ctx, "zents: instance method requires a CLR object receiver");
+        return js::ThrowTypeError(ctx, "zents: instance method requires a CLR object receiver");
     return MethodBridge::InvokeJs2Cs(ctx, target, argc, argv, mctx);
 }
 
-static JSValue FieldGetter(
-    JSContext* ctx, JSValueConst this_val, int /*argc*/, JSValueConst* /*argv*/, int /*magic*/, JSValue* func_data)
+static js::Value FieldGetter(
+    js::Context* ctx, js::ValueConst this_val, int /*argc*/, js::ValueConst* /*argv*/, int magic, js::Value* func_data)
 {
+    if(magic!=0 && ObjectRegistry::IsByVal(ctx,this_val)!=(magic==1))return js::ThrowTypeError(ctx,"zents: incompatible ByVal/ByObj receiver");
+
     FieldMarshalCtx* fctx =
-        reinterpret_cast<FieldMarshalCtx*>(JS_GetOpaque(func_data[0], s_methodCtxClassId));
+        reinterpret_cast<FieldMarshalCtx*>(js::GetOpaque(func_data[0], s_methodCtxClassId));
     Il2CppObject* target = ObjectRegistry::Get(ctx, this_val);
     if (fctx == nullptr || target == nullptr)
-        return JS_ThrowTypeError(ctx, "zents: invalid field getter receiver");
+        return js::ThrowTypeError(ctx, "zents: invalid field getter receiver");
 
+    if(!il2cpp::vm::Class::IsAssignableFrom(fctx->field->parent,target->klass))return js::ThrowTypeError(ctx,"zents: incompatible field receiver");
     void* tempStorage = nullptr;
     void* storage = fctx->meta->passByValue ? &tempStorage : alloca((size_t)fctx->meta->size);
     il2cpp::vm::Field::GetValue(target, fctx->field, storage);
     return fctx->meta->cs2jsWriter(ctx, storage, fctx->meta);
 }
 
-static JSValue FieldSetter(
-    JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv, int /*magic*/, JSValue* func_data)
+static js::Value FieldSetter(
+    js::Context* ctx, js::ValueConst this_val, int argc, js::ValueConst* argv, int magic, js::Value* func_data)
 {
+    if(magic!=0 && ObjectRegistry::IsByVal(ctx,this_val)!=(magic==1))return js::ThrowTypeError(ctx,"zents: incompatible ByVal/ByObj receiver");
+
     FieldMarshalCtx* fctx =
-        reinterpret_cast<FieldMarshalCtx*>(JS_GetOpaque(func_data[0], s_methodCtxClassId));
+        reinterpret_cast<FieldMarshalCtx*>(js::GetOpaque(func_data[0], s_methodCtxClassId));
     Il2CppObject* target = ObjectRegistry::Get(ctx, this_val);
     if (fctx == nullptr || target == nullptr)
-        return JS_ThrowTypeError(ctx, "zents: invalid field setter receiver");
+        return js::ThrowTypeError(ctx, "zents: invalid field setter receiver");
+    if(il2cpp::vm::Field::GetFlags(fctx->field)&(FIELD_ATTRIBUTE_INIT_ONLY|FIELD_ATTRIBUTE_LITERAL))return js::ThrowTypeError(ctx,"zents: field is read-only");
     if (argc < 1)
-        return JS_ThrowTypeError(ctx, "zents: field setter requires a value");
+        return js::ThrowTypeError(ctx, "zents: field setter requires a value");
 
+    if(!il2cpp::vm::Class::IsAssignableFrom(fctx->field->parent,target->klass))return js::ThrowTypeError(ctx,"zents: incompatible field receiver");
     void* tempStorage = nullptr;
     void* storage = fctx->meta->passByValue ? &tempStorage : alloca((size_t)fctx->meta->size);
     fctx->meta->js2csWriter(ctx, argv[0], storage, fctx->meta);
-    if (JS_HasException(ctx))
-        return JS_EXCEPTION;
+    if (js::HasException(ctx))
+        return js::Exception();
     /* Field::SetValue uses deref_pointer=false for refs ??pass object pointer, not &slot. */
     void* setArg = fctx->meta->passByValue ? tempStorage : storage;
     il2cpp::vm::Field::SetValue(target, fctx->field, setArg);
-    return JS_UNDEFINED;
+    return js::Undefined();
 }
 
-static JSValue StaticFieldGetter(
-    JSContext* ctx, JSValueConst /*this_val*/, int /*argc*/, JSValueConst* /*argv*/, int /*magic*/, JSValue* func_data)
+static js::Value StaticFieldGetter(
+    js::Context* ctx, js::ValueConst /*this_val*/, int /*argc*/, js::ValueConst* /*argv*/, int /*magic*/, js::Value* func_data)
 {
     FieldMarshalCtx* fctx =
-        reinterpret_cast<FieldMarshalCtx*>(JS_GetOpaque(func_data[0], s_methodCtxClassId));
+        reinterpret_cast<FieldMarshalCtx*>(js::GetOpaque(func_data[0], s_methodCtxClassId));
     if (fctx == nullptr)
-        return JS_ThrowTypeError(ctx, "zents: invalid static field getter");
+        return js::ThrowTypeError(ctx, "zents: invalid static field getter");
 
     void* tempStorage = nullptr;
     void* storage = fctx->meta->passByValue ? &tempStorage : alloca((size_t)fctx->meta->size);
@@ -151,91 +173,95 @@ static JSValue StaticFieldGetter(
     return fctx->meta->cs2jsWriter(ctx, storage, fctx->meta);
 }
 
-static JSValue StaticFieldSetter(
-    JSContext* ctx, JSValueConst /*this_val*/, int argc, JSValueConst* argv, int /*magic*/, JSValue* func_data)
+static js::Value StaticFieldSetter(
+    js::Context* ctx, js::ValueConst /*this_val*/, int argc, js::ValueConst* argv, int /*magic*/, js::Value* func_data)
 {
     FieldMarshalCtx* fctx =
-        reinterpret_cast<FieldMarshalCtx*>(JS_GetOpaque(func_data[0], s_methodCtxClassId));
+        reinterpret_cast<FieldMarshalCtx*>(js::GetOpaque(func_data[0], s_methodCtxClassId));
     if (fctx == nullptr)
-        return JS_ThrowTypeError(ctx, "zents: invalid static field setter");
+        return js::ThrowTypeError(ctx, "zents: invalid static field setter");
     if (argc < 1)
-        return JS_ThrowTypeError(ctx, "zents: field setter requires a value");
+        return js::ThrowTypeError(ctx, "zents: field setter requires a value");
 
     void* tempStorage = nullptr;
     void* storage = fctx->meta->passByValue ? &tempStorage : alloca((size_t)fctx->meta->size);
     fctx->meta->js2csWriter(ctx, argv[0], storage, fctx->meta);
-    if (JS_HasException(ctx))
-        return JS_EXCEPTION;
+    if (js::HasException(ctx))
+        return js::Exception();
     void* setArg = fctx->meta->passByValue ? tempStorage : storage;
     il2cpp::vm::Field::StaticSetValue(fctx->field, setArg);
-    return JS_UNDEFINED;
+    return js::Undefined();
 }
 
-static JSValue PropertyGetter(
-    JSContext* ctx, JSValueConst this_val, int /*argc*/, JSValueConst* /*argv*/, int /*magic*/, JSValue* func_data)
+static js::Value PropertyGetter(
+    js::Context* ctx, js::ValueConst this_val, int /*argc*/, js::ValueConst* /*argv*/, int magic, js::Value* func_data)
 {
+    if(magic!=0 && ObjectRegistry::IsByVal(ctx,this_val)!=(magic==1))return js::ThrowTypeError(ctx,"zents: incompatible ByVal/ByObj receiver");
+
     MethodMarshalCtx* mctx =
-        reinterpret_cast<MethodMarshalCtx*>(JS_GetOpaque(func_data[0], s_methodCtxClassId));
+        reinterpret_cast<MethodMarshalCtx*>(js::GetOpaque(func_data[0], s_methodCtxClassId));
     Il2CppObject* target = ObjectRegistry::Get(ctx, this_val);
     if (mctx == nullptr || target == nullptr)
-        return JS_ThrowTypeError(ctx, "zents: invalid property getter receiver");
+        return js::ThrowTypeError(ctx, "zents: invalid property getter receiver");
     return MethodBridge::InvokeJs2Cs(ctx, target, 0, nullptr, mctx);
 }
 
-static JSValue PropertySetter(
-    JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv, int /*magic*/, JSValue* func_data)
+static js::Value PropertySetter(
+    js::Context* ctx, js::ValueConst this_val, int argc, js::ValueConst* argv, int magic, js::Value* func_data)
 {
+    if(magic!=0 && ObjectRegistry::IsByVal(ctx,this_val)!=(magic==1))return js::ThrowTypeError(ctx,"zents: incompatible ByVal/ByObj receiver");
+
     MethodMarshalCtx* mctx =
-        reinterpret_cast<MethodMarshalCtx*>(JS_GetOpaque(func_data[0], s_methodCtxClassId));
+        reinterpret_cast<MethodMarshalCtx*>(js::GetOpaque(func_data[0], s_methodCtxClassId));
     Il2CppObject* target = ObjectRegistry::Get(ctx, this_val);
     if (mctx == nullptr || target == nullptr)
-        return JS_ThrowTypeError(ctx, "zents: invalid property setter receiver");
+        return js::ThrowTypeError(ctx, "zents: invalid property setter receiver");
     if (argc < 1)
-        return JS_ThrowTypeError(ctx, "zents: property setter requires a value");
+        return js::ThrowTypeError(ctx, "zents: property setter requires a value");
     return MethodBridge::InvokeJs2Cs(ctx, target, 1, argv, mctx);
 }
 
-static JSValue StaticPropertyGetter(
-    JSContext* ctx, JSValueConst /*this_val*/, int /*argc*/, JSValueConst* /*argv*/, int /*magic*/, JSValue* func_data)
+static js::Value StaticPropertyGetter(
+    js::Context* ctx, js::ValueConst /*this_val*/, int /*argc*/, js::ValueConst* /*argv*/, int /*magic*/, js::Value* func_data)
 {
     MethodMarshalCtx* mctx =
-        reinterpret_cast<MethodMarshalCtx*>(JS_GetOpaque(func_data[0], s_methodCtxClassId));
+        reinterpret_cast<MethodMarshalCtx*>(js::GetOpaque(func_data[0], s_methodCtxClassId));
     if (mctx == nullptr)
-        return JS_ThrowTypeError(ctx, "zents: invalid static property getter");
+        return js::ThrowTypeError(ctx, "zents: invalid static property getter");
     return MethodBridge::InvokeJs2Cs(ctx, nullptr, 0, nullptr, mctx);
 }
 
-static JSValue StaticPropertySetter(
-    JSContext* ctx, JSValueConst /*this_val*/, int argc, JSValueConst* argv, int /*magic*/, JSValue* func_data)
+static js::Value StaticPropertySetter(
+    js::Context* ctx, js::ValueConst /*this_val*/, int argc, js::ValueConst* argv, int /*magic*/, js::Value* func_data)
 {
     MethodMarshalCtx* mctx =
-        reinterpret_cast<MethodMarshalCtx*>(JS_GetOpaque(func_data[0], s_methodCtxClassId));
+        reinterpret_cast<MethodMarshalCtx*>(js::GetOpaque(func_data[0], s_methodCtxClassId));
     if (mctx == nullptr)
-        return JS_ThrowTypeError(ctx, "zents: invalid static property setter");
+        return js::ThrowTypeError(ctx, "zents: invalid static property setter");
     if (argc < 1)
-        return JS_ThrowTypeError(ctx, "zents: property setter requires a value");
+        return js::ThrowTypeError(ctx, "zents: property setter requires a value");
     return MethodBridge::InvokeJs2Cs(ctx, nullptr, 1, argv, mctx);
 }
 
-static MethodMarshalCtx* FindCtor(TypeBinding* binding, JSContext* ctx, int argc, JSValueConst* argv)
+static MethodMarshalCtx* FindCtor(TypeBinding* binding, js::Context* ctx, int argc, js::ValueConst* argv)
 {
     OverloadGroup group;
     group.candidates = binding->ctors;
     return MethodOverloadResolver::Resolve(ctx, &group, argc, argv);
 }
 
-static JSValue TypeConstruct(
-    JSContext* ctx, JSValueConst /*this_val*/, int argc, JSValueConst* argv, int /*magic*/, JSValue* func_data)
+static js::Value TypeConstruct(
+    js::Context* ctx, js::ValueConst /*this_val*/, int argc, js::ValueConst* argv, int /*magic*/, js::Value* func_data)
 {
     TypeBinding* binding =
-        reinterpret_cast<TypeBinding*>(JS_GetOpaque(func_data[0], s_methodCtxClassId));
+        reinterpret_cast<TypeBinding*>(js::GetOpaque(func_data[0], s_methodCtxClassId));
     if (binding == nullptr)
-        return JS_ThrowInternalError(ctx, "zents: missing type binding");
+        return js::ThrowInternalError(ctx, "zents: missing type binding");
 
     MethodMarshalCtx* ctor = FindCtor(binding, ctx, argc, argv);
     if (ctor == nullptr)
     {
-        return JS_ThrowTypeError(
+        return js::ThrowTypeError(
             ctx,
             "zents: no matching constructor for %s with %d argument(s)",
             MetadataUtil::GetTypeFullName(binding->klass),
@@ -243,22 +269,22 @@ static JSValue TypeConstruct(
     }
 
     Il2CppObject* obj = il2cpp::vm::Object::New(binding->klass);
-    JSValue invokeRet = MethodBridge::InvokeJs2Cs(ctx, obj, argc, argv, ctor);
-    if (JS_IsException(invokeRet))
+    js::Value invokeRet = MethodBridge::InvokeJs2Cs(ctx, obj, argc, argv, ctor);
+    if (js::IsException(invokeRet))
         return invokeRet;
-    JS_FreeValue(ctx, invokeRet);
+    js::FreeValue(ctx, invokeRet);
     if (il2cpp::vm::Class::IsValuetype(binding->klass) && !binding->klass->enumtype)
         return ObjectRegistry::PushByVal(ctx, obj, binding);
     return ObjectRegistry::Push(ctx, obj, binding);
 }
 
-static JSValue StructDefaultInvoke(
-    JSContext* ctx, JSValueConst /*this_val*/, int /*argc*/, JSValueConst* /*argv*/, int /*magic*/, JSValue* func_data)
+static js::Value StructDefaultInvoke(
+    js::Context* ctx, js::ValueConst /*this_val*/, int /*argc*/, js::ValueConst* /*argv*/, int /*magic*/, js::Value* func_data)
 {
     TypeBinding* binding =
-        reinterpret_cast<TypeBinding*>(JS_GetOpaque(func_data[0], s_methodCtxClassId));
+        reinterpret_cast<TypeBinding*>(js::GetOpaque(func_data[0], s_methodCtxClassId));
     if (binding == nullptr || binding->klass == nullptr)
-        return JS_ThrowInternalError(ctx, "zents: missing type binding for _default");
+        return js::ThrowInternalError(ctx, "zents: missing type binding for _default");
 
     Il2CppClass* klass = binding->klass;
     il2cpp::vm::Class::Init(klass);
@@ -270,26 +296,26 @@ static JSValue StructDefaultInvoke(
     return ObjectRegistry::PushByVal(ctx, boxed, binding);
 }
 
-static void AttachStructDefault(JSContext* ctx, JSValue typeObj, TypeBinding* binding)
+static void AttachStructDefault(js::Context* ctx, js::Value typeObj, TypeBinding* binding)
 {
     Il2CppClass* klass = binding->klass;
     if (!il2cpp::vm::Class::IsValuetype(klass) || klass->enumtype)
         return;
 
     binding->memberKeys.insert("_default");
-    JSValue holder = JS_NewObjectClass(ctx, s_methodCtxClassId);
-    JS_SetOpaque(holder, binding);
-    JSValue fn = JS_NewCFunctionData(ctx, StructDefaultInvoke, 0, 0, 1, &holder);
-    JS_FreeValue(ctx, holder);
-    JS_SetPropertyStr(ctx, typeObj, "_default", fn);
+    js::Value holder = js::NewObjectClass(ctx, s_methodCtxClassId);
+    js::SetOpaque(holder, binding);
+    js::Value fn = js::NewCFunctionData(ctx, StructDefaultInvoke, 0, 0, 1, &holder);
+    js::FreeValue(ctx, holder);
+    js::SetPropertyStr(ctx, typeObj, "_default", fn);
 }
 
-static JSValue Cs2JsOpaqueValue(JSContext* ctx, void* address, const MarshalMetaInfo* meta)
+static js::Value Cs2JsOpaqueValue(js::Context* ctx, void* address, const MarshalMetaInfo* meta)
 {
     return OpaqueValueMarshal::Push(ctx, address, meta->type);
 }
 
-static void Js2CsOpaqueValue(JSContext* ctx, JSValueConst value, void* address, const MarshalMetaInfo* meta)
+static void Js2CsOpaqueValue(js::Context* ctx, js::ValueConst value, void* address, const MarshalMetaInfo* meta)
 {
     if (OpaqueValueMarshal::IsOpaqueHandle(ctx, value))
     {
@@ -414,6 +440,7 @@ static bool TryBuildMarshalCtx(const MethodInfo* method, MethodMarshalCtx** outC
 {
     if (method == nullptr)
         return false;
+    auto cached=s_methodPlans.find(method);if(cached!=s_methodPlans.end()){*outCtx=cached->second;return true;}
 
     if (method->is_generic)
     {
@@ -422,12 +449,14 @@ static bool TryBuildMarshalCtx(const MethodInfo* method, MethodMarshalCtx** outC
     ctx->js2CsInvoker = nullptr; /* open generic: invoke rejects */
     ctx->paramsMeta = nullptr;
     ctx->retMeta = nullptr;
+    ctx->paramsElementMeta = nullptr;
     ctx->defaults = nullptr;
     ctx->arity = method->parameters_count;
     ctx->minArity = method->parameters_count;
     ctx->sealed = true;
     ctx->isExtension = false;
     ctx->hasParamsArray = false;
+    s_methodPlans[method]=ctx;
     *outCtx = ctx;
     return true;
     }
@@ -464,15 +493,8 @@ static bool TryBuildMarshalCtx(const MethodInfo* method, MethodMarshalCtx** outC
                 }
                 else
                 {
-                    const MarshalMetaInfo* base = MarshalMeta::TryCreateDefault(method->parameters[i]);
-                    if (base != nullptr)
-                    {
-                        auto* bad = new MarshalMetaInfo();
-                        *bad = *base;
-                        bad->js2csWriter = BytesMarshal::Js2CsBytesTypeMismatch;
-                        bad->cs2jsWriter = BytesMarshal::Cs2JsBytesTypeMismatch;
-                        meta = bad;
-                    }
+                    marshalKind=0;
+                    meta=MarshalMeta::TryCreateDefault(method->parameters[i]);
                 }
             }
             else if (marshalKind == 3 /* OpaqueValue */)
@@ -482,7 +504,8 @@ static bool TryBuildMarshalCtx(const MethodInfo* method, MethodMarshalCtx** outC
                 {
                     auto* om = new MarshalMetaInfo();
                     *om = *base;
-                    om->js2csWriter = Js2CsOpaqueValue;
+                    om->marshalAsKind = MarshalAsKind::OpaqueValue;
+                om->js2csWriter = Js2CsOpaqueValue;
                     om->cs2jsWriter = Cs2JsOpaqueValue;
                     meta = om;
                 }
@@ -505,6 +528,8 @@ static bool TryBuildMarshalCtx(const MethodInfo* method, MethodMarshalCtx** outC
                 delete[] paramsMeta;
                 return false;
             }
+            if (marshalKind == 7 || marshalKind == 1) meta = MarshalMeta::WithStrategy(method->parameters[i], marshalKind);
+            if (marshalKind == 2) const_cast<MarshalMetaInfo*>(meta)->marshalAsKind = MarshalAsKind::Bytes;
             paramsMeta[i] = meta;
         }
     }
@@ -536,15 +561,7 @@ static bool TryBuildMarshalCtx(const MethodInfo* method, MethodMarshalCtx** outC
             }
             else
             {
-                const MarshalMetaInfo* base = MarshalMeta::TryCreateDefault(method->return_type);
-                if (base != nullptr)
-                {
-                    auto* bad = new MarshalMetaInfo();
-                    *bad = *base;
-                    bad->js2csWriter = BytesMarshal::Js2CsBytesTypeMismatch;
-                    bad->cs2jsWriter = BytesMarshal::Cs2JsBytesTypeMismatch;
-                    retMeta = bad;
-                }
+                retMeta=MarshalMeta::TryCreateDefault(method->return_type);
             }
         }
         else if (retMarshalKind == 3 /* OpaqueValue */)
@@ -554,6 +571,7 @@ static bool TryBuildMarshalCtx(const MethodInfo* method, MethodMarshalCtx** outC
             {
                 auto* om = new MarshalMetaInfo();
                 *om = *base;
+                om->marshalAsKind = MarshalAsKind::OpaqueValue;
                 om->js2csWriter = Js2CsOpaqueValue;
                 om->cs2jsWriter = Cs2JsOpaqueValue;
                 retMeta = om;
@@ -582,7 +600,10 @@ static bool TryBuildMarshalCtx(const MethodInfo* method, MethodMarshalCtx** outC
     ctx->method = method;
     ctx->js2CsInvoker = MethodBridge::ResolveMethodInvoker(method);
     ctx->paramsMeta = paramsMeta;
+    int32_t returnKind = 0; MetadataUtil::TryReadJsMarshalAs(method, -1, &returnKind, nullptr);
+    if (returnKind == 6 || returnKind == 7 || returnKind == 1) retMeta = MarshalMeta::WithStrategy(method->return_type, returnKind);
     ctx->retMeta = retMeta;
+    ctx->paramsElementMeta = nullptr;
     ctx->isExtension = isExtension;
     ctx->hasParamsArray = false;
     {
@@ -594,14 +615,19 @@ static bool TryBuildMarshalCtx(const MethodInfo* method, MethodMarshalCtx** outC
                 ? (int)method->parameters_count - 1
                 : -1;
         if (paramsIndex >= (int)start)
+        {
             ctx->hasParamsArray = true;
+            Il2CppClass* arrayClass = paramsMeta[paramsIndex]->typeKlass;
+            if (arrayClass && arrayClass->element_class) ctx->paramsElementMeta = MarshalMeta::TryCreateDefault(&arrayClass->element_class->byval_arg);
+        }
 
         for (uint8_t i = start; i < method->parameters_count; ++i)
         {
+            if ((method->parameters[i]->attrs & PARAM_ATTRIBUTE_OUT) && !(method->parameters[i]->attrs & PARAM_ATTRIBUTE_IN)) continue;
             int32_t slots = TableMarshal::GetJsArgSlotCount(paramsMeta[i]);
             if ((int)i == paramsIndex)
             {
-                jsArity += 1; /* params is a single JS slot when provided */
+                jsArity += 1; /* params overflow is handled by the element plan */
                 continue;
             }
             jsArity += slots;
@@ -616,61 +642,121 @@ static bool TryBuildMarshalCtx(const MethodInfo* method, MethodMarshalCtx** outC
     }
     ctx->defaults = TryBuildDefaultArgs(method, paramsMeta, isExtension);
     ctx->sealed = MetadataUtil::IsMethodSealed(method, false);
+    s_methodPlans[method]=ctx;
     *outCtx = ctx;
     return true;
 }
 
+MethodMarshalCtx* MetaBinding::ResolveGtap(js::Context* ctx,const std::vector<MethodMarshalCtx*>& methods,int argc,js::ValueConst* argv,int* prefix)
+{
+    *prefix=0;std::vector<MethodMarshalCtx*> closed;int commonPrefix=-1;
+    for(auto* mc:methods)
+    {
+        const MethodInfo* open=mc->method;if(!open->is_generic)continue;
+        auto container=open->genericContainerHandle;if(!container&&open->methodMetadataHandle)container=il2cpp::vm::MetadataCache::GetGenericContainerFromMethod(open->methodMetadataHandle);
+        if(!container)continue;uint32_t n=il2cpp::vm::MetadataCache::GetGenericContainerCount(container);if(argc<(int)n)continue;
+        std::vector<const Il2CppType*> types;bool valid=true;
+        for(uint32_t i=0;i<n;++i)
+        {
+            Il2CppObject* obj=ObjectRegistry::Get(ctx,argv[i]);
+            if(!obj || !il2cpp::vm::Class::IsAssignableFrom(il2cpp_defaults.systemtype_class,obj->klass)){valid=false;break;}
+            types.push_back(reinterpret_cast<Il2CppReflectionType*>(obj)->type);
+        }
+        if(!valid)continue;
+        if(!MetadataUtil::MethodGenericTypeArgsSatisfyConstraints(open,types.data(),n))continue;
+        const MethodInfo* method=il2cpp::vm::MetadataCache::GetGenericInstanceMethod(open,types.data(),n);
+        // Fully shared methods can lack a direct-call stub while their invoker redirects
+        // to a valid raw AOT body. This bridge calls the invoker, never the direct stub.
+        if(!method || !method->invoker_method || method->invoker_method==il2cpp::vm::Runtime::GetMissingMethodInvoker())
+        {js::ThrowTypeError(ctx,"zents: generic AOT code is unavailable for %s",open->name);return nullptr;}
+        MethodMarshalCtx* cm=CreateMethodMarshalCtx(method);
+        if(!cm || !MethodOverloadResolver::IsApplicable(ctx,cm,argc-(int)n,argv+n))continue;
+        if(commonPrefix>=0&&commonPrefix!=(int)n){js::ThrowTypeError(ctx,"zents: ambiguous GTAP overload");return nullptr;}
+        commonPrefix=(int)n;closed.push_back(cm);
+    }
+    if(closed.empty())return nullptr;
+    OverloadGroup group;group.candidates=closed;auto* winner=MethodOverloadResolver::Resolve(ctx,&group,argc-commonPrefix,argv+commonPrefix);
+    if(!winner){js::ThrowTypeError(ctx,"zents: ambiguous GTAP overload");return nullptr;}*prefix=commonPrefix;return winner;
+}
+
+const MethodInfo* MetaBinding::FindPublicMethod(Il2CppClass* owner,const char* key,int staticDomain,int genericArity)
+{
+    std::vector<const MethodInfo*> methods;
+    for(Il2CppClass* walk=owner;walk;walk=walk->parent){il2cpp::vm::Class::SetupMethods(walk);for(uint16_t i=0;i<walk->method_count;++i)methods.push_back(walk->methods[i]);}
+    if(staticDomain!=1)CollectExtensionMethods(owner,methods);
+    const MethodInfo* found=nullptr;
+    for(const MethodInfo* m:methods)
+    {
+        bool extension=MetadataUtil::IsExtensionMethod(m);
+        if(!MetadataUtil::IsPublicMethod(m)||m->name[0]=='.')continue;
+        if((m->flags&METHOD_ATTRIBUTE_SPECIAL_NAME)&&std::strncmp(m->name,"add_",4)!=0&&std::strncmp(m->name,"remove_",7)!=0)continue;
+        bool stat=MetadataUtil::IsStaticMethod(m)&&!extension;
+        if(staticDomain>=0&&stat!=(staticDomain!=0))continue;
+        if(genericArity>=0){if(!m->is_generic)continue;auto c=m->genericContainerHandle;if(!c||(int)il2cpp::vm::MetadataCache::GetGenericContainerCount(c)!=genericArity)continue;}
+        std::string name=m->name,alias;
+        if(MetadataUtil::TryReadJsAlias(m,alias)||AliasXmlTable::TryGetAlias(m,alias))name=alias;
+        bool match=std::strchr(key,'(')?MethodOverloadResolver::BuildSignatureKey(m)==key:name==key;
+        if(!match)continue;
+        if(!found)found=m;
+        else if(MethodOverloadResolver::BuildSignatureKey(found)!=MethodOverloadResolver::BuildSignatureKey(m))return nullptr;
+    }
+    return found;
+}
+
 MethodMarshalCtx* MetaBinding::CreateMethodMarshalCtx(const MethodInfo* method)
 {
+    // CLR method metadata and AOT XML are immutable for the process lifetime.
+    auto found=s_methodPlans.find(method);if(found!=s_methodPlans.end())return found->second;
     MethodMarshalCtx* ctx = nullptr;
     if (!TryBuildMarshalCtx(method, &ctx))
         return nullptr;
+    s_methodPlans[method]=ctx;
     return ctx;
 }
 
-static JSValue CreateMethodFunction(JSContext* ctx, void* opaque, JSCFunctionData* invoker, int length, bool markDirect)
+static js::Value CreateMethodFunction(js::Context* ctx, void* opaque, js::CFunctionData* invoker, int length, bool markDirect, int mode = 0)
 {
-    EnsureMethodCtxClass(JS_GetRuntime(ctx));
-    JSValue holder = JS_NewObjectClass(ctx, s_methodCtxClassId);
-    JS_SetOpaque(holder, opaque);
-    JSValue fn = JS_NewCFunctionData(ctx, invoker, length, 0, 1, &holder);
+    EnsureMethodCtxClass(js::GetRuntime(ctx));
+    js::Value holder = js::NewObjectClass(ctx, s_methodCtxClassId);
+    js::SetOpaque(holder, opaque);
+    js::Value fn = js::NewCFunctionData(ctx, invoker, length, mode, 1, &holder);
     if (markDirect)
     {
-        JS_SetPropertyStr(ctx, fn, "__zents_mctx", JS_DupValue(ctx, holder));
-        JS_SetPropertyStr(ctx, fn, "__zents_direct", JS_NewBool(ctx, 1));
+        js::SetPropertyStr(ctx, fn, "__zents_mctx", js::DupValue(ctx, holder));
+        js::SetPropertyStr(ctx, fn, "__zents_direct", js::NewBool(ctx, 1));
     }
-    JS_FreeValue(ctx, holder);
+    js::FreeValue(ctx, holder);
     return fn;
 }
 
-JSValue MetaBinding::CreateInstanceMethodFunction(JSContext* ctx, MethodMarshalCtx* mctx)
+js::Value MetaBinding::CreateInstanceMethodFunction(js::Context* ctx, MethodMarshalCtx* mctx, int mode)
 {
-    return CreateMethodFunction(ctx, mctx, InvokeInstanceMethod, mctx->minArity, true);
+    return CreateMethodFunction(ctx, mctx, InvokeInstanceMethod, mctx->minArity, true, mode);
 }
 
-JSValue MetaBinding::CreateStaticMethodFunction(JSContext* ctx, MethodMarshalCtx* mctx)
+js::Value MetaBinding::CreateStaticMethodFunction(js::Context* ctx, MethodMarshalCtx* mctx)
 {
     return CreateMethodFunction(ctx, mctx, InvokeStaticMethod, mctx->minArity, true);
 }
 
-MethodMarshalCtx* MetaBinding::TryGetDirectMethodCtx(JSContext* ctx, JSValueConst fn)
+MethodMarshalCtx* MetaBinding::TryGetDirectMethodCtx(js::Context* ctx, js::ValueConst fn)
 {
-    if (!JS_IsFunction(ctx, fn))
+    if (!js::IsFunction(ctx, fn))
         return nullptr;
-    JSValue direct = JS_GetPropertyStr(ctx, fn, "__zents_direct");
-    bool ok = JS_IsBool(direct) && JS_ToBool(ctx, direct);
-    JS_FreeValue(ctx, direct);
+    js::Value direct = js::GetPropertyStr(ctx, fn, "__zents_direct");
+    bool ok = js::IsBool(direct) && js::ToBool(ctx, direct);
+    js::FreeValue(ctx, direct);
     if (!ok)
         return nullptr;
-    JSValue holder = JS_GetPropertyStr(ctx, fn, "__zents_mctx");
-    if (!JS_IsObject(holder))
+    js::Value holder = js::GetPropertyStr(ctx, fn, "__zents_mctx");
+    if (!js::IsObject(holder))
     {
-        JS_FreeValue(ctx, holder);
+        js::FreeValue(ctx, holder);
         return nullptr;
     }
-    EnsureMethodCtxClass(JS_GetRuntime(ctx));
-    MethodMarshalCtx* mctx = reinterpret_cast<MethodMarshalCtx*>(JS_GetOpaque(holder, s_methodCtxClassId));
-    JS_FreeValue(ctx, holder);
+    EnsureMethodCtxClass(js::GetRuntime(ctx));
+    MethodMarshalCtx* mctx = reinterpret_cast<MethodMarshalCtx*>(js::GetOpaque(holder, s_methodCtxClassId));
+    js::FreeValue(ctx, holder);
     return mctx;
 }
 
@@ -760,7 +846,10 @@ static void RegisterFields(Il2CppClass* klass, TypeBinding* binding, NameMetaMap
         if (instanceMap.find(field->name) != instanceMap.end())
             continue;
 
-        const MarshalMetaInfo* meta = MarshalMeta::TryCreateDefault(field->type);
+        int32_t fieldKind=0;std::vector<std::string> fieldMembers;
+        MetadataUtil::TryReadFieldMarshalAs(field,&fieldKind,&fieldMembers);
+        const MarshalMetaInfo* meta = MarshalMeta::WithStrategy(field->type,fieldKind);
+        if((fieldKind==4||fieldKind==5)&&!fieldMembers.empty())meta=TableMarshal::Create(field->type,il2cpp::vm::Class::FromIl2CppType(field->type),fieldMembers,(MarshalAsKind)fieldKind);
         if (meta == nullptr)
             continue;
 
@@ -776,7 +865,7 @@ static void RegisterFields(Il2CppClass* klass, TypeBinding* binding, NameMetaMap
     }
 }
 
-static void AttachStaticLiteralFields(JSContext* ctx, JSValue typeObj, Il2CppClass* klass)
+static void AttachStaticLiteralFields(js::Context* ctx, js::Value typeObj, Il2CppClass* klass)
 {
     il2cpp::vm::Class::SetupFields(klass);
     for (uint16_t i = 0; i < klass->field_count; ++i)
@@ -790,18 +879,21 @@ static void AttachStaticLiteralFields(JSContext* ctx, JSValue typeObj, Il2CppCla
         if ((il2cpp::vm::Field::GetFlags(field) & FIELD_ATTRIBUTE_LITERAL) == 0 && !klass->enumtype)
             continue;
 
-        const MarshalMetaInfo* meta = MarshalMeta::TryCreateDefault(field->type);
+        int32_t fieldKind=0;std::vector<std::string> fieldMembers;
+        MetadataUtil::TryReadFieldMarshalAs(field,&fieldKind,&fieldMembers);
+        const MarshalMetaInfo* meta = MarshalMeta::WithStrategy(field->type,fieldKind);
+        if((fieldKind==4||fieldKind==5)&&!fieldMembers.empty())meta=TableMarshal::Create(field->type,il2cpp::vm::Class::FromIl2CppType(field->type),fieldMembers,(MarshalAsKind)fieldKind);
         if (meta == nullptr)
             continue;
 
         void* storage = alloca((size_t)meta->size);
         il2cpp::vm::Field::StaticGetValue(field, storage);
-        JSValue js = meta->cs2jsWriter(ctx, storage, meta);
-        JS_SetPropertyStr(ctx, typeObj, field->name, js);
+        js::Value js = meta->cs2jsWriter(ctx, storage, meta);
+        js::DefinePropertyValueStr(ctx, typeObj, field->name, js, 4);
     }
 }
 
-static void AttachStaticFields(JSContext* ctx, JSValue typeObj, TypeBinding* binding, Il2CppClass* klass)
+static void AttachStaticFields(js::Context* ctx, js::Value typeObj, TypeBinding* binding, Il2CppClass* klass)
 {
     il2cpp::vm::Class::SetupFields(klass);
     for (uint16_t i = 0; i < klass->field_count; ++i)
@@ -818,7 +910,10 @@ static void AttachStaticFields(JSContext* ctx, JSValue typeObj, TypeBinding* bin
         if (binding->memberKeys.find(field->name) != binding->memberKeys.end())
             continue;
 
-        const MarshalMetaInfo* meta = MarshalMeta::TryCreateDefault(field->type);
+        int32_t fieldKind=0;std::vector<std::string> fieldMembers;
+        MetadataUtil::TryReadFieldMarshalAs(field,&fieldKind,&fieldMembers);
+        const MarshalMetaInfo* meta = MarshalMeta::WithStrategy(field->type,fieldKind);
+        if((fieldKind==4||fieldKind==5)&&!fieldMembers.empty())meta=TableMarshal::Create(field->type,il2cpp::vm::Class::FromIl2CppType(field->type),fieldMembers,(MarshalAsKind)fieldKind);
         if (meta == nullptr)
             continue;
 
@@ -832,11 +927,11 @@ static void AttachStaticFields(JSContext* ctx, JSValue typeObj, TypeBinding* bin
         binding->staticMap[field->name] = info;
         binding->memberKeys.insert(field->name);
 
-        JSValue getter = CreateMethodFunction(ctx, fctx, StaticFieldGetter, 0, false);
-        JSValue setter = CreateMethodFunction(ctx, fctx, StaticFieldSetter, 1, false);
-        JSAtom atom = JS_NewAtom(ctx, field->name);
-        JS_DefinePropertyGetSet(ctx, typeObj, atom, getter, setter, JS_PROP_C_W_E);
-        JS_FreeAtom(ctx, atom);
+        js::Value getter = CreateMethodFunction(ctx, fctx, StaticFieldGetter, 0, false);
+        js::Value setter = CreateMethodFunction(ctx, fctx, StaticFieldSetter, 1, false);
+        js::Atom atom = js::NewAtom(ctx, field->name);
+        js::DefinePropertyGetSet(ctx, typeObj, atom, getter, setter, js::PropertyConfigurableWritableEnumerable);
+        js::FreeAtom(ctx, atom);
     }
 }
 
@@ -860,7 +955,7 @@ static void RegisterProperties(Il2CppClass* klass, TypeBinding* binding, NameMet
             continue;
         if (property->set != nullptr && !TryBuildMarshalCtx(property->set, &setter))
         {
-            delete getter;
+            /* CLR plans are process-owned and may be shared by another binding. */
             continue;
         }
 
@@ -873,12 +968,12 @@ static void RegisterProperties(Il2CppClass* klass, TypeBinding* binding, NameMet
     }
 }
 
-static JSValue ThrowReadOnlyProperty(JSContext* ctx, JSValueConst /*this_val*/, int /*argc*/, JSValueConst* /*argv*/)
+static js::Value ThrowReadOnlyProperty(js::Context* ctx, js::ValueConst /*this_val*/, int /*argc*/, js::ValueConst* /*argv*/)
 {
-    return JS_ThrowTypeError(ctx, "zents: property is read-only");
+    return js::ThrowTypeError(ctx, "zents: property is read-only");
 }
 
-static void AttachStaticProperties(JSContext* ctx, JSValue typeObj, TypeBinding* binding, Il2CppClass* klass)
+static void AttachStaticProperties(js::Context* ctx, js::Value typeObj, TypeBinding* binding, Il2CppClass* klass)
 {
     void* iter = nullptr;
     while (const PropertyInfo* property = il2cpp::vm::Class::GetProperties(klass, &iter))
@@ -899,7 +994,7 @@ static void AttachStaticProperties(JSContext* ctx, JSValue typeObj, TypeBinding*
             continue;
         if (property->set != nullptr && !TryBuildMarshalCtx(property->set, &setter))
         {
-            delete getter;
+            /* CLR plans are process-owned and may be shared by another binding. */
             continue;
         }
 
@@ -910,17 +1005,17 @@ static void AttachStaticProperties(JSContext* ctx, JSValue typeObj, TypeBinding*
         binding->staticMap[property->name] = info;
         binding->memberKeys.insert(property->name);
 
-        JSValue jsGetter = JS_UNDEFINED;
-        JSValue jsSetter = JS_UNDEFINED;
+        js::Value jsGetter = js::Undefined();
+        js::Value jsSetter = js::Undefined();
         if (getter != nullptr)
             jsGetter = CreateMethodFunction(ctx, getter, StaticPropertyGetter, 0, false);
         if (setter != nullptr)
             jsSetter = CreateMethodFunction(ctx, setter, StaticPropertySetter, 1, false);
         else if (getter != nullptr)
-            jsSetter = JS_NewCFunction(ctx, ThrowReadOnlyProperty, "set", 1);
-        JSAtom atom = JS_NewAtom(ctx, property->name);
-        JS_DefinePropertyGetSet(ctx, typeObj, atom, jsGetter, jsSetter, JS_PROP_C_W_E);
-        JS_FreeAtom(ctx, atom);
+            jsSetter = js::NewCFunction(ctx, ThrowReadOnlyProperty, "set", 1);
+        js::Atom atom = js::NewAtom(ctx, property->name);
+        js::DefinePropertyGetSet(ctx, typeObj, atom, jsGetter, jsSetter, js::PropertyConfigurableWritableEnumerable);
+        js::FreeAtom(ctx, atom);
     }
 }
 
@@ -966,7 +1061,7 @@ static void CollectExtensionMethods(Il2CppClass* klass, std::vector<const Method
                 continue;
             if (MetadataUtil::IsCtorOrCCtor(method))
                 continue;
-            if (!MetadataUtil::IsExtensionMethod(method) || method->is_generic)
+            if (!MetadataUtil::IsExtensionMethod(method))
                 continue;
             if (method->parameters_count < 1)
                 continue;
@@ -1016,46 +1111,56 @@ static void CollectMethods(
     }
 }
 
-static JSValue InvokeStaticDispatch(
-    JSContext* ctx, JSValueConst /*this_val*/, int argc, JSValueConst* argv, int /*magic*/, JSValue* func_data)
+static js::Value InvokeStaticDispatch(
+    js::Context* ctx, js::ValueConst /*this_val*/, int argc, js::ValueConst* argv, int /*magic*/, js::Value* func_data)
 {
-    OverloadGroup* group = reinterpret_cast<OverloadGroup*>(JS_GetOpaque(func_data[0], s_methodCtxClassId));
+    OverloadGroup* group = reinterpret_cast<OverloadGroup*>(js::GetOpaque(func_data[0], s_methodCtxClassId));
     if (group == nullptr)
-        return JS_ThrowInternalError(ctx, "zents: missing overload group");
-    MethodMarshalCtx* mctx = MethodOverloadResolver::Resolve(ctx, group, argc, argv);
+        return js::ThrowInternalError(ctx, "zents: missing overload group");
+    int prefix=0;MethodMarshalCtx* mctx=MetaBinding::ResolveGtap(ctx,group->candidates,argc,argv,&prefix);
+    if(js::HasException(ctx))return js::Exception();
+    if(mctx){argc-=prefix;argv+=prefix;}else mctx=MethodOverloadResolver::Resolve(ctx,group,argc,argv);
     if (mctx == nullptr)
-        return JS_ThrowTypeError(ctx, "zents: no matching overload");
+        return js::HasException(ctx)?js::Exception():js::ThrowTypeError(ctx, "zents: no matching overload");
     return MethodBridge::InvokeJs2Cs(ctx, nullptr, argc, argv, mctx);
 }
 
-static JSValue InvokeInstanceDispatch(
-    JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv, int /*magic*/, JSValue* func_data)
+static js::Value InvokeInstanceDispatch(
+    js::Context* ctx, js::ValueConst this_val, int argc, js::ValueConst* argv, int magic, js::Value* func_data)
 {
-    OverloadGroup* group = reinterpret_cast<OverloadGroup*>(JS_GetOpaque(func_data[0], s_methodCtxClassId));
+    if(magic!=0 && ObjectRegistry::IsByVal(ctx,this_val)!=(magic==1))return js::ThrowTypeError(ctx,"zents: incompatible ByVal/ByObj receiver");
+
+    OverloadGroup* group = reinterpret_cast<OverloadGroup*>(js::GetOpaque(func_data[0], s_methodCtxClassId));
     if (group == nullptr)
-        return JS_ThrowInternalError(ctx, "zents: missing overload group");
+        return js::ThrowInternalError(ctx, "zents: missing overload group");
     Il2CppObject* target = ObjectRegistry::Get(ctx, this_val);
     if (target == nullptr)
-        return JS_ThrowTypeError(ctx, "zents: instance method requires a CLR object receiver");
-    MethodMarshalCtx* mctx = MethodOverloadResolver::Resolve(ctx, group, argc, argv);
+        return js::ThrowTypeError(ctx, "zents: instance method requires a CLR object receiver");
+    int prefix=0;MethodMarshalCtx* mctx=MetaBinding::ResolveGtap(ctx,group->candidates,argc,argv,&prefix);
+    if(js::HasException(ctx))return js::Exception();
+    if(mctx){argc-=prefix;argv+=prefix;}else mctx=MethodOverloadResolver::Resolve(ctx,group,argc,argv);
     if (mctx == nullptr)
-        return JS_ThrowTypeError(ctx, "zents: no matching overload");
+        return js::HasException(ctx)?js::Exception():js::ThrowTypeError(ctx, "zents: no matching overload");
     return MethodBridge::InvokeJs2Cs(ctx, target, argc, argv, mctx);
 }
 
 static void RegisterUniqueMethods(
-    JSContext* ctx,
+    js::Context* ctx,
     TypeBinding* binding,
     NameMetaMap& map,
-    JSValue targetObj,
+    js::Value targetObj,
     const std::vector<const MethodInfo*>& methods,
-    JSCFunctionData* directInvoker,
-    JSCFunctionData* dispatchInvoker,
+    js::CFunctionData* directInvoker,
+    js::CFunctionData* dispatchInvoker,
     bool attachToObject)
 {
     std::unordered_map<std::string, std::vector<const MethodInfo*>> groups;
+    std::unordered_set<std::string> signatures;
     for (const MethodInfo* method : methods)
     {
+        std::string signature=MethodOverloadResolver::BuildSignatureKey(method);
+        if(MetadataUtil::IsExtensionMethod(method))signature+="@"+MetadataUtil::BuildTypeFullName(method->klass);
+        if(!signatures.insert(signature).second)continue;
         std::string key = method->name;
         std::string alias;
         if (MetadataUtil::TryReadJsAlias(method, alias))
@@ -1092,8 +1197,8 @@ static void RegisterUniqueMethods(
             map[methodName] = info;
             if (attachToObject)
             {
-                JSValue fn = CreateMethodFunction(ctx, built[0], directInvoker, built[0]->minArity, true);
-                JS_SetPropertyStr(ctx, targetObj, methodName, fn);
+                js::Value fn = CreateMethodFunction(ctx, built[0], directInvoker, built[0]->minArity, true);
+                js::SetPropertyStr(ctx, targetObj, methodName, fn);
             }
             binding->memberKeys.insert(methodName);
             continue;
@@ -1111,118 +1216,105 @@ static void RegisterUniqueMethods(
 
         if (attachToObject)
         {
-            JSValue fn = CreateMethodFunction(ctx, group, dispatchInvoker, 0, false);
-            JS_SetPropertyStr(ctx, targetObj, methodName, fn);
+            js::Value fn = CreateMethodFunction(ctx, group, dispatchInvoker, 0, false);
+            js::SetPropertyStr(ctx, targetObj, methodName, fn);
         }
 
-        for (size_t i = 0; i < built.size(); ++i)
-        {
-            binding->ownedNames.push_back(MethodOverloadResolver::BuildSignatureKey(builtMethods[i]));
-            const char* sigKey = binding->ownedNames.back().c_str();
-            MetaInfo sigInfo = {};
-            sigInfo.kind = MetaKind::Method;
-            sigInfo.methodCtx = built[i];
-            map[sigKey] = sigInfo;
-            binding->memberKeys.insert(sigKey);
-            if (attachToObject)
-            {
-                JSValue fn = CreateMethodFunction(ctx, built[i], directInvoker, built[i]->minArity, true);
-                JS_SetPropertyStr(ctx, targetObj, sigKey, fn);
-            }
-        }
+
     }
 }
 
-void MetaBinding::AttachInstanceMembers(JSContext* ctx, JSValueConst jsObj, TypeBinding* binding)
+void MetaBinding::AttachInstanceMembers(js::Context* ctx, js::ValueConst jsObj, TypeBinding* binding)
 {
+    int mode=il2cpp::vm::Class::IsValuetype(binding->klass)&&!binding->klass->enumtype?(js::StrictEq(ctx,jsObj,binding->byvalInstanceProto)?1:2):0;
     for (const auto& kv : binding->instanceMap)
     {
         const MetaInfo& info = kv.second;
         if (info.kind == MetaKind::Method && info.methodCtx != nullptr)
         {
-            JSValue fn = CreateInstanceMethodFunction(ctx, info.methodCtx);
-            JS_SetPropertyStr(ctx, jsObj, kv.first, fn);
+            js::Value fn = CreateInstanceMethodFunction(ctx, info.methodCtx, mode);
+            js::SetPropertyStr(ctx, jsObj, kv.first, fn);
             continue;
         }
 
         if (info.kind == MetaKind::MethodDispatch && info.overloadGroup != nullptr)
         {
-            JSValue fn = CreateMethodFunction(ctx, info.overloadGroup, InvokeInstanceDispatch, 0, false);
-            JS_SetPropertyStr(ctx, jsObj, kv.first, fn);
+            js::Value fn = CreateMethodFunction(ctx, info.overloadGroup, InvokeInstanceDispatch, 0, false, mode);
+            js::SetPropertyStr(ctx, jsObj, kv.first, fn);
             continue;
         }
 
         if (info.kind == MetaKind::Field && info.fieldCtx != nullptr)
         {
-            JSValue getter = CreateMethodFunction(ctx, info.fieldCtx, FieldGetter, 0, false);
-            JSValue setter = CreateMethodFunction(ctx, info.fieldCtx, FieldSetter, 1, false);
-            JSAtom atom = JS_NewAtom(ctx, kv.first);
-            JS_DefinePropertyGetSet(ctx, jsObj, atom, getter, setter, JS_PROP_C_W_E);
-            JS_FreeAtom(ctx, atom);
+            js::Value getter = CreateMethodFunction(ctx, info.fieldCtx, FieldGetter, 0, false, mode);
+            js::Value setter = CreateMethodFunction(ctx, info.fieldCtx, FieldSetter, 1, false, mode);
+            js::Atom atom = js::NewAtom(ctx, kv.first);
+            js::DefinePropertyGetSet(ctx, jsObj, atom, getter, setter, js::PropertyConfigurableWritableEnumerable);
+            js::FreeAtom(ctx, atom);
             continue;
         }
 
         if (info.kind == MetaKind::Property)
         {
-            JSValue getter = JS_UNDEFINED;
-            JSValue setter = JS_UNDEFINED;
+            js::Value getter = js::Undefined();
+            js::Value setter = js::Undefined();
             if (info.methodCtx != nullptr)
-                getter = CreateMethodFunction(ctx, info.methodCtx, PropertyGetter, 0, false);
+                getter = CreateMethodFunction(ctx, info.methodCtx, PropertyGetter, 0, false, mode);
             if (info.setterCtx != nullptr)
-                setter = CreateMethodFunction(ctx, info.setterCtx, PropertySetter, 1, false);
+                setter = CreateMethodFunction(ctx, info.setterCtx, PropertySetter, 1, false, mode);
             else if (info.methodCtx != nullptr)
-                setter = JS_NewCFunction(ctx, ThrowReadOnlyProperty, "set", 1);
-            JSAtom atom = JS_NewAtom(ctx, kv.first);
-            JS_DefinePropertyGetSet(ctx, jsObj, atom, getter, setter, JS_PROP_C_W_E);
-            JS_FreeAtom(ctx, atom);
+                setter = js::NewCFunction(ctx, ThrowReadOnlyProperty, "set", 1);
+            js::Atom atom = js::NewAtom(ctx, kv.first);
+            js::DefinePropertyGetSet(ctx, jsObj, atom, getter, setter, js::PropertyConfigurableWritableEnumerable);
+            js::FreeAtom(ctx, atom);
         }
     }
 }
 
-JSValue MetaBinding::WrapStrictMiss(JSContext* ctx, JSValue obj)
+js::Value MetaBinding::WrapStrictMiss(js::Context* ctx, js::Value obj)
 {
-    JSValue global = JS_GetGlobalObject(ctx);
-    JSValue wrapFn = JS_GetPropertyStr(ctx, global, "__zents_wrap_miss");
-    JS_FreeValue(ctx, global);
-    if (!JS_IsFunction(ctx, wrapFn))
+    js::Value global = js::GetGlobalObject(ctx);
+    js::Value wrapFn = js::GetPropertyStr(ctx, global, "__zents_wrap_miss");
+    js::FreeValue(ctx, global);
+    if (!js::IsFunction(ctx, wrapFn))
     {
-        JS_FreeValue(ctx, wrapFn);
+        js::FreeValue(ctx, wrapFn);
         return obj;
     }
-    JSValue argv[1] = { obj };
-    JSValue wrapped = JS_Call(ctx, wrapFn, JS_UNDEFINED, 1, argv);
-    JS_FreeValue(ctx, wrapFn);
-    if (JS_IsException(wrapped))
+    js::Value argv[1] = { obj };
+    js::Value wrapped = js::Call(ctx, wrapFn, js::Undefined(), 1, argv);
+    js::FreeValue(ctx, wrapFn);
+    if (js::IsException(wrapped))
         return wrapped;
-    JS_FreeValue(ctx, obj);
+    js::FreeValue(ctx, obj);
     return wrapped;
 }
 
-JSValue MetaBinding::WrapDelegateCall(JSContext* ctx, JSValue obj)
+js::Value MetaBinding::WrapDelegateCall(js::Context* ctx, js::Value obj)
 {
-    JSValue global = JS_GetGlobalObject(ctx);
-    JSValue wrapFn = JS_GetPropertyStr(ctx, global, "__zents_wrap_delegate_call");
-    JS_FreeValue(ctx, global);
-    if (!JS_IsFunction(ctx, wrapFn))
+    js::Value global = js::GetGlobalObject(ctx);
+    js::Value wrapFn = js::GetPropertyStr(ctx, global, "__zents_wrap_delegate_call");
+    js::FreeValue(ctx, global);
+    if (!js::IsFunction(ctx, wrapFn))
     {
-        JS_FreeValue(ctx, wrapFn);
+        js::FreeValue(ctx, wrapFn);
         return obj;
     }
-    JSValue argv[1] = { obj };
-    JSValue wrapped = JS_Call(ctx, wrapFn, JS_UNDEFINED, 1, argv);
-    JS_FreeValue(ctx, wrapFn);
-    if (JS_IsException(wrapped))
+    js::Value argv[1] = { obj };
+    js::Value wrapped = js::Call(ctx, wrapFn, js::Undefined(), 1, argv);
+    js::FreeValue(ctx, wrapFn);
+    if (js::IsException(wrapped))
         return wrapped;
-    JS_FreeValue(ctx, obj);
+    js::FreeValue(ctx, obj);
     return wrapped;
 }
 
-static void BuildBinding(JSContext* ctx, TypeBinding* binding)
+static void BuildBinding(js::Context* ctx, TypeBinding* binding)
 {
     Il2CppClass* klass = binding->klass;
     il2cpp::vm::Class::Init(klass);
-    ObjectRegistry::Initialize(JS_GetRuntime(ctx));
-    EnsureMethodCtxClass(JS_GetRuntime(ctx));
+    ObjectRegistry::Initialize(js::GetRuntime(ctx));
+    EnsureMethodCtxClass(js::GetRuntime(ctx));
 
     std::vector<const MethodInfo*> ctors;
     std::vector<const MethodInfo*> staticMethods;
@@ -1252,11 +1344,11 @@ static void BuildBinding(JSContext* ctx, TypeBinding* binding)
             binding->ctors.push_back(mctx);
     }
 
-    JSValue holder = JS_NewObjectClass(ctx, s_methodCtxClassId);
-    JS_SetOpaque(holder, binding);
-    JSValue typeFn = JS_NewCFunctionData(ctx, TypeConstruct, 1, 0, 1, &holder);
-    JS_FreeValue(ctx, holder);
-    JS_SetConstructorBit(ctx, typeFn, 1);
+    js::Value holder = js::NewObjectClass(ctx, s_methodCtxClassId);
+    js::SetOpaque(holder, binding);
+    js::Value typeFn = js::NewCFunctionData(ctx, TypeConstruct, 1, 0, 1, &holder);
+    js::FreeValue(ctx, holder);
+    js::SetConstructorBit(ctx, typeFn, 1);
 
     RegisterUniqueMethods(
         ctx,
@@ -1277,12 +1369,12 @@ static void BuildBinding(JSContext* ctx, TypeBinding* binding)
         InvokeInstanceDispatch,
         false);
 
-    binding->instanceProto = JS_NewObject(ctx);
+    binding->instanceProto = js::NewObject(ctx);
     MetaBinding::AttachInstanceMembers(ctx, binding->instanceProto, binding);
     if (klass->rank > 0)
         ArrayBinding::AttachMembers(ctx, binding->instanceProto, binding, klass);
-    binding->byobjInstanceProto = JS_UNDEFINED;
-    binding->byvalInstanceProto = JS_UNDEFINED;
+    binding->byobjInstanceProto = js::Undefined();
+    binding->byvalInstanceProto = js::Undefined();
 
     AttachStaticLiteralFields(ctx, typeFn, klass);
     AttachStaticFields(ctx, typeFn, binding, klass);
@@ -1292,26 +1384,26 @@ static void BuildBinding(JSContext* ctx, TypeBinding* binding)
     {
         /* ByObj IEO aliases instanceProto; ByVal IEO is a distinct proto with the same member set. */
         binding->byobjInstanceProto = binding->instanceProto;
-        binding->byvalInstanceProto = JS_NewObject(ctx);
+        binding->byvalInstanceProto = js::NewObject(ctx);
         MetaBinding::AttachInstanceMembers(ctx, binding->byvalInstanceProto, binding);
 
-        JS_SetPropertyStr(ctx, typeFn, "__struct", JS_NewBool(ctx, 1));
-        JS_SetPropertyStr(ctx, typeFn, "__byvalInstanceProto", JS_DupValue(ctx, binding->byvalInstanceProto));
-        JS_SetPropertyStr(ctx, typeFn, "__byobjInstanceProto", JS_DupValue(ctx, binding->byobjInstanceProto));
+        js::SetPropertyStr(ctx, typeFn, "__struct", js::NewBool(ctx, 1));
+        js::SetPropertyStr(ctx, typeFn, "__byvalInstanceProto", js::DupValue(ctx, binding->byvalInstanceProto));
+        js::SetPropertyStr(ctx, typeFn, "__byobjInstanceProto", js::DupValue(ctx, binding->byobjInstanceProto));
         AttachStructDefault(ctx, typeFn, binding);
     }
     if (klass->nullabletype)
-        JS_SetPropertyStr(ctx, typeFn, "__nullable", JS_NewBool(ctx, 1));
+        js::SetPropertyStr(ctx, typeFn, "__nullable", js::NewBool(ctx, 1));
 
     std::string fullName = MetadataUtil::BuildTypeFullName(klass);
-    JS_SetPropertyStr(ctx, typeFn, "__zents_type_name", JS_NewString(ctx, fullName.c_str()));
+    js::SetPropertyStr(ctx, typeFn, "__zents_type_name", js::NewString(ctx, fullName.c_str()));
 
-    binding->typeObjectRaw = JS_DupValue(ctx, typeFn);
+    binding->typeObjectRaw = js::DupValue(ctx, typeFn);
     binding->typeObject = MetaBinding::WrapStrictMiss(ctx, typeFn);
     binding->hasJsObject = true;
 }
 
-TypeBinding* MetaBinding::EnsureBinding(JSContext* ctx, Il2CppClass* klass)
+TypeBinding* MetaBinding::EnsureBinding(js::Context* ctx, Il2CppClass* klass)
 {
     auto it = s_bindings.find(klass);
     if (it != s_bindings.end())
@@ -1319,45 +1411,45 @@ TypeBinding* MetaBinding::EnsureBinding(JSContext* ctx, Il2CppClass* klass)
 
     TypeBinding* binding = new TypeBinding();
     binding->klass = klass;
-    binding->typeObject = JS_UNDEFINED;
-    binding->typeObjectRaw = JS_UNDEFINED;
-    binding->instanceProto = JS_UNDEFINED;
-    binding->byvalInstanceProto = JS_UNDEFINED;
-    binding->byobjInstanceProto = JS_UNDEFINED;
+    binding->typeObject = js::Undefined();
+    binding->typeObjectRaw = js::Undefined();
+    binding->instanceProto = js::Undefined();
+    binding->byvalInstanceProto = js::Undefined();
+    binding->byobjInstanceProto = js::Undefined();
     binding->hasJsObject = false;
     BuildBinding(ctx, binding);
     s_bindings[klass] = binding;
     return binding;
 }
 
-Il2CppClass* MetaBinding::TryGetKlassFromTypeValue(JSContext* ctx, JSValueConst typeVal)
+Il2CppClass* MetaBinding::TryGetKlassFromTypeValue(js::Context* ctx, js::ValueConst typeVal)
 {
-    if (ctx == nullptr || !JS_IsObject(typeVal))
+    if (ctx == nullptr || !js::IsObject(typeVal))
         return nullptr;
     for (const auto& kv : s_bindings)
     {
         TypeBinding* binding = kv.second;
         if (!binding->hasJsObject)
             continue;
-        if (!JS_IsUndefined(binding->typeObject) && JS_StrictEq(ctx, typeVal, binding->typeObject))
+        if (!js::IsUndefined(binding->typeObject) && js::StrictEq(ctx, typeVal, binding->typeObject))
             return binding->klass;
-        if (!JS_IsUndefined(binding->typeObjectRaw) && JS_StrictEq(ctx, typeVal, binding->typeObjectRaw))
+        if (!js::IsUndefined(binding->typeObjectRaw) && js::StrictEq(ctx, typeVal, binding->typeObjectRaw))
             return binding->klass;
     }
 
     /* Fallback: match STO __zents_type_name (Proxy StrictEq can miss across Dup edges). */
-    JSValue nameVal = JS_GetPropertyStr(ctx, typeVal, "__zents_type_name");
-    if (JS_IsException(nameVal) || !JS_IsString(nameVal))
+    js::Value nameVal = js::GetPropertyStr(ctx, typeVal, "__zents_type_name");
+    if (js::IsException(nameVal) || !js::IsString(nameVal))
     {
-        JS_FreeValue(ctx, nameVal);
+        js::FreeValue(ctx, nameVal);
         return nullptr;
     }
-    const char* cstr = JS_ToCString(ctx, nameVal);
-    JS_FreeValue(ctx, nameVal);
+    const char* cstr = js::ToCString(ctx, nameVal);
+    js::FreeValue(ctx, nameVal);
     if (cstr == nullptr)
         return nullptr;
     std::string fullName = cstr;
-    JS_FreeCString(ctx, cstr);
+    js::FreeCString(ctx, cstr);
     for (const auto& kv : s_bindings)
     {
         TypeBinding* binding = kv.second;
@@ -1369,34 +1461,34 @@ Il2CppClass* MetaBinding::TryGetKlassFromTypeValue(JSContext* ctx, JSValueConst 
     return nullptr;
 }
 
-void MetaBinding::Reset(JSContext* ctx)
+void MetaBinding::Reset(js::Context* ctx)
 {
     for (auto& kv : s_bindings)
     {
         TypeBinding* binding = kv.second;
         if (binding->hasJsObject && ctx != nullptr)
         {
-            if (!JS_IsUndefined(binding->typeObject))
+            if (!js::IsUndefined(binding->typeObject))
             {
-                JS_FreeValue(ctx, binding->typeObject);
-                binding->typeObject = JS_UNDEFINED;
+                js::FreeValue(ctx, binding->typeObject);
+                binding->typeObject = js::Undefined();
             }
-            if (!JS_IsUndefined(binding->typeObjectRaw))
+            if (!js::IsUndefined(binding->typeObjectRaw))
             {
-                JS_FreeValue(ctx, binding->typeObjectRaw);
-                binding->typeObjectRaw = JS_UNDEFINED;
+                js::FreeValue(ctx, binding->typeObjectRaw);
+                binding->typeObjectRaw = js::Undefined();
             }
-            if (!JS_IsUndefined(binding->byvalInstanceProto))
+            if (!js::IsUndefined(binding->byvalInstanceProto))
             {
-                JS_FreeValue(ctx, binding->byvalInstanceProto);
-                binding->byvalInstanceProto = JS_UNDEFINED;
+                js::FreeValue(ctx, binding->byvalInstanceProto);
+                binding->byvalInstanceProto = js::Undefined();
             }
             /* byobjInstanceProto aliases instanceProto for structs — free once via instanceProto. */
-            binding->byobjInstanceProto = JS_UNDEFINED;
-            if (!JS_IsUndefined(binding->instanceProto))
+            binding->byobjInstanceProto = js::Undefined();
+            if (!js::IsUndefined(binding->instanceProto))
             {
-                JS_FreeValue(ctx, binding->instanceProto);
-                binding->instanceProto = JS_UNDEFINED;
+                js::FreeValue(ctx, binding->instanceProto);
+                binding->instanceProto = js::Undefined();
             }
             binding->hasJsObject = false;
         }

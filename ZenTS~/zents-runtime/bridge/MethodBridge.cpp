@@ -23,6 +23,8 @@
 #include "../marshal/ObjectRegistry.h"
 #include "../marshal/OpaqueValueMarshal.h"
 #include "../marshal/TableMarshal.h"
+#include "../marshal/MarshalMeta.h"
+#include "gc/GarbageCollector.h"
 
 #include "il2cpp-tabledefs.h"
 #include "vm/Array.h"
@@ -106,8 +108,8 @@ bool FillDefaultParam(
 
 /** Byref: OpaqueValue or matching ByVal/ByObj valuetype → payload address (writeback). */
 bool TryBindByRefAddress(
-    JSContext* ctx,
-    JSValueConst jsArg,
+    js::Context* ctx,
+    js::ValueConst jsArg,
     const Il2CppType* paramType,
     const MarshalMetaInfo* paramMeta,
     void** outAddr)
@@ -118,7 +120,7 @@ bool TryBindByRefAddress(
         return false;
 
     void* opaqueAddr = nullptr;
-    if (OpaqueValueMarshal::TryGetValueAddress(ctx, jsArg, &opaqueAddr) && opaqueAddr != nullptr)
+    if (OpaqueValueMarshal::TryGetValueAddress(ctx, jsArg, &opaqueAddr, paramType) && opaqueAddr != nullptr)
     {
         *outAddr = opaqueAddr;
         return true;
@@ -144,11 +146,11 @@ void MethodBridge::Initialize()
     MethodBridge_Initialize();
 }
 
-JSValue MethodBridge::DefaultInvoke(
-    JSContext* ctx,
+js::Value MethodBridge::DefaultInvoke(
+    js::Context* ctx,
     void* target,
     int argc,
-    JSValueConst* argv,
+    js::ValueConst* argv,
     const MethodInfo* method,
     const MethodMarshalCtx* mctx)
 {
@@ -179,72 +181,44 @@ JSValue MethodBridge::DefaultInvoke(
     }
 
     int jsIndex = 0;
+    std::vector<void*> storageSlots(clrArity, nullptr);
     for (uint8_t i = jsStart; i < clrArity; i++)
     {
-        const MarshalMetaInfo* paramMeta = mctx->paramsMeta[i];
-        void* tempStorage = nullptr;
-        void* storage = paramMeta->passByValue ? &tempStorage : alloca((size_t)paramMeta->size);
-
-        if ((int)i == paramsIndex)
+        const MarshalMetaInfo* meta=mctx->paramsMeta[i]; const Il2CppType* type=method->parameters[i];
+        void* storage=alloca((size_t)meta->size < sizeof(void*) ? sizeof(void*) : (size_t)meta->size);
+        std::memset(storage,0,(size_t)meta->size); storageSlots[i]=storage;
+        bool isOut=(type->attrs&PARAM_ATTRIBUTE_OUT)&&!(type->attrs&PARAM_ATTRIBUTE_IN);
+        if(isOut){params[i]=storage;continue;}
+        if((int)i==paramsIndex)
         {
-            if (jsIndex >= argc)
-            {
-                Il2CppClass* arrKlass = il2cpp::vm::Class::FromIl2CppType(method->parameters[i]);
-                Il2CppClass* el = arrKlass != nullptr ? arrKlass->element_class : nullptr;
-                tempStorage = el != nullptr ? il2cpp::vm::Array::New(el, 0) : nullptr;
-            }
-            else if (JS_IsUndefined(argv[jsIndex]))
-            {
-                return JS_ThrowTypeError(ctx, "zents: undefined is not assignable to params array");
-            }
+            Il2CppArray* array=nullptr; Il2CppObject* whole=argc-jsIndex==1?ObjectRegistry::Get(ctx,argv[jsIndex]):nullptr;
+            if(whole&&il2cpp::vm::Class::IsAssignableFrom(meta->typeKlass,whole->klass))array=reinterpret_cast<Il2CppArray*>(whole);
             else
             {
-                paramMeta->js2csWriter(ctx, argv[jsIndex], storage, paramMeta);
+                int count=argc-jsIndex;Il2CppClass* element=meta->typeKlass->element_class;
+                array=il2cpp::vm::Array::New(element,count);int size=il2cpp::vm::Class::GetArrayElementSize(element);
+                const MarshalMetaInfo* em=mctx->paramsElementMeta;
+                for(int k=0;k<count;++k)
+                {
+                    void* slot=il2cpp_array_addr_with_size(array,size,k);em->js2csWriter(ctx,argv[jsIndex+k],slot,em);
+                    if(js::HasException(ctx))return js::Exception();
+                    if(array->klass->has_references)il2cpp::gc::GarbageCollector::SetWriteBarrier(reinterpret_cast<void**>(slot),(size_t)size);
+                }
             }
-            jsIndex += 1;
+            *reinterpret_cast<Il2CppArray**>(storage)=array;jsIndex=argc;
         }
-        else if (paramMeta->marshalAsKind == MarshalAsKind::UnpackedValues)
-        {
-            const int slots = TableMarshal::GetJsArgSlotCount(paramMeta);
-            if (jsIndex + slots <= argc)
-            {
-                TableMarshal::Js2CsUnpacked(ctx, argv, jsIndex, argc, storage, paramMeta);
-            }
-            else
-            {
-                std::memset(storage, 0, (size_t)paramMeta->size);
-            }
-            jsIndex += slots;
-        }
-        else if (jsIndex < argc)
-        {
-            void* byrefAddr = nullptr;
-            if (TryBindByRefAddress(ctx, argv[jsIndex], method->parameters[i], paramMeta, &byrefAddr))
-            {
-                params[i] = byrefAddr;
-                jsIndex += 1;
-                if (JS_HasException(ctx))
-                    return JS_EXCEPTION;
-                continue;
-            }
-            paramMeta->js2csWriter(ctx, argv[jsIndex], storage, paramMeta);
-            jsIndex += 1;
-        }
-        else if (IsOptionalParam(method->parameters[i]))
-        {
-            FillDefaultParam(method, i, paramMeta, paramMeta->passByValue ? &tempStorage : storage, mctx);
-        }
+        else if(IsOptionalParam(type)&&(jsIndex==argc || js::IsUndefined(argv[jsIndex])))
+        {FillDefaultParam(method,i,meta,storage,mctx);if(jsIndex<argc)jsIndex++;}
+        else if(meta->marshalAsKind==MarshalAsKind::UnpackedValues)
+        {TableMarshal::Js2CsUnpacked(ctx,argv,jsIndex,argc,storage,meta);jsIndex+=TableMarshal::GetJsArgSlotCount(meta);}
         else
         {
-            if (paramMeta->passByValue)
-                tempStorage = nullptr;
-            else
-                std::memset(storage, 0, (size_t)paramMeta->size);
+            void* byref=nullptr;
+            if(TryBindByRefAddress(ctx,argv[jsIndex],type,meta,&byref)){params[i]=byref;jsIndex++;continue;}
+            meta->js2csWriter(ctx,argv[jsIndex++],storage,meta);
         }
-
-        if (JS_HasException(ctx))
-            return JS_EXCEPTION;
-        params[i] = paramMeta->passByValue ? tempStorage : storage;
+        if(js::HasException(ctx))return js::Exception();
+        params[i]=type->byref?storage:meta->passByValue?*reinterpret_cast<void**>(storage):storage;
     }
 
     void* invokeThis = isExt ? nullptr : target;
@@ -255,15 +229,29 @@ JSValue MethodBridge::DefaultInvoke(
             invokeThis = ObjectUnbox(obj);
     }
 
-    if (mctx->retMeta != nullptr)
+    // A ref return writes a managed address to the invoker result slot,
+    // not an element-sized value (int& needs pointer-size storage on Win64).
+    const bool refReturn = method->return_type->byref;
+    void* ret=mctx->retMeta?alloca(refReturn ? sizeof(void*) : (size_t)mctx->retMeta->size):nullptr;
+    method->invoker_method(method->methodPointer,method,invokeThis,params,ret);
+    if (refReturn && ret != nullptr)
     {
-        void* ret = alloca((size_t)mctx->retMeta->size);
-        method->invoker_method(method->methodPointer, method, invokeThis, params, ret);
-        return mctx->retMeta->cs2jsWriter(ctx, ret, mctx->retMeta);
+        ret = *reinterpret_cast<void**>(ret);
+        if (ret == nullptr) return js::ThrowTypeError(ctx, "zents: null managed reference return");
     }
+    bool hasOut=false;
+    for(uint8_t i=jsStart;i<clrArity;++i)if((method->parameters[i]->attrs&PARAM_ATTRIBUTE_OUT)&&!(method->parameters[i]->attrs&PARAM_ATTRIBUTE_IN)){hasOut=true;break;}
+    if(!hasOut)return mctx->retMeta?mctx->retMeta->cs2jsWriter(ctx,ret,mctx->retMeta):js::Undefined();
+    js::Value tuple=js::NewArray(ctx);uint32_t index=0;
+    if(mctx->retMeta){js::Value value=mctx->retMeta->cs2jsWriter(ctx,ret,mctx->retMeta);if(js::IsException(value)){js::FreeValue(ctx,tuple);return value;}js::SetPropertyUint32(ctx,tuple,index++,value);}
+    for(uint8_t i=jsStart;i<clrArity;++i)
+    {
+        if(!(method->parameters[i]->attrs&PARAM_ATTRIBUTE_OUT)||(method->parameters[i]->attrs&PARAM_ATTRIBUTE_IN))continue;
+        const MarshalMetaInfo* meta=mctx->paramsMeta[i];js::Value value=meta->cs2jsWriter(ctx,storageSlots[i],meta);
+        if(js::IsException(value)){js::FreeValue(ctx,tuple);return value;}js::SetPropertyUint32(ctx,tuple,index++,value);
+    }
+    return tuple;
 
-    method->invoker_method(method->methodPointer, method, invokeThis, params, nullptr);
-    return JS_UNDEFINED;
 }
 
 FnJs2CsInvoker MethodBridge::ResolveMethodInvoker(const MethodInfo* /*method*/)

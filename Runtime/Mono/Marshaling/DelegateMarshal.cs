@@ -26,7 +26,7 @@ namespace ZenTS.Marshaling
 {
     internal static class DelegateMarshal
     {
-        public static Delegate FromJsFunction(IntPtr ctx, JSValue jsFunc, Type delegateType)
+        public static Delegate FromJsFunction(IntPtr ctx, JsValue jsFunc, Type delegateType)
         {
             JsEnv env = JsEnv.FromContext(ctx);
             return DynamicBridgeFactory.Create(env, delegateType, jsFunc, env.Generation);

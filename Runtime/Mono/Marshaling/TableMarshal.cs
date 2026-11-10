@@ -28,6 +28,7 @@ namespace ZenTS.Marshaling
     {
         public static int GetJsArgSlotCount(ParameterInfo param)
         {
+            if (ZenTS.Emit.JsCallPlan.IsOut(param)) return 0;
             JsMarshalAsAttribute mas = JsMarshalAsXmlRegistry.ResolveParameterMarshal(param);
             if (mas != null &&
                 mas.JsMarshalType == JsMarshalType.UnpackedValues &&
@@ -40,7 +41,7 @@ namespace ZenTS.Marshaling
             return 1;
         }
 
-        public static object Pop(IntPtr ctx, JSValue jsValue, Type expectedType, JsMarshalAsAttribute marshalAs)
+        public static object Pop(IntPtr ctx, JsValue jsValue, Type expectedType, JsMarshalAsAttribute marshalAs)
         {
             if (marshalAs == null)
             {
@@ -55,7 +56,7 @@ namespace ZenTS.Marshaling
             return null;
         }
 
-        public static JSValue Push(IntPtr ctx, object value, Type declaredType, JsMarshalAsAttribute marshalAs)
+        public static JsValue Push(IntPtr ctx, object value, Type declaredType, JsMarshalAsAttribute marshalAs)
         {
             if (marshalAs == null || marshalAs.Members == null || marshalAs.Members.Length == 0)
             {
@@ -81,24 +82,24 @@ namespace ZenTS.Marshaling
             throw new JsScriptException($"zents: unsupported TableMarshal push kind {marshalAs.JsMarshalType}.");
         }
 
-        private static JSValue PushTable(IntPtr ctx, object value, Type underlying, string[] members)
+        private static JsValue PushTable(IntPtr ctx, object value, Type underlying, string[] members)
         {
-            JSValue obj = QuickJsDll.JS_NewObject(ctx);
+            JsValue obj = EngineApi.NewObject(ctx);
             for (int i = 0; i < members.Length; i++)
             {
                 ParseMemberSpec(members[i], out string memberName, out _);
                 MemberAccessor accessor = ResolveMember(underlying, memberName);
                 object memberValue = accessor.Get(value);
-                JSValue jsMember = TypedMarshal.Push(ctx, memberValue, accessor.MemberType);
-                QuickJsDll.JS_SetPropertyStr(ctx, obj, memberName, jsMember);
+                JsValue jsMember = TypedMarshal.Push(ctx, memberValue, accessor.MemberType, accessor.Marshal);
+                EngineApi.SetPropertyStr(ctx, obj, memberName, jsMember);
             }
 
             return obj;
         }
 
-        private static JSValue PushUnpacked(IntPtr ctx, object value, Type underlying, string[] members)
+        private static JsValue PushUnpacked(IntPtr ctx, object value, Type underlying, string[] members)
         {
-            JSValue arr = QuickJsDll.JS_NewArray(ctx);
+            JsValue arr = EngineApi.NewArray(ctx);
             for (int i = 0; i < members.Length; i++)
             {
                 string spec = members[i];
@@ -109,8 +110,8 @@ namespace ZenTS.Marshaling
 
                 MemberAccessor accessor = ResolveMember(underlying, spec);
                 object memberValue = accessor.Get(value);
-                JSValue jsMember = TypedMarshal.Push(ctx, memberValue, accessor.MemberType);
-                QuickJsDll.JS_SetPropertyUint32(ctx, arr, (uint)i, jsMember);
+                JsValue jsMember = TypedMarshal.Push(ctx, memberValue, accessor.MemberType, accessor.Marshal);
+                EngineApi.SetPropertyUint32(ctx, arr, (uint)i, jsMember);
             }
 
             return arr;
@@ -156,8 +157,8 @@ namespace ZenTS.Marshaling
 
                 string memberName = spec ?? throw new JsScriptException("zents: UnpackedValues member name is null.");
                 MemberAccessor accessor = ResolveMember(underlying, memberName);
-                JSValue jsArg = ArgReader.Read(argvPtr, jsStartIndex + i);
-                object value = TypedMarshal.Pop(ctx, jsArg, accessor.MemberType);
+                JsValue jsArg = ArgReader.Read(argvPtr, jsStartIndex + i);
+                object value = TypedMarshal.Pop(ctx, jsArg, accessor.MemberType, accessor.Marshal);
                 accessor.Set(boxed, value);
             }
 
@@ -169,13 +170,24 @@ namespace ZenTS.Marshaling
             return boxed;
         }
 
+        internal static object PopPacked(IntPtr ctx,JsValue value,Type type,JsMarshalAsAttribute marshal)
+        {
+            if(EngineApi.IsArray(ctx,value)==0)throw new JsScriptException("zents: UnpackedValues result requires an Array");
+            JsValue length=EngineApi.GetPropertyStr(ctx,value,"length");
+            try {if(Convert.ToInt32(PrimitiveMarshal.Pop(ctx,length))!=marshal.Members.Length)throw new JsScriptException("zents: UnpackedValues result length mismatch");}
+            finally {JsValueUtil.Free(ctx,length);}
+            var args=new JsValue[marshal.Members.Length];
+            try {for(int i=0;i<args.Length;++i)args[i]=EngineApi.GetPropertyUint32(ctx,value,(uint)i);unsafe {fixed(JsValue* ptr=args)return PopUnpacked(ctx,(IntPtr)ptr,0,args.Length,type,marshal);}}
+            finally {foreach(var arg in args)JsValueUtil.Free(ctx,arg);}
+        }
+
         public static Type ResolveMemberType(Type structType, string memberSpec)
         {
             ParseMemberSpec(memberSpec, out string memberName, out _);
             return ResolveMember(structType, memberName).MemberType;
         }
 
-        private static object PopTable(IntPtr ctx, JSValue jsValue, Type expectedType, string[] members)
+        private static object PopTable(IntPtr ctx, JsValue jsValue, Type expectedType, string[] members)
         {
             if (members == null || members.Length == 0)
             {
@@ -214,22 +226,13 @@ namespace ZenTS.Marshaling
             {
                 ParseMemberSpec(members[i], out string memberName, out bool optional);
                 MemberAccessor accessor = ResolveMember(underlying, memberName);
-                JSValue propVal = QuickJsDll.JS_GetPropertyStr(ctx, jsValue, memberName);
+                int own=EngineApi.HasOwnProperty(ctx,jsValue,memberName);
+                if(own!=1){if(optional&&own==0)continue;throw new JsScriptException("zents: Table missing member "+memberName);}
+                JsValue propVal = EngineApi.GetPropertyStr(ctx, jsValue, memberName);
                 try
                 {
-                    int propTag = JsValueUtil.GetNormTag(propVal);
-                    if (propTag == JsValueUtil.TagUndefined)
-                    {
-                        if (optional)
-                        {
-                            continue;
-                        }
 
-                        throw new JsScriptException(
-                            $"zents: Table marshal missing required member '{memberName}' for {expectedType.FullName}.");
-                    }
-
-                    object value = TypedMarshal.Pop(ctx, propVal, accessor.MemberType);
+                    object value = TypedMarshal.Pop(ctx, propVal, accessor.MemberType, accessor.Marshal);
                     accessor.Set(boxed, value);
                 }
                 finally
@@ -241,12 +244,12 @@ namespace ZenTS.Marshaling
             return boxed;
         }
 
-        private static void RejectClrExotic(IntPtr ctx, JSValue jsValue, Type expectedType)
+        private static void RejectClrExotic(IntPtr ctx, JsValue jsValue, Type expectedType)
         {
-            JSValue ptrFlag = QuickJsDll.JS_GetPropertyStr(ctx, jsValue, "__zents_pointer");
+            JsValue ptrFlag = EngineApi.GetPropertyStr(ctx, jsValue, "__zents_pointer");
             try
             {
-                if (JsValueUtil.GetNormTag(ptrFlag) == JsValueUtil.TagBool && ptrFlag.UInt64 != 0)
+                if (JsValueUtil.GetNormTag(ptrFlag) == JsValueUtil.TagBool && JsValueUtil.GetUInt64(ptrFlag) != 0)
                 {
                     throw new JsScriptException(
                         $"zents: Table marshal requires plain object for {expectedType.FullName}, not Pointer handle.");
@@ -257,7 +260,7 @@ namespace ZenTS.Marshaling
                 JsValueUtil.Free(ctx, ptrFlag);
             }
 
-            JSValue idVal = QuickJsDll.JS_GetPropertyStr(ctx, jsValue, "__zents_id");
+            JsValue idVal = EngineApi.GetPropertyStr(ctx, jsValue, "__zents_id");
             try
             {
                 if (JsValueUtil.GetNormTag(idVal) == JsValueUtil.TagInt)
@@ -292,18 +295,18 @@ namespace ZenTS.Marshaling
 
         private static MemberAccessor ResolveMember(Type structType, string memberName)
         {
-            const BindingFlags flags = BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase;
+            const BindingFlags flags = BindingFlags.Public | BindingFlags.Instance;
             FieldInfo field = structType.GetField(memberName, flags);
             if (field != null)
             {
-                return new MemberAccessor(field.FieldType, field.SetValue, field.GetValue);
+                return new MemberAccessor(field.FieldType, field.SetValue, field.GetValue, JsMarshalAsXmlRegistry.ResolveFieldMarshal(field));
             }
 
             PropertyInfo prop = structType.GetProperty(memberName, flags);
             if (prop != null && prop.CanRead)
             {
                 Action<object, object> setter = prop.CanWrite ? prop.SetValue : null;
-                return new MemberAccessor(prop.PropertyType, setter, prop.GetValue);
+                return new MemberAccessor(prop.PropertyType, setter, prop.GetValue, JsMarshalAsXmlRegistry.ResolvePropertyMarshal(prop));
             }
 
             throw new JsScriptException(
@@ -313,12 +316,14 @@ namespace ZenTS.Marshaling
         private readonly struct MemberAccessor
         {
             public Type MemberType { get; }
+            public JsMarshalAsAttribute Marshal { get; }
             private readonly Action<object, object> _set;
             private readonly Func<object, object> _get;
 
-            public MemberAccessor(Type memberType, Action<object, object> set, Func<object, object> get)
+            public MemberAccessor(Type memberType, Action<object, object> set, Func<object, object> get, JsMarshalAsAttribute marshal)
             {
                 MemberType = memberType;
+                Marshal = marshal;
                 _set = set;
                 _get = get;
             }

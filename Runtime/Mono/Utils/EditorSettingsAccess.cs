@@ -54,12 +54,7 @@ namespace ZenTS.Utils
             }
 
             FieldInfo field = settingsType.GetField(fieldName);
-            if (field == null)
-            {
-                return false;
-            }
-
-            object raw = field.GetValue(settings);
+            object raw = field != null ? field.GetValue(settings) : settingsType.GetProperty(fieldName)?.GetValue(settings);
             if (raw is T typed)
             {
                 value = typed;

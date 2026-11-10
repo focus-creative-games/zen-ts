@@ -33,6 +33,7 @@ struct TableMarshalMeta : MarshalMetaInfo
     std::vector<bool> optional;
     /* Cached at Create — avoid linear FieldInfo scan + TryCreateDefault per member per call. */
     std::vector<FieldInfo*> fields;
+    std::vector<const PropertyInfo*> properties;
     std::vector<const MarshalMetaInfo*> fieldMetas;
 };
 
@@ -45,13 +46,14 @@ public:
         const std::vector<std::string>& memberSpecs,
         MarshalAsKind kind);
 
-    static void Js2CsTable(JSContext* ctx, JSValueConst value, void* address, const MarshalMetaInfo* meta);
-    static JSValue Cs2JsTable(JSContext* ctx, void* address, const MarshalMetaInfo* meta);
+    static void Js2CsPacked(js::Context* ctx, js::ValueConst value, void* address, const MarshalMetaInfo* meta);
+    static void Js2CsTable(js::Context* ctx, js::ValueConst value, void* address, const MarshalMetaInfo* meta);
+    static js::Value Cs2JsTable(js::Context* ctx, void* address, const MarshalMetaInfo* meta);
 
     /** Pop Members.Length consecutive JS args starting at jsStart into a struct. */
     static void Js2CsUnpacked(
-        JSContext* ctx, JSValueConst* argv, int jsStart, int argc, void* address, const MarshalMetaInfo* meta);
-    static JSValue Cs2JsUnpacked(JSContext* ctx, void* address, const MarshalMetaInfo* meta);
+        js::Context* ctx, js::ValueConst* argv, int jsStart, int argc, void* address, const MarshalMetaInfo* meta);
+    static js::Value Cs2JsUnpacked(js::Context* ctx, void* address, const MarshalMetaInfo* meta);
 
     static int GetJsArgSlotCount(const MarshalMetaInfo* meta);
 };

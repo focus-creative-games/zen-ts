@@ -29,7 +29,7 @@ namespace zents
     {
         Il2CppObject object;
         bool disposed;
-        JSContext* ctx;
+        js::Context* ctx;
         int32_t funcRef;
         const void* methodMarshalCtx; // MethodMarshalCtx* for Invoke (CS→JS writers)
     };
@@ -39,16 +39,16 @@ namespace zents
     public:
         static void Reset();
 
-        static Il2CppDelegate* CreateFromFuncRef(JSContext* ctx, Il2CppClass* delegateClass, int funcRef);
+        static Il2CppDelegate* CreateFromFuncRef(js::Context* ctx, Il2CppClass* delegateClass, int funcRef);
 
         /** Reuse the same CLR delegate for the same JS function + delegate type (event add/remove). */
         static Il2CppDelegate* GetOrCreateFromJsFunction(
-            JSContext* ctx, Il2CppClass* delegateClass, JSValueConst jsFunc);
+            js::Context* ctx, Il2CppClass* delegateClass, js::ValueConst jsFunc);
 
         /** If del was created from a JS function (JsMethod target), dup that function into outFn. */
-        static bool TryGetBoundJsFunction(JSContext* ctx, Il2CppDelegate* del, JSValue* outFn);
+        static bool TryGetBoundJsFunction(js::Context* ctx, Il2CppDelegate* del, js::Value* outFn);
 
         /** Push CLR delegate as callable JS (bound JS fn, or exotic + [[Call]] via wrap). */
-        static JSValue PushToJs(JSContext* ctx, Il2CppDelegate* del, Il2CppClass* viewKlass);
+        static js::Value PushToJs(js::Context* ctx, Il2CppDelegate* del, Il2CppClass* viewKlass);
     };
 }

@@ -36,20 +36,12 @@ namespace ZenTS
             TryLoad(logSuccess: false);
         }
 
-        [MenuItem("ZenTS/Reload MarshalAs XML", priority = 520)]
-        private static void ReloadMenu()
-        {
-            string projectRoot = Path.GetDirectoryName(Application.dataPath);
-            JsMarshalAsXmlRegistry.Load(Settings.Instance.marshalAsXmlPaths, projectRoot);
-            Debug.Log("[ZenTS] MarshalAs XML loaded: " + JsMarshalAsXmlRegistry.Rules.Count + " rule(s).");
-        }
-
         internal static void TryLoad(bool logSuccess)
         {
             try
             {
                 string projectRoot = Path.GetDirectoryName(Application.dataPath);
-                JsMarshalAsXmlRegistry.Load(Settings.Instance.marshalAsXmlPaths, projectRoot);
+                JsMarshalAsXmlRegistry.Load(Settings.Instance.EffectiveMarshalAsXmlPaths, projectRoot);
                 if (logSuccess)
                 {
                     Debug.Log("[ZenTS] MarshalAs XML loaded: " + JsMarshalAsXmlRegistry.Rules.Count + " rule(s).");

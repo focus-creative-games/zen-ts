@@ -24,7 +24,6 @@
 #include "../utils/XmlBindingUtil.h"
 
 #include "il2cpp-class-internals.h"
-#include "metadata/GenericMetadata.h"
 #include "vm/Class.h"
 
 #include <string>
@@ -78,12 +77,7 @@ JsMarshalAsResolvedData MakeData(const JsMarshalAsXmlEntry& e)
     return data;
 }
 
-bool IsDeterminedMarshalTargetType(const Il2CppType* type)
-{
-    return !il2cpp::metadata::GenericMetadata::ContainsGenericParameters(type);
-}
-
-/// Runtime bind: skip invalid entries silently (Generate already validated).
+/// Member rules retain open generic definition tokens; validate each closed slot at binding.
 void TryBindOneEntry(const JsMarshalAsXmlEntry& e)
 {
     const Il2CppAssembly* assembly = MetadataUtil::ResolveAssembly(e.assemblyName);
@@ -111,7 +105,7 @@ void TryBindOneEntry(const JsMarshalAsXmlEntry& e)
     case JsMarshalAsXmlKind::Field:
     {
         const FieldInfo* field = il2cpp::vm::Class::GetFieldFromName(klass, e.memberOrMethodName);
-        if (field == nullptr || !IsDeterminedMarshalTargetType(field->type))
+        if (field == nullptr)
             return;
         maps.byMemberToken[field->token] = std::move(data);
         return;
@@ -123,8 +117,6 @@ void TryBindOneEntry(const JsMarshalAsXmlEntry& e)
             return;
         const Il2CppType* propType = property->get != nullptr ? property->get->return_type
                                                               : (property->set != nullptr ? property->set->parameters[0] : nullptr);
-        if (!IsDeterminedMarshalTargetType(propType))
-            return;
         maps.byMemberToken[property->token] = std::move(data);
         return;
     }
@@ -141,14 +133,10 @@ void TryBindOneEntry(const JsMarshalAsXmlEntry& e)
         {
             if (e.paramIndex < 0 || e.paramIndex >= method->parameters_count)
                 return;
-            if (!IsDeterminedMarshalTargetType(method->parameters[e.paramIndex]))
-                return;
             maps.byMethodSlot[{method->token, e.paramIndex}] = std::move(data);
             return;
         }
 
-        if (!IsDeterminedMarshalTargetType(method->return_type))
-            return;
         maps.byMethodSlot[{method->token, -1}] = std::move(data);
         return;
     }

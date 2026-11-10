@@ -36,20 +36,12 @@ namespace ZenTS
             TryLoad(logSuccess: false);
         }
 
-        [MenuItem("ZenTS/Reload JsAlias XML", priority = 521)]
-        private static void ReloadMenu()
-        {
-            string projectRoot = Path.GetDirectoryName(Application.dataPath);
-            JsAliasXmlRegistry.Load(Settings.Instance.jsAliasXmlPaths, projectRoot);
-            Debug.Log("[ZenTS] JsAlias XML loaded: " + JsAliasXmlRegistry.Rules.Count + " rule(s).");
-        }
-
         internal static void TryLoad(bool logSuccess)
         {
             try
             {
                 string projectRoot = Path.GetDirectoryName(Application.dataPath);
-                JsAliasXmlRegistry.Load(Settings.Instance.jsAliasXmlPaths, projectRoot);
+                JsAliasXmlRegistry.Load(Settings.Instance.EffectiveAliasXmlPaths, projectRoot);
                 if (logSuccess)
                 {
                     Debug.Log("[ZenTS] JsAlias XML loaded: " + JsAliasXmlRegistry.Rules.Count + " rule(s).");

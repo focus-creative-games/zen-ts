@@ -27,7 +27,7 @@ namespace ZenTS
     /// <summary>
     /// JsAlias XML registry: load by assembly name; bind lazily to MethodInfo metadata token.
     /// </summary>
-    public static class JsAliasXmlRegistry
+    internal static class JsAliasXmlRegistry
     {
         private static readonly object s_gate = new object();
         private static List<JsAliasXmlRule> s_rules = new List<JsAliasXmlRule>();
@@ -36,6 +36,7 @@ namespace ZenTS
         private static Dictionary<Assembly, Dictionary<int, string>> s_aliasByMethodToken =
             new Dictionary<Assembly, Dictionary<int, string>>();
         private static bool s_loaded;
+        private static HashSet<Assembly> s_aotAssemblies = new HashSet<Assembly>();
 
         public static bool IsLoaded
         {
@@ -59,7 +60,7 @@ namespace ZenTS
             }
         }
 
-        public static void Clear()
+        internal static void Clear()
         {
             lock (s_gate)
             {
@@ -70,7 +71,7 @@ namespace ZenTS
             }
         }
 
-        public static void Load(IEnumerable<string> configuredPaths, string projectRoot)
+        internal static void Load(IEnumerable<string> configuredPaths, string projectRoot)
         {
             List<JsAliasXmlRule> rules = JsAliasXmlLoader.LoadFromConfiguredPaths(configuredPaths, projectRoot);
             var byName = new Dictionary<string, List<JsAliasXmlRule>>(StringComparer.Ordinal);
@@ -91,6 +92,7 @@ namespace ZenTS
                 s_rules = rules;
                 s_rulesByAssemblyName = byName;
                 s_aliasByMethodToken = new Dictionary<Assembly, Dictionary<int, string>>();
+                s_aotAssemblies = AotXmlPolicy.Capture();
                 s_loaded = true;
             }
         }
@@ -237,6 +239,11 @@ namespace ZenTS
             }
 
             string assemblyName = assembly.GetName()?.Name;
+            if(!s_aotAssemblies.Contains(assembly))
+            {
+                if(assemblyName!=null && s_rulesByAssemblyName.ContainsKey(assemblyName))throw new JsMarshalAsConfigurationException("[ZenTS] XML is only valid for initialized AOT assemblies: "+assemblyName);
+                return new Dictionary<int,string>();
+            }
             var map = new Dictionary<int, string>();
             if (assemblyName != null
                 && s_rulesByAssemblyName.TryGetValue(assemblyName, out List<JsAliasXmlRule> rules)

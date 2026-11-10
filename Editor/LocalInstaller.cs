@@ -38,11 +38,6 @@ namespace ZenTS
 {
     public class LocalInstaller
     {
-        private static readonly string[] s_zentsDefinePrefixes =
-        {
-            "ZENTS_QUICKJS",
-            "ZENTS_QUICKJS_VERSION_",
-        };
 
         private readonly UnityVersion _curVersion;
 
@@ -91,8 +86,8 @@ namespace ZenTS
         public bool HasInstalledToLocal()
         {
             return Directory.Exists(CommonDirs.LocalLibil2cppPath)
-                   && Directory.Exists(CommonDirs.LocalZentsPath)
-                   && Directory.Exists(CommonDirs.LocalQuickJsSrcPath);
+                   && File.Exists(Path.Combine(CommonDirs.LocalZentsPath,"ZenTSCommon.h"))
+                   && File.Exists(ZenTSConfWriter.LocalConfPath);
         }
 
         public bool NeedReinstallAfterUpdatePackage()
@@ -107,8 +102,8 @@ namespace ZenTS
                 return true;
             }
 
-            string qjsId = QuickJsVersionUtil.FromVendoredIl2CppTree().Id;
-            if (!string.Equals(saved.quickjsVersionId, qjsId, StringComparison.Ordinal)
+            string engineId = ZenTSConfWriter.ConfValues.EngineId;
+            if (!string.Equals(saved.engineVersionId, engineId, StringComparison.Ordinal)
                 || !string.Equals(saved.unityVersion, Application.unityVersion, StringComparison.Ordinal)
                 || !string.Equals(saved.packageContentStamp, ComputePackageContentStamp(), StringComparison.Ordinal))
             {
@@ -131,16 +126,8 @@ namespace ZenTS
                     $"zents-runtime missing: {CommonDirs.ZentsRuntimePathInPackage}");
             }
 
-            QuickJsVersionInfo qjsInfo = QuickJsVersionUtil.FromVendoredIl2CppTree();
-            QuickJsVersionUtil.EnsureAvailable(qjsInfo);
-            if (!string.Equals(Settings.Instance.quickjsVersionId, qjsInfo.Id, StringComparison.Ordinal))
-            {
-                Settings.Instance.quickjsVersionId = qjsInfo.Id;
-                Settings.Save();
-                Debug.Log($"[ZenTS] Settings.quickjsVersionId synced to vendored {qjsInfo.Id}");
-            }
-
-            WarnIfEditorPluginMissing();
+            if(NativeSdkStore.HasTarget(NativeSdkStore.EditorTarget))NativeEditorPlugins.Ensure();
+            MonoHooks.GetIl2CppFolderHook.EnsureInstalled();
 
             Directory.CreateDirectory(CommonDirs.InstallRootDir);
             string localIl2CppDataDir = CommonDirs.LocalIl2CppDataPath;
@@ -180,12 +167,24 @@ namespace ZenTS
             PatchApplier.Apply(il2cppPatchFile, CommonDirs.LocalIl2CppPath, stripComponents: 1);
 
             DirectoryUtil.CopyDir(CommonDirs.ZentsRuntimePathInPackage, CommonDirs.LocalZentsPath, true);
+            // Retired M0 JSON/ccall prototype. HostJs now shares the CLR bridge through EngineApi.
+            foreach(string relative in new[]{"hostjs/HostRegistry.h","hostjs/HostRegistry.cpp","hostjs/HostDispatch.h","hostjs/HostDispatch.cpp","hostjs/HostInternalCalls.h","hostjs/HostInternalCalls.cpp"})
+            {
+                string retired=Path.Combine(CommonDirs.LocalZentsPath,relative);
+                if(File.Exists(retired))File.Delete(retired);
+            }
+            if(NativeSdkStore.HasTarget("windows-x64"))V8BuildSetup.ConfigureStaticLibraries(CommonDirs.LocalZentsPath);
+            string facade = File.ReadAllText(Path.Combine(CommonDirs.JsLibPathInPackage, "zentslib.js"));
+            if (facade.Contains(")zents\"")) throw new InvalidOperationException("[ZenTS] JS facade raw-string delimiter collision.");
+            string includePath=Path.Combine(CommonDirs.LocalZentsPath,"jvm","ZentsLibScript.inc");
+            string embedded=File.ReadAllText(includePath);
+            int marker=embedded.IndexOf("R\"zents(",StringComparison.Ordinal);
+            if(marker<0)throw new InvalidOperationException("[ZenTS] Invalid embedded facade template.");
+            File.WriteAllText(includePath,embedded.Substring(0,marker)+"R\"zents("+facade+")zents\";\n",new UTF8Encoding(false));
 
-            const string quickjsSourceKey = "vendored";
-            InstallQuickJsSources(qjsInfo);
 
             string defines = ApplyScriptingDefines();
-            ZenTSConfWriter.WriteLocal(qjsInfo, Application.unityVersion);
+            ZenTSConfWriter.WriteLocal(Application.unityVersion);
             EnsureMinimalGeneratedStubs();
             try
             {
@@ -202,9 +201,8 @@ namespace ZenTS
             InstallFingerprint.Write(new InstallFingerprintData
             {
                 unityVersion = Application.unityVersion,
-                quickjsVersionId = qjsInfo.Id,
+                engineVersionId = ZenTSConfWriter.ConfValues.EngineId,
                 libil2cppPatchKey = il2cppPatchKey,
-                quickjsPatchKey = quickjsSourceKey,
                 packageContentStamp = ComputePackageContentStamp(),
                 defines = defines,
             });
@@ -221,53 +219,9 @@ namespace ZenTS
 
             RequiresEditorRestart = true;
             Debug.Log(
-                $"[ZenTS] Install succeeded. unity={Application.unityVersion} quickjs={qjsInfo.Id} "
-                + $"libil2cppPatch={il2cppPatchKey} quickjsSource={quickjsSourceKey} defines={defines}. "
+                $"[ZenTS] Install succeeded. unity={Application.unityVersion} engine={ZenTSConfWriter.ConfValues.EngineId} "
+                + $"libil2cppPatch={il2cppPatchKey} defines={defines}. "
                 + "Restart the Unity Editor if scripting defines changed.");
-        }
-
-        /// <summary>
-        /// Copy vendored <c>ZenTS~/quickjs-il2cpp</c> as-is. No Install-time QuickJS patches.
-        /// </summary>
-        private static void InstallQuickJsSources(QuickJsVersionInfo qjsInfo)
-        {
-            string src = qjsInfo.SourceDir;
-            string dest = CommonDirs.LocalQuickJsSrcPath;
-            if (!Directory.Exists(src))
-            {
-                throw new InvalidOperationException($"[ZenTS] Vendored QuickJS missing: {src}");
-            }
-
-            DirectoryUtil.CopyDir(src, dest, true);
-
-            // Docs stay in package only.
-            foreach (string name in new[] { "README.md" })
-            {
-                string doc = Path.Combine(dest, name);
-                if (File.Exists(doc))
-                {
-                    File.Delete(doc);
-                }
-            }
-
-            // Never ship POSIX libc or CLI entry points into Il2Cpp.
-            foreach (string name in new[] { "quickjs-libc.c", "qjs.c", "qjsc.c", "run-test262.c" })
-            {
-                string bad = Path.Combine(dest, name);
-                if (File.Exists(bad))
-                {
-                    File.Delete(bad);
-                }
-            }
-
-            if (!File.Exists(Path.Combine(dest, "quickjs.c"))
-                || !File.Exists(Path.Combine(dest, "zents_qjs_std_stubs.c")))
-            {
-                throw new InvalidOperationException(
-                    "[ZenTS] Vendored QuickJS incomplete after copy (need quickjs.c + zents_qjs_std_stubs.c).");
-            }
-
-            Debug.Log($"[ZenTS] Installed vendored QuickJS {qjsInfo.Id} ? {dest}");
         }
 
         private static void EnsureMinimalGeneratedStubs()
@@ -313,16 +267,6 @@ namespace ZenTS
 
         private static void ValidateLocalTree()
         {
-            if (!File.Exists(Path.Combine(CommonDirs.LocalQuickJsSrcPath, "quickjs.c")))
-            {
-                throw new InvalidOperationException("[ZenTS] quickjs.c missing after Install.");
-            }
-
-            if (!File.Exists(Path.Combine(CommonDirs.LocalQuickJsSrcPath, "zents_qjs_std_stubs.c")))
-            {
-                throw new InvalidOperationException("[ZenTS] zents_qjs_std_stubs.c missing after Install.");
-            }
-
             if (!File.Exists(Path.Combine(CommonDirs.LocalZentsPath, "ZenTSCommon.h")))
             {
                 throw new InvalidOperationException("[ZenTS] ZenTSCommon.h missing after Install.");
@@ -334,37 +278,9 @@ namespace ZenTS
             }
         }
 
-        private static void WarnIfEditorPluginMissing()
-        {
-#if UNITY_EDITOR_OSX
-            string qjs = Path.Combine(CommonDirs.PackagePluginsRoot, "quickjs", "darwin-arm64", "libquickjs.dylib");
-            if (!File.Exists(qjs))
-            {
-                qjs = Path.Combine(CommonDirs.PackagePluginsRoot, "quickjs", "darwin-universal", "libquickjs.dylib");
-            }
-
-            if (!File.Exists(qjs))
-            {
-                Debug.LogWarning($"[ZenTS] Editor QuickJS plugin missing (non-fatal for Install): {qjs}");
-            }
-
-            string gate = Path.Combine(CommonDirs.PackagePluginsRoot, "quickjs", "libzents_mono_gate.dylib");
-            if (!File.Exists(gate))
-            {
-                Debug.LogWarning($"[ZenTS] Editor zents_mono_gate missing (non-fatal for Install): {gate}");
-            }
-#else
-            string dll = Path.Combine(CommonDirs.PackagePluginsRoot, "quickjs", "win32-x64", "quickjs.dll");
-            if (!File.Exists(dll))
-            {
-                Debug.LogWarning($"[ZenTS] Editor QuickJS plugin missing (non-fatal for Install): {dll}");
-            }
-#endif
-        }
-
         private string ApplyScriptingDefines()
         {
-            var targets = new[]
+            var targets = new List<NamedBuildTarget>
             {
                 NamedBuildTarget.Standalone,
                 NamedBuildTarget.Android,
@@ -372,7 +288,9 @@ namespace ZenTS
                 NamedBuildTarget.WebGL,
             };
 
-            const string define = "ZENTS_QUICKJS";
+            if(Enum.TryParse("WeixinMiniGame",out BuildTargetGroup wechatGroup))targets.Add(NamedBuildTarget.FromBuildTargetGroup(wechatGroup));
+
+            const string define = "ZENTS_V8";
             foreach (NamedBuildTarget t in targets)
             {
                 try
@@ -381,16 +299,9 @@ namespace ZenTS
                     var parts = new HashSet<string>(
                         current.Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries),
                         StringComparer.Ordinal);
-                    foreach (string p in parts.Where(x => s_zentsDefinePrefixes.Any(pref => x.StartsWith(pref, StringComparison.Ordinal))).ToList())
-                    {
-                        // keep ZENTS_QUICKJS; strip version macros we don't use yet
-                        if (p != "ZENTS_QUICKJS")
-                        {
-                            parts.Remove(p);
-                        }
-                    }
-
-                    parts.Add(define);
+                    // ZenTS owns its reserved scripting-symbol namespace.
+                    parts.RemoveWhere(x => x.StartsWith("ZENTS_", StringComparison.Ordinal) || x.StartsWith("ZTS_", StringComparison.Ordinal));
+                    parts.Add((t == NamedBuildTarget.WebGL || t.TargetName=="WeixinMiniGame") ? "ZENTS_HOST_JS" : define);
                     PlayerSettings.SetScriptingDefineSymbols(t, string.Join(";", parts.OrderBy(x => x)));
                 }
                 catch (Exception ex)
@@ -406,9 +317,8 @@ namespace ZenTS
         {
             string runtime = CommonDirs.ZentsRuntimePathInPackage;
             string patches = CommonDirs.Libil2cppPatchesPathInPackage;
-            string quickjs = CommonDirs.QuickJsIl2CppPathInPackage;
             long max = 0;
-            foreach (string root in new[] { runtime, patches, quickjs })
+            foreach (string root in new[] { runtime, patches })
             {
                 if (!Directory.Exists(root))
                 {

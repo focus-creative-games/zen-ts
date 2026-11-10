@@ -98,27 +98,10 @@ namespace ZenTS.Utils
             return major * 10000 + minor * 100 + patch;
         }
 
-        public static int EncodeQuickJsVersionDate(string versionDate)
-        {
-            if (string.IsNullOrWhiteSpace(versionDate))
-            {
-                return 0;
-            }
-
-            string digits = versionDate.Trim().Replace("-", string.Empty);
-            if (digits.Length != 8 || !int.TryParse(digits, out int value))
-            {
-                throw new System.InvalidOperationException(
-                    $"Cannot encode QuickJS VERSION date '{versionDate}'.");
-            }
-
-            return value;
-        }
-
-        public static string BuildConfId(string quickjsVersionId, UnityVersion unityLine, string tuanjieVersionLabel)
+        public static string BuildConfId(string engineVersionId, UnityVersion unityLine, string tuanjieVersionLabel)
         {
             string tj = string.IsNullOrEmpty(tuanjieVersionLabel) ? "0" : tuanjieVersionLabel;
-            return $"{quickjsVersionId}|unity-{unityLine}|tuanjie-{tj}";
+            return $"{engineVersionId}|unity-{unityLine}|tuanjie-{tj}";
         }
 
         public static void ResolveTuanjieFields(

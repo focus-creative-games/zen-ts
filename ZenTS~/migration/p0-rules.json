@@ -1,0 +1,342 @@
+[
+  {
+    "id": "HOST-01",
+    "topic": "唯一宿主门面 / 反射创建后端",
+    "zlua": "01-HOST-API.md §1.1",
+    "zents": "01-HOST-API.md",
+    "status": "contract-aligned",
+    "evidence": "Runtime/Common/JsAppDomain.cs / IJsRuntime.cs",
+    "tests": "TC_JsEval",
+    "next": "保持 Initialize/GetFunction/Reset 门面；引擎与 CLR 宿主是两个维度"
+  },
+  {
+    "id": "HOST-02",
+    "topic": "重复 Initialize 拒绝",
+    "zlua": "01-HOST-API.md §1.2",
+    "zents": "01-HOST-API.md",
+    "status": "regression-covered",
+    "evidence": "Runtime/Mono/Jvm/JsMonoAppDomain.cs; zents-runtime/jvm/JsAppDomain.cpp",
+    "tests": "TC_JsEval",
+    "next": "P2 为 V8 重跑"
+  },
+  {
+    "id": "LIFE-01",
+    "topic": "Reset 帧末执行、旧委托失效",
+    "zlua": "10-LIFETIME.md §7",
+    "zents": "10-LIFETIME.md",
+    "status": "regression-covered",
+    "evidence": "Runtime/Common/JsFramePump.cs; jvm/JsEnv.cpp",
+    "tests": "TC_ResetInvalidates",
+    "next": "HostJs 只能重建 ZenTS 管理世界，不能关闭宿主 VM"
+  },
+  {
+    "id": "OVER-01",
+    "topic": "最终名字分组、Alias 替换默认名",
+    "zlua": "04-METHOD-OVERLOAD.md §3/§5",
+    "zents": "04-METHOD-OVERLOAD.md §5",
+    "status": "contract-aligned",
+    "evidence": "mt/MetaBinding.cpp; Runtime/Mono/Emit/MetaBinding.cs",
+    "tests": "cases/method_overload",
+    "next": "P3 对照继承与扩展方法竞争细则"
+  },
+  {
+    "id": "OVER-02",
+    "topic": "全签名键 miss 懒解析，单候选亦适用",
+    "zlua": "04-METHOD-OVERLOAD.md §3.7",
+    "zents": "04-METHOD-OVERLOAD.md §3.7",
+    "status": "confirmed-drift",
+    "evidence": "ZLua mt/MetaBinding.cpp lazy lookup; ZenTS 规范仍预注册",
+    "tests": "cases/method_overload",
+    "next": "P3 移植 lazy lookup/cache，禁止预挂所有签名"
+  },
+  {
+    "id": "OVER-03",
+    "topic": "取消运行时 register_method，短名冻结",
+    "zlua": "04-METHOD-OVERLOAD.md §2",
+    "zents": "04-METHOD-OVERLOAD.md §6",
+    "status": "confirmed-drift",
+    "evidence": "Runtime/Mono/ZentsLib.cs; jvm/JsLib.cpp RegisterMethodCallback",
+    "tests": "cases/zentslib/tc_register_method.js; cases/method_overload/tc_register_method.js",
+    "next": "P3 移除并把旧用例替换为冻结断言；P1 不改变旧语义"
+  },
+  {
+    "id": "OVER-04",
+    "topic": "GTAP 泛型类型前缀",
+    "zlua": "04-METHOD-OVERLOAD.md §3.8",
+    "zents": "04-METHOD-OVERLOAD.md",
+    "status": "confirmed-drift",
+    "evidence": "ZLua Mono/Emit/MethodEmitter.cs; ZenTS TryBuildMarshalCtx rejects open generic",
+    "tests": "cases/zentslib/tc_make_generic_method.js",
+    "next": "P3 加 System.Type 前缀、泛型闭合、约束与竞争测试"
+  },
+  {
+    "id": "OVER-05",
+    "topic": "params 展开及候选惩罚",
+    "zlua": "04-METHOD-OVERLOAD.md §3.3/§3.6.3",
+    "zents": "marshal/02-MARSHAL-AS.md §7",
+    "status": "confirmed-drift",
+    "evidence": "MarshalDefs/BindingPlan hasParamsArray single slot; MethodBridge.cpp",
+    "tests": "cases/method_overload",
+    "next": "P3 0..N、整段数组、optionalUsed/paramsExpanded/paramsKind"
+  },
+  {
+    "id": "OVER-06",
+    "topic": "必选参数缺失与范围检查",
+    "zlua": "04-METHOD-OVERLOAD.md §3.3",
+    "zents": "marshal/01-OVERVIEW.md §2",
+    "status": "source-spec-conflict",
+    "evidence": "MethodOverloadResolver.cpp explicitly allows argc < minArity; MethodBridge fills zero",
+    "tests": "cases/method_overload; cases/marshal",
+    "next": "P3 direct/dispatch/ctor 共用 arity 与匹配规则"
+  },
+  {
+    "id": "OVER-07",
+    "topic": "逐参数 better member，而非总分吞掉歧义",
+    "zlua": "04-METHOD-OVERLOAD.md §3.6",
+    "zents": "04-METHOD-OVERLOAD.md",
+    "status": "confirmed-drift",
+    "evidence": "ZenTS MethodOverloadResolver Resolve uses summed score and parameter count",
+    "tests": "cases/method_overload",
+    "next": "P3 迁移逐参数偏序、默认值和 params tie-break"
+  },
+  {
+    "id": "MAR-01",
+    "topic": "声明门面与对象身份",
+    "zlua": "marshal/06-CLASS.md",
+    "zents": "marshal/06-CLASS.md",
+    "status": "needs-targeted-test",
+    "evidence": "ObjectRegistry / ObjectMarshal",
+    "tests": "cases/type_system; cases/marshal",
+    "next": "P3 增加基类、接口、同一对象多门面对照"
+  },
+  {
+    "id": "MAR-02",
+    "topic": "ActualTypeUserData 返回值策略",
+    "zlua": "marshal/02-MARSHAL-AS.md §2",
+    "zents": "marshal/02-MARSHAL-AS.md",
+    "status": "confirmed-drift",
+    "evidence": "LuaMarshalType contains ActualTypeUserData; JsMarshalType does not",
+    "tests": "missing",
+    "next": "P3 追加枚举值且不重排旧值，支持实际 string 的 ByObj 门面"
+  },
+  {
+    "id": "MAR-03",
+    "topic": "泛型成员配置在闭合后校验",
+    "zlua": "marshal/02-MARSHAL-AS.md §1.1",
+    "zents": "marshal/02-MARSHAL-AS.md §1.1",
+    "status": "confirmed-drift",
+    "evidence": "ZLua definition token and closed slot validation; ZenTS older restriction",
+    "tests": "cases/marshal/tc_composite_marshal.js",
+    "next": "P3 泛型成员定义匹配、闭合类型校验、非法配置处理"
+  },
+  {
+    "id": "MAR-04",
+    "topic": "struct ByVal / ByObj 与复制",
+    "zlua": "marshal/05-STRUCT.md",
+    "zents": "marshal/05-STRUCT.md",
+    "status": "needs-targeted-test",
+    "evidence": "StructMarshal.cpp; Mono/Marshaling/StructMarshal.cs",
+    "tests": "cases/marshal; cases/value_type",
+    "next": "P3 验证含引用字段 struct 的复制/持有与回收"
+  },
+  {
+    "id": "MAR-05",
+    "topic": "写入 GC 堆槽必须执行 write barrier",
+    "zlua": "marshal/05-STRUCT.md / 10-LIFETIME.md",
+    "zents": "10-LIFETIME.md",
+    "status": "needs-targeted-test",
+    "evidence": "ZLua marshal has needsWriteBarrierOnWriteReference; ZenTS FnMarshalJs2Cs lacks destination flag",
+    "tests": "missing incremental-GC stress",
+    "next": "P3 单独审计字段、数组、Composite、byref 的堆写屏障"
+  },
+  {
+    "id": "MAR-06",
+    "topic": "ref/in 临时槽与可写 payload",
+    "zlua": "marshal/03-BYREF.md §3/§4",
+    "zents": "marshal/03-BYREF.md",
+    "status": "contract-aligned",
+    "evidence": "MethodBridge.cpp TryBindByRefAddress",
+    "tests": "TC_OpaqueRef; cases/marshal",
+    "next": "P3 补 nullable/ref reference identity 对照"
+  },
+  {
+    "id": "MAR-07",
+    "topic": "out 不占输入、多返回值",
+    "zlua": "marshal/03-BYREF.md §5",
+    "zents": "marshal/03-BYREF.md",
+    "status": "javascript-adaptation",
+    "evidence": "Lua 多返回值不能直接移植为 JS return",
+    "tests": "missing new tuple contract",
+    "next": "已接受方案：JS [returnValue,out...]；void+[out...]。P3 修改声明及测试"
+  },
+  {
+    "id": "MAR-08",
+    "topic": "C#→JS byref Opaque scope",
+    "zlua": "marshal/04-OPAQUE.md",
+    "zents": "marshal/04-OPAQUE.md",
+    "status": "regression-covered",
+    "evidence": "OpaqueValueMarshal.cpp; OpaqueParameterScope.cs",
+    "tests": "TC_OpaqueRef; TC_OpaqueExpiry",
+    "next": "P2 保持 scope/generation；异步完成后禁止访问"
+  },
+  {
+    "id": "MAR-09",
+    "topic": "Table / UnpackedValues",
+    "zlua": "marshal/02-MARSHAL-AS.md §5",
+    "zents": "marshal/02-MARSHAL-AS.md §5",
+    "status": "javascript-adaptation",
+    "evidence": "JS 对象单值返回；展开输入仍可表达",
+    "tests": "cases/marshal/tc_composite_marshal.js",
+    "next": "P3 定稿展开返回与 out 组合规则；P1 保留旧实现"
+  },
+  {
+    "id": "MAR-10",
+    "topic": "null 与 undefined 区分",
+    "zlua": "marshal/01-OVERVIEW.md",
+    "zents": "marshal/01-OVERVIEW.md §2",
+    "status": "javascript-adaptation",
+    "evidence": "JS has explicit null and missing undefined",
+    "tests": "cases/marshal",
+    "next": "保留差异；direct/dispatch/optional/nullable 一致"
+  },
+  {
+    "id": "MAR-11",
+    "topic": "Int64/UInt64 精确表示",
+    "zlua": "marshal/01-OVERVIEW.md",
+    "zents": "marshal/01-OVERVIEW.md bigint restriction",
+    "status": "javascript-adaptation",
+    "evidence": "当前 BigInt 拒绝；Number 不能无损覆盖 64 位整数",
+    "tests": "cases/marshal",
+    "next": "P3 按已接受方案引入 BigInt 并生成 TS bigint；不在 P1 偷改规则"
+  },
+  {
+    "id": "MAR-12",
+    "topic": "数组、空洞、字节",
+    "zlua": "marshal/07-ARRAY.md",
+    "zents": "marshal/07-ARRAY.md",
+    "status": "javascript-adaptation",
+    "evidence": "Lua table 与 JS Array/TypedArray 的差异",
+    "tests": "cases/marshal; cases/zentslib/tc_to_bytes.js",
+    "next": "P3 连续性/空洞/复制与共享边界定稿"
+  },
+  {
+    "id": "MAR-13",
+    "topic": "delegate 双向绑定与身份",
+    "zlua": "marshal/09-FUNCTION.md",
+    "zents": "marshal/09-FUNCTION.md",
+    "status": "regression-covered",
+    "evidence": "DelegateMarshal.cpp; DynamicBridgeFactory.cs",
+    "tests": "TC_GetFunctionAdd; cases/marshal/tc_marshal_delegate.js",
+    "next": "P2 按 ABI 重建桥；不将 Win64 trampolines 当通用签名解法"
+  },
+  {
+    "id": "MAR-14",
+    "topic": "Nullable 无值/有值",
+    "zlua": "marshal/05-STRUCT.md",
+    "zents": "metatable/04-SPECIAL-TYPES.md",
+    "status": "needs-targeted-test",
+    "evidence": "MarshalMeta.cpp nullable branch",
+    "tests": "cases/marshal",
+    "next": "P3 null、Table、ref Nullable 分开验收"
+  },
+  {
+    "id": "META-01",
+    "topic": "XML 三表优先级与非法配置",
+    "zlua": "01-HOST-API.md / marshal/02-MARSHAL-AS.md",
+    "zents": "01-HOST-API.md",
+    "status": "needs-targeted-test",
+    "evidence": "Alias/MarshalAs/Extension loaders and generated tables",
+    "tests": "cases/extension; cases/marshal",
+    "next": "P3 对照 Attribute 优先级、重复项硬失败、Mono soft fallback"
+  },
+  {
+    "id": "META-02",
+    "topic": "InteropMetadata 热更 XML",
+    "zlua": "01-HOST-API.md §1.1 InteropMetadata",
+    "zents": "01-HOST-API.md",
+    "status": "confirmed-drift",
+    "evidence": "当前 ZenTS 无相应公开入口",
+    "tests": "missing",
+    "next": "先解决 ZLua Settings 与 Host API 对热更 XML 的描述冲突，再移植"
+  },
+  {
+    "id": "META-03",
+    "topic": "Unity 优化总开关",
+    "zlua": "15-UNITY-OPTIMIZATIONS.md",
+    "zents": "missing",
+    "status": "confirmed-drift",
+    "evidence": "ZenTS Settings 缺 enableUnityOptimizations / 内置 XML",
+    "tests": "missing",
+    "next": "P3 移植 GetComponentT/GetComponentN/ActualType 与默认开关"
+  },
+  {
+    "id": "META-04",
+    "topic": "实例与 extension 同名竞争",
+    "zlua": "13-EXTENSION-METHODS.md",
+    "zents": "13-EXTENSION-METHODS.md",
+    "status": "needs-targeted-test",
+    "evidence": "ExtensionXmlTable; MetaBinding",
+    "tests": "cases/extension/tc_extension_methods.js",
+    "next": "P3 对照统一 overload 竞争和签名去 this"
+  },
+  {
+    "id": "JS-01",
+    "topic": "JS this / callable / Symbol 协议",
+    "zlua": "Lua metatable dispatch",
+    "zents": "metatable/02-INDEX.md",
+    "status": "javascript-adaptation",
+    "evidence": "JS 函数提取无隐式 this；then/Symbol 为语言协议",
+    "tests": "cases/method_overload",
+    "next": "保持 .call 接收者语义；补 then/Symbol 探测测试"
+  },
+  {
+    "id": "JS-02",
+    "topic": "ESM 与 Promise",
+    "zlua": "Lua loader / coroutine",
+    "zents": "14-TYPESCRIPT.md; build/06-HOSTJS.md",
+    "status": "javascript-adaptation",
+    "evidence": "模块加载及异步能力不可混同 Lua coroutine",
+    "tests": "TC_JsMatrix; TsDemoRunner",
+    "next": "P4 用构建器处理宿主模块，不使用运行时正则实现完整 ESM"
+  },
+  {
+    "id": "ENG-01",
+    "topic": "Native V8 / HostJs 最终矩阵",
+    "zlua": "11-MULTI-VERSION.md",
+    "zents": "build/01-QUICKJS.md",
+    "status": "planned-engine-migration",
+    "evidence": "当前仅 QuickJS 可运行；P1 适配接口已抽离",
+    "tests": "current regression only",
+    "next": "P2 Win64 Editor+Player V8；P4 HostJs；P5 iOS JITless"
+  },
+  {
+    "id": "ENG-02",
+    "topic": "HostJs 文档与实现错位",
+    "zlua": "not applicable",
+    "zents": "build/06-HOSTJS.md",
+    "status": "source-spec-conflict",
+    "evidence": "文档称 P4 已验收；实际 HostInternalCalls.GetFunction 抛 not implemented，dispatch 为桩",
+    "tests": "not runnable",
+    "next": "以嵌入包为实现基线，不将旧文档声明记为能力"
+  },
+  {
+    "id": "BUILD-01",
+    "topic": "测试覆盖不能混同目标平台",
+    "zlua": "00-OVERVIEW.md",
+    "zents": "00-OVERVIEW.md",
+    "status": "source-export-divergence",
+    "evidence": "当前源码 Il2CppJsMatrixRunner 为12套；已导出 Player 运行55套",
+    "tests": "baseline log + source hashes",
+    "next": "记录导出产物自己的基线，后续 C# 变更才重新导出"
+  },
+  {
+    "id": "SPEC-01",
+    "topic": "ZLua 文档内部版本冲突",
+    "zlua": "01-HOST-API.md params 摘要 vs 04-METHOD-OVERLOAD.md",
+    "zents": "not applicable",
+    "status": "upstream-spec-conflict",
+    "evidence": "旧摘要称单槽，新 overload 与实现支持 params 展开",
+    "tests": "ZLua Mono/Emit/ParamsArrayUtil.cs",
+    "next": "以源码+针对性测试确认，登记冲突而非盲目复制"
+  }
+]

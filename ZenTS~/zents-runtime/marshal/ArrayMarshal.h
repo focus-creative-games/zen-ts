@@ -27,7 +27,7 @@ namespace zents
 class ArrayMarshal
 {
 public:
-    static void Js2CsSzArray(JSContext* ctx, JSValueConst value, void* address, const MarshalMetaInfo* meta);
-    static JSValue Cs2JsSzArray(JSContext* ctx, void* address, const MarshalMetaInfo* meta);
+    static void Js2CsSzArray(js::Context* ctx, js::ValueConst value, void* address, const MarshalMetaInfo* meta);
+    static js::Value Cs2JsSzArray(js::Context* ctx, void* address, const MarshalMetaInfo* meta);
 };
 }

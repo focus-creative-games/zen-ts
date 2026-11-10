@@ -1,6 +1,6 @@
 # ZenTS
 
-ZenTS is a modern, concise, and easy-to-use Unity **TypeScript / JavaScript** scripting solution powered by **QuickJS**, with strong Il2Cpp optimization. Its design parallels [ZLua](https://github.com/focus-creative-games/zlua).
+ZenTS is a modern, concise, and easy-to-use Unity **TypeScript / JavaScript** scripting solution powered by **V8**, with strong Il2Cpp optimization. Its design parallels [ZLua](https://github.com/focus-creative-games/zlua).
 
 - Documentation: [zents.code-philosophy.com](https://zents.code-philosophy.com/)
 - Sister product (Lua): [ZLua](https://doc.zlua.cn) / [zlua GitHub](https://github.com/focus-creative-games/zlua)
@@ -11,7 +11,7 @@ ZenTS is a modern, concise, and easy-to-use Unity **TypeScript / JavaScript** sc
 
 ## Why ZenTS
 
-Compared with Puerts / xLua-style JS bridges, or “hand-rolled QuickJS + custom bindings”:
+Compared with Puerts / xLua-style JS bridges, or “hand-rolled V8 + custom bindings”:
 
 | | |
 |--|--|
@@ -27,7 +27,7 @@ Compared with Puerts / xLua-style JS bridges, or “hand-rolled QuickJS + custom
 
 | | ZLua | ZenTS |
 |--|------|-----|
-| Script side | Lua (PUC-Rio / LuaJIT) | JavaScript (QuickJS); optional TypeScript → ES modules |
+| Script side | Lua (PUC-Rio / LuaJIT) | JavaScript (V8); optional TypeScript → ES modules |
 | Host façade | `LuaAppDomain` | `JsAppDomain` |
 | Type entry | `CSharp[...]` | Same; plus `import { T } from "csharp:…"` |
 | Stdlib | `zlua.*` | `zents.*` |
@@ -54,16 +54,16 @@ For a modern TypeScript solution on **Unreal Engine** (aggressively optimized fo
 | Category | Supported |
 |----------|-----------|
 | **Engine** | Unity **2021.3.x** / **2022.3.x** / **6000.0.x** / **6000.3.x** / **6000.5.x**; **Tuanjie Engine 1.x.y** |
-| **VM** | QuickJS (see pin under `ZenTS~/` / docs) |
+| **VM** | V8 (see pin under `ZenTS~/` / docs) |
 | **Runtime** | Editor **Mono** + Player **Il2Cpp** |
-| **Editor platforms** | Windows x64, macOS (Apple Silicon / Intel) |
-| **Player platforms** | Platforms supported by Il2Cpp (including Win64, Android, iOS, WebGL, WeChat Mini Games, HarmonyOS / automotive, etc.) |
+| **Editor platforms** | Windows x64 validated; other V8 SDK integrations pending |
+| **Player platforms** | Win64 validated; other native V8 SDKs and WebGL / mini-game host VM integration pending |
 
 ---
 
 ## Usage A: Plain JavaScript
 
-The runtime loads **ES modules only** (QuickJS). Module names use a **canonical specifier** (logical path **without** `.js`).
+The runtime loads **ES modules only** (V8). Module names use a **canonical specifier** (logical path **without** `.js`).
 
 Contracts: [docs site](https://zents.code-philosophy.com/) and `Docs/spec/01-HOST-API.md`, `02-TYPE-SYSTEM.md`.
 
@@ -220,7 +220,7 @@ Play mode runs `tsc --noEmit` by default. You can also run **`ZenTS/Compile Type
 | Assembly | Platform | Role |
 |----------|----------|------|
 | `ZenTS.Common` | All | `JsAppDomain` façade, attributes, shared types |
-| `ZenTS.Mono` | Editor | QuickJS P/Invoke + Mono callback gate + Emit |
+| `ZenTS.Mono` | Editor | V8 C ABI + Emit |
 | `ZenTS.Il2Cpp` | Player | Il2Cpp host wiring (`ZenTS~/zents-runtime`) |
 | `ZenTS.Editor` | Editor | Install / Export / TypeScript toolchain / Settings |
 
@@ -228,27 +228,11 @@ Play mode runs `tsc --noEmit` by default. You can also run **`ZenTS/Compile Type
 
 ## Editor native deps (Mono)
 
-```text
-Plugins/quickjs/
-  win32-x64/quickjs.dll          # QuickJS Win64 (no NAN boxing: JSValue = 16 bytes)
-  zents_mono_gate.dll              # Editor-only JS→C# callback gate (Windows)
-  darwin-arm64/quickjs.dylib     # QuickJS macOS arm64
-  libzents_mono_gate.dylib         # Editor-only gate (macOS)
-```
+Editor plugin: `Plugins/v8/win64/zents_v8.dll`.
 
-Build (from the package root):
-
-```bat
-ZenTS~\mono-native\build_quickjs_msvc.bat
-```
-
-```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File ZenTS~\mono-native\build_zents_mono_gate.ps1
-```
-
-macOS: `ZenTS~/mono-native/build_quickjs_darwin.sh`, `build_zents_mono_gate_unix.sh`.
-
-Il2Cpp: menu **ZenTS / Install...** installs `ZenTS~/zents-runtime` + QuickJS into LocalIl2Cpp; on Windows, **ZenTS / Export Build-Win64...** exports an MSBuildable Player solution. For iOS and other targets, follow Unity’s export + native toolchain (see docs).
+Build the official V8 static SDK outside Unity, then run `python ZenTS~/v8/build_win64.py --sdk <exported SDK>`.
+`ZenTS/Install` installs the runtime and precompiled static SDK; Win64 Player links both statically.
+Currently verified: Windows x64 Editor and Player. Other native platforms require matching V8 SDKs and build integration; WebGL/mini-game host VM integration remains in progress.
 
 ---
 

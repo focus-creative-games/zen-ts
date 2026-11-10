@@ -19,6 +19,8 @@
 // SOFTWARE.
 
 #pragma once
+#include "vm/Class.h"
+#include "../marshal/MethodOverloadResolver.h"
 
 #include "BridgeDefs.h"
 #include "../utils/MetadataUtil.h"
@@ -29,31 +31,31 @@ class MethodBridge
 {
 public:
     static void Initialize();
-    static JSValue DefaultInvoke(
-        JSContext* ctx,
+    static js::Value DefaultInvoke(
+        js::Context* ctx,
         void* target,
         int argc,
-        JSValueConst* argv,
+        js::ValueConst* argv,
         const MethodInfo* method,
         const MethodMarshalCtx* mctx);
 
     static FnJs2CsInvoker ResolveMethodInvoker(const MethodInfo* method);
 
-    static inline JSValue InvokeJs2Cs(
-        JSContext* ctx,
+    static inline js::Value InvokeJs2Cs(
+        js::Context* ctx,
         void* target,
         int argc,
-        JSValueConst* argv,
+        js::ValueConst* argv,
         const MethodMarshalCtx* mctx)
     {
-        /* ZenTS allows omitting non-optional args (zero/type defaults), matching Mono v1. */
-        if (argc > mctx->arity)
+        if (!MethodOverloadResolver::IsApplicable(ctx, mctx, argc, argv))
+            return js::ThrowTypeError(ctx, "zents: argument mismatch for %s", mctx->method->name);
+        if(target != nullptr)
         {
-            return JS_ThrowTypeError(
-                ctx,
-                "zents: argument mismatch: expected at most %d argument(s), got %d",
-                mctx->arity,
-                argc);
+            auto* object=reinterpret_cast<Il2CppObject*>(target);
+            Il2CppClass* expected=mctx->isExtension?mctx->paramsMeta[0]->typeKlass:mctx->method->klass;
+            if(expected && !il2cpp::vm::Class::IsAssignableFrom(expected,object->klass))
+                return js::ThrowTypeError(ctx,"zents: incompatible method receiver");
         }
         const MethodInfo* method = MetadataUtil::ResolveInvokeMethod(mctx->method, target, mctx->sealed);
         return mctx->js2CsInvoker(ctx, target, argc, argv, method, mctx);

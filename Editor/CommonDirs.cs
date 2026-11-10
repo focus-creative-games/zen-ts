@@ -78,15 +78,6 @@ namespace ZenTS
             Path.GetFullPath(Path.Combine(ZentsDataPathInPackage, "zents-runtime"));
 
         /// <summary>
-        /// Vendored QuickJS sources for Il2Cpp (no Install-time patching).
-        /// </summary>
-        public static string QuickJsIl2CppPathInPackage =>
-            Path.GetFullPath(Path.Combine(ZentsDataPathInPackage, "quickjs-il2cpp"));
-
-        public static string QuickJsSrcCacheDir =>
-            Path.GetFullPath(Path.Combine(InstallRootDir, "QuickJsSrcCache"));
-
-        /// <summary>
         /// Staged TS/JS toolchain files for tools outside Unity (tsc, IDE, Node).
         /// Layout: <c>types/</c> + <c>jslib/</c>.
         /// </summary>
@@ -111,7 +102,6 @@ namespace ZenTS
 
         public static string LocalLibil2cppPath => $"{LocalIl2CppPath}/libil2cpp";
 
-        public static string LocalQuickJsSrcPath => $"{LocalLibil2cppPath}/quickjs";
 
         public static string LocalZentsPath => Path.Combine(LocalLibil2cppPath, "zents");
 
@@ -124,8 +114,6 @@ namespace ZenTS
         public static string GeneratedZentsPath =>
             Path.GetFullPath(Path.Combine(LocalZentsPath, "generated"));
 
-        public static string PackageGeneratedZentsPath =>
-            Path.GetFullPath(Path.Combine(ZentsRuntimePathInPackage, "generated"));
 
         public static string BuildWin64GeneratedZentsPath =>
             Path.GetFullPath(Path.Combine(

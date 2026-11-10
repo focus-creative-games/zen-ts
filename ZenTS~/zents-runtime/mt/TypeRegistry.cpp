@@ -23,13 +23,13 @@
 
 namespace zents
 {
-JSValue TypeRegistry::PushTypeObject(JSContext* ctx, Il2CppClass* klass)
+js::Value TypeRegistry::PushTypeObject(js::Context* ctx, Il2CppClass* klass)
 {
     TypeBinding* binding = MetaBinding::EnsureBinding(ctx, klass);
-    return JS_DupValue(ctx, binding->typeObject);
+    return js::DupValue(ctx, binding->typeObject);
 }
 
-void TypeRegistry::Reset(JSContext* ctx)
+void TypeRegistry::Reset(js::Context* ctx)
 {
     MetaBinding::Reset(ctx);
 }

@@ -1,0 +1,71 @@
+{
+  "verified_utc": "2026-11-10T07:59:55.733155+00:00",
+  "git_base": "36fa772f9556f1916ee85e1533f3e081cce856ab",
+  "counting": "Named test_* source declarations, excluding comments; module count is not case count or branch coverage.",
+  "zlua_matrix": {
+    "files": 71,
+    "named_cases": 581
+  },
+  "zents_matrix": {
+    "files": 56,
+    "named_suites": 52,
+    "baseline_named_cases": 374,
+    "named_cases": 435,
+    "added_named_cases": 61,
+    "duplicate_cases_replaced": 5
+  },
+  "executions": [
+    {
+      "log": "coverage-editor.log",
+      "total": 435,
+      "passed": 435,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "log": "p5-player.log",
+      "total": 435,
+      "passed": 435,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "log": "p4-webgl-browser.log",
+      "total": 435,
+      "passed": 434,
+      "failed": 0,
+      "skipped": 1
+    },
+    {
+      "log": "wechat-player.log",
+      "total": 435,
+      "passed": 434,
+      "failed": 0,
+      "skipped": 1
+    }
+  ],
+  "supporting_verification": {
+    "suite_runner_and_inventory_negative_tests": "PASS",
+    "restricted_host_console_rewrite_utf8_reset_no_dynamic_codegen": "PASS",
+    "browser_real_gc_and_exception_boundary": "PASS",
+    "editor_smoke_ts": "8/8; 3/3",
+    "win64_webgl_wechat_smoke_ts": "10/10; 3/3"
+  },
+  "host_skip": "p3.alignment.test_main_thread_contract: single-thread host build has no managed Thread",
+  "test_source_sha256": "1bfa8b1a4c3b3c8d2060a0932afc95dd34cf68abf00fa61594a48931b342459a",
+  "logs_sha256": {
+    "coverage-editor.log": "7bebade52e753f7b5da595b12a160f3c392f96d55a162cc3843fcbb9c41ba69f",
+    "p5-player.log": "da8c459e7460bc598968b06700c72e3958088fcc3f4649843e980d620d1046d8",
+    "p4-webgl-browser.log": "49f303379766729e47ca30a7282f8fb8238dd10a6ecb0c193292b3942b657c3b",
+    "wechat-player.log": "ae869644877eda5a35240b53cf0ff3489375c7b96c11920c2927c5deac499557",
+    "coverage-webgl-build.log": "5f5b5f2c82ae1e73ce275858980b9be1eb146df2ae0a1bfff65e0cabb0376b64",
+    "coverage-wechat-build.log": "e4bdc8ce49f9d2ee45db812828bad50471c941c7ee4c1060133c279f82e21030"
+  },
+  "not_rerun": [
+    "macOS",
+    "iOS",
+    "Android",
+    "physical phone"
+  ],
+  "scope": "Modified embedded ZenTSTest package and test project only; no push or commit."
+}

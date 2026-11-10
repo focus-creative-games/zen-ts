@@ -28,6 +28,8 @@ class MarshalMeta
 {
 public:
     /// Returns nullptr when the type is not yet supported (M2: Int32 only).
+    static const MarshalMetaInfo* WithStrategy(const Il2CppType* type, int kind);
+    static bool TryReadBigInt(js::Context* ctx, js::ValueConst value, const Il2CppType* type, uint64_t* bits);
     static const MarshalMetaInfo* TryCreateDefault(const Il2CppType* type);
 };
 }

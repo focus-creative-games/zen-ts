@@ -25,6 +25,7 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using ZenTS.Jvm;
+using ZenTS.Emit;
 using ZenTS.Marshaling;
 using ZenTS.Utils;
 
@@ -32,20 +33,20 @@ namespace ZenTS.DelegateImpl
 {
     internal static class DynamicBridgeFactory
     {
-        private static readonly List<JSValue> HeldFunctions = new List<JSValue>();
-        private static readonly ConcurrentDictionary<Type, Func<JsEnv, JSValue, int, Delegate>> Factories =
-            new ConcurrentDictionary<Type, Func<JsEnv, JSValue, int, Delegate>>();
+        private static readonly List<JsValue> HeldFunctions = new List<JsValue>();
+        private static readonly ConcurrentDictionary<Type, Func<JsEnv, JsValue, int, Delegate>> Factories =
+            new ConcurrentDictionary<Type, Func<JsEnv, JsValue, int, Delegate>>();
         private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<Delegate, JsFuncHolder> BoundJsFuncs =
             new System.Runtime.CompilerServices.ConditionalWeakTable<Delegate, JsFuncHolder>();
 
         private sealed class JsFuncHolder
         {
-            public JSValue Func;
+            public JsValue Func;
         }
 
         public static Delegate CreateBinding(JsEnv env, Type delegateType, string jsModule, string jsExportName)
         {
-            JSValue jsFunc = env.GetModuleExport(jsModule, jsExportName);
+            JsValue jsFunc = env.GetModuleExport(jsModule, jsExportName);
             try
             {
                 return Create(env, delegateType, jsFunc, env.Generation);
@@ -56,10 +57,10 @@ namespace ZenTS.DelegateImpl
             }
         }
 
-        private static readonly ConcurrentDictionary<(ulong ptr, long tag, Type delType), Delegate> FromJsIdentityCache =
-            new ConcurrentDictionary<(ulong, long, Type), Delegate>();
+        private static readonly ConcurrentDictionary<(IntPtr identity, Type delType), Delegate> FromJsIdentityCache =
+            new ConcurrentDictionary<(IntPtr, Type), Delegate>();
 
-        public static Delegate Create(JsEnv env, Type delegateType, JSValue jsFunc, int generation)
+        public static Delegate Create(JsEnv env, Type delegateType, JsValue jsFunc, int generation)
         {
             if (!typeof(MulticastDelegate).IsAssignableFrom(delegateType))
             {
@@ -78,28 +79,28 @@ namespace ZenTS.DelegateImpl
             }
 
             // Reuse identity so event remove_ with the same JS function matches add_.
-            var cacheKey = (jsFunc.UInt64, jsFunc.Tag, delegateType);
+            var cacheKey = (JsValueUtil.GetIdentity(jsFunc), delegateType);
             if (FromJsIdentityCache.TryGetValue(cacheKey, out Delegate cached) && cached != null)
             {
                 return cached;
             }
 
-            JSValue funcDup = JsValueUtil.Dup(jsFunc);
+            JsValue funcDup = JsValueUtil.Dup(jsFunc);
             lock (HeldFunctions)
             {
                 HeldFunctions.Add(funcDup);
             }
 
-            Func<JsEnv, JSValue, int, Delegate> factory = Factories.GetOrAdd(delegateType, BuildFactory);
+            Func<JsEnv, JsValue, int, Delegate> factory = Factories.GetOrAdd(delegateType, BuildFactory);
             Delegate created = factory(env, funcDup, generation);
             BoundJsFuncs.Add(created, new JsFuncHolder { Func = funcDup });
             FromJsIdentityCache[cacheKey] = created;
             // Also index the Dup'd value (may differ if bits differ after Dup — usually same).
-            FromJsIdentityCache[(funcDup.UInt64, funcDup.Tag, delegateType)] = created;
+            FromJsIdentityCache[(JsValueUtil.GetIdentity(funcDup), delegateType)] = created;
             return created;
         }
 
-        private static Func<JsEnv, JSValue, int, Delegate> BuildFactory(Type delegateType)
+        private static Func<JsEnv, JsValue, int, Delegate> BuildFactory(Type delegateType)
         {
             MethodInfo invoke = delegateType.GetMethod("Invoke");
             ParameterInfo[] parameters = invoke.GetParameters();
@@ -108,7 +109,7 @@ namespace ZenTS.DelegateImpl
 
             return (env, func, gen) =>
             {
-                var closure = new BridgeClosure(env, func, gen, paramTypes, returnType);
+                var closure = new BridgeClosure(env, func, gen, paramTypes, returnType, JsCallPlan.For(invoke));
                 ParameterExpression[] pexprs = parameters
                     .Select(p => Expression.Parameter(p.ParameterType, p.Name ?? "arg"))
                     .ToArray();
@@ -171,42 +172,45 @@ namespace ZenTS.DelegateImpl
 
         private static object InvokeCore(
             JsEnv env,
-            JSValue func,
+            JsValue func,
             int boundGen,
             Type[] paramTypes,
             Type returnType,
-            object[] args)
+            object[] args, JsCallPlan plan)
         {
+            JsMainThread.EnsureMainThread();
             if (!env.IsAlive || boundGen != env.Generation)
             {
                 throw new InvalidOperationException("zents: JS runtime was reset; re-bind GetFunction delegates.");
             }
 
             IntPtr ctx = env.Context;
-            int argc = args?.Length ?? 0;
-            var jsArgs = new JSValue[argc];
+            int clrArgc=args?.Length??0;
+            var offsets=new int[clrArgc];int argc=0;
+            for(int i=0;i<clrArgc;++i){offsets[i]=argc;var mas=plan.Marshal[i];argc+=!paramTypes[i].IsByRef && mas?.JsMarshalType==JsMarshalType.UnpackedValues?mas.Members.Length:1;}
+            var jsArgs=new JsValue[argc];
             OpaqueParameterScope.Enter();
             try
             {
-                for (int i = 0; i < argc; i++)
+                for(int i=0;i<clrArgc;++i)
                 {
-                    Type pt = paramTypes[i];
-                    if (pt.IsByRef)
+                    Type pt=paramTypes[i];var mas=plan.Marshal[i];int slot=offsets[i];
+                    if(pt.IsByRef)jsArgs[slot]=OpaqueParameterScope.Push(ctx,args[i],pt.GetElementType(),mas);
+                    else if(mas?.JsMarshalType==JsMarshalType.UnpackedValues)
                     {
-                        jsArgs[i] = OpaqueParameterScope.Push(ctx, args[i]);
+                        JsValue packed=TypedMarshal.Push(ctx,args[i],pt,mas);
+                        try {for(int k=0;k<mas.Members.Length;++k)jsArgs[slot+k]=EngineApi.GetPropertyUint32(ctx,packed,(uint)k);}
+                        finally {JsValueUtil.Free(ctx,packed);}
                     }
-                    else
-                    {
-                        jsArgs[i] = TypedMarshal.Push(ctx, args[i], pt);
-                    }
+                    else jsArgs[slot]=TypedMarshal.Push(ctx,args[i],pt,mas);
                 }
 
-                JSValue ret;
+                JsValue ret;
                 unsafe
                 {
-                    fixed (JSValue* argvPtr = argc > 0 ? jsArgs : null)
+                    fixed (JsValue* argvPtr = argc > 0 ? jsArgs : null)
                     {
-                        ret = QuickJsDll.JS_Call(
+                        ret = EngineApi.Call(
                             ctx,
                             func,
                             JsValueUtil.Undefined,
@@ -221,21 +225,21 @@ namespace ZenTS.DelegateImpl
                         throw nested;
                     }
 
-                    JSValue ex = QuickJsDll.JS_GetException(ctx);
+                    JsValue ex = EngineApi.GetException(ctx);
                     string msg = JsEnv.FormatJsValue(ctx, ex);
                     JsValueUtil.Free(ctx, ex);
                     throw new JsScriptException($"zents: {msg}");
                 }
 
                 // Write back by-ref via Opaque
-                for (int i = 0; i < argc; i++)
+                for (int i = 0; i < clrArgc; i++)
                 {
                     if (!paramTypes[i].IsByRef)
                     {
                         continue;
                     }
 
-                    if (OpaqueParameterScope.TryPop(ctx, jsArgs[i], out object updated))
+                    if (OpaqueParameterScope.TryPop(ctx, jsArgs[offsets[i]], out object updated))
                     {
                         Type elem = paramTypes[i].GetElementType();
                         if (updated == null)
@@ -259,7 +263,7 @@ namespace ZenTS.DelegateImpl
                     return null;
                 }
 
-                object managed = TypedMarshal.Pop(ctx, ret, returnType);
+                object managed = TypedMarshal.Pop(ctx, ret, returnType, plan.ReturnMarshal);
                 JsValueUtil.Free(ctx, ret);
                 return managed;
             }
@@ -277,30 +281,32 @@ namespace ZenTS.DelegateImpl
         private sealed class BridgeClosure
         {
             private readonly JsEnv _env;
-            private readonly JSValue _func;
+            private readonly JsValue _func;
             private readonly int _gen;
             private readonly Type[] _paramTypes;
             private readonly Type _returnType;
+            private readonly JsCallPlan _plan;
 
-            public BridgeClosure(JsEnv env, JSValue func, int gen, Type[] paramTypes, Type returnType)
+            public BridgeClosure(JsEnv env, JsValue func, int gen, Type[] paramTypes, Type returnType, JsCallPlan plan)
             {
                 _env = env;
                 _func = func;
                 _gen = gen;
                 _paramTypes = paramTypes;
                 _returnType = returnType;
+                _plan = plan;
             }
 
-            public JSValue JsFunction => _func;
+            public JsValue JsFunction => _func;
 
             public object Run(object[] args) =>
-                InvokeCore(_env, _func, _gen, _paramTypes, _returnType, args);
+                InvokeCore(_env, _func, _gen, _paramTypes, _returnType, args, _plan);
         }
 
         /// <summary>
         /// If <paramref name="d"/> was created from a JS function, return that function (not Dup'd).
         /// </summary>
-        public static bool TryGetBoundJsFunction(Delegate d, out JSValue jsFunc)
+        public static bool TryGetBoundJsFunction(Delegate d, out JsValue jsFunc)
         {
             jsFunc = default;
             if (d == null)
@@ -339,7 +345,7 @@ namespace ZenTS.DelegateImpl
             IntPtr ctx = env.Context;
             lock (HeldFunctions)
             {
-                foreach (JSValue fn in HeldFunctions)
+                foreach (JsValue fn in HeldFunctions)
                 {
                     JsValueUtil.Free(ctx, fn);
                 }

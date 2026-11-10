@@ -36,14 +36,6 @@ namespace ZenTS
             TryLoad(logSuccess: false);
         }
 
-        [MenuItem("ZenTS/Reload JsExtensions XML", priority = 522)]
-        private static void ReloadMenu()
-        {
-            string projectRoot = Path.GetDirectoryName(Application.dataPath);
-            JsExtensionXmlRegistry.Load(Settings.Instance.jsExtensionXmlPaths, projectRoot);
-            Debug.Log("[ZenTS] JsExtensions XML loaded: " + JsExtensionXmlRegistry.Rules.Count + " rule(s).");
-        }
-
         internal static void TryLoad(bool logSuccess)
         {
             try

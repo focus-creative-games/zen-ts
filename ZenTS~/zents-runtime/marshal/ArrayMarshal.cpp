@@ -29,13 +29,14 @@
 #include "vm/Array.h"
 #include "vm/Class.h"
 #include "vm/Object.h"
+#include "gc/GarbageCollector.h"
 
 namespace zents
 {
-void ArrayMarshal::Js2CsSzArray(JSContext* ctx, JSValueConst value, void* address, const MarshalMetaInfo* meta)
+void ArrayMarshal::Js2CsSzArray(js::Context* ctx, js::ValueConst value, void* address, const MarshalMetaInfo* meta)
 {
     Il2CppArray** out = reinterpret_cast<Il2CppArray**>(address);
-    if (JS_IsNull(value) || JS_IsUndefined(value))
+    if (js::IsNull(value))
     {
         *out = nullptr;
         return;
@@ -44,7 +45,7 @@ void ArrayMarshal::Js2CsSzArray(JSContext* ctx, JSValueConst value, void* addres
     Il2CppClass* arrayKlass = meta != nullptr ? meta->typeKlass : nullptr;
     if (arrayKlass == nullptr)
     {
-        JS_ThrowTypeError(ctx, "zents: missing array marshal meta");
+        js::ThrowTypeError(ctx, "zents: missing array marshal meta");
         return;
     }
 
@@ -53,30 +54,30 @@ void ArrayMarshal::Js2CsSzArray(JSContext* ctx, JSValueConst value, void* addres
         Il2CppObject* obj = ObjectRegistry::Get(ctx, value);
         if (obj == nullptr || !il2cpp::vm::Class::IsAssignableFrom(arrayKlass, obj->klass))
         {
-            JS_ThrowTypeError(ctx, "zents: argument mismatch: expected array %s", MetadataUtil::GetTypeFullName(arrayKlass));
+            js::ThrowTypeError(ctx, "zents: argument mismatch: expected array %s", MetadataUtil::GetTypeFullName(arrayKlass));
             return;
         }
         *out = reinterpret_cast<Il2CppArray*>(obj);
         return;
     }
 
-    if (!JS_IsArray(ctx, value))
+    if (!js::IsArray(ctx, value))
     {
-        JS_ThrowTypeError(ctx, "zents: expected JS Array or CLR array");
+        js::ThrowTypeError(ctx, "zents: expected JS Array or CLR array");
         return;
     }
 
-    JSValue lenVal = JS_GetPropertyStr(ctx, value, "length");
+    js::Value lenVal = js::GetPropertyStr(ctx, value, "length");
     int32_t length = 0;
-    if (JS_ToInt32(ctx, &length, lenVal))
+    if (js::ToInt32(ctx, &length, lenVal))
     {
-        JS_FreeValue(ctx, lenVal);
+        js::FreeValue(ctx, lenVal);
         return;
     }
-    JS_FreeValue(ctx, lenVal);
+    js::FreeValue(ctx, lenVal);
     if (length < 0)
     {
-        JS_ThrowRangeError(ctx, "zents: invalid array length");
+        js::ThrowRangeError(ctx, "zents: invalid array length");
         return;
     }
 
@@ -85,43 +86,45 @@ void ArrayMarshal::Js2CsSzArray(JSContext* ctx, JSValueConst value, void* addres
     const MarshalMetaInfo* elemMeta = MarshalMeta::TryCreateDefault(&elementKlass->byval_arg);
     if (elemMeta == nullptr)
     {
-        JS_ThrowTypeError(ctx, "zents: array element type not supported yet");
+        js::ThrowTypeError(ctx, "zents: array element type not supported yet");
         return;
     }
 
     int32_t elementSize = il2cpp::vm::Class::GetArrayElementSize(elementKlass);
     for (int32_t i = 0; i < length; ++i)
     {
-        JSValue item = JS_GetPropertyUint32(ctx, value, (uint32_t)i);
-        if (JS_IsException(item))
+        if(js::HasOwnProperty(ctx,value,std::to_string(i).c_str())!=1){js::ThrowTypeError(ctx,"zents: array holes are not supported");return;}
+        js::Value item = js::GetPropertyUint32(ctx, value, (uint32_t)i);
+        if (js::IsException(item))
             return;
         void* slot = il2cpp_array_addr_with_size(arr, elementSize, i);
         if (elemMeta->passByValue)
         {
             void* temp = nullptr;
             elemMeta->js2csWriter(ctx, item, &temp, elemMeta);
-            JS_FreeValue(ctx, item);
-            if (JS_HasException(ctx))
+            js::FreeValue(ctx, item);
+            if (js::HasException(ctx))
                 return;
             *reinterpret_cast<void**>(slot) = temp;
         }
         else
         {
             elemMeta->js2csWriter(ctx, item, slot, elemMeta);
-            JS_FreeValue(ctx, item);
-            if (JS_HasException(ctx))
+            js::FreeValue(ctx, item);
+            if (js::HasException(ctx))
                 return;
         }
+        if (arr->klass->has_references) il2cpp::gc::GarbageCollector::SetWriteBarrier(reinterpret_cast<void**>(slot), (size_t)elementSize);
     }
 
     *out = arr;
 }
 
-JSValue ArrayMarshal::Cs2JsSzArray(JSContext* ctx, void* address, const MarshalMetaInfo* meta)
+js::Value ArrayMarshal::Cs2JsSzArray(js::Context* ctx, void* address, const MarshalMetaInfo* meta)
 {
     Il2CppArray* arr = *reinterpret_cast<Il2CppArray**>(address);
     if (arr == nullptr)
-        return JS_NULL;
+        return js::Null();
     Il2CppClass* view = meta != nullptr && meta->typeKlass != nullptr
         ? meta->typeKlass
         : reinterpret_cast<Il2CppObject*>(arr)->klass;

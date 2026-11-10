@@ -32,44 +32,44 @@ namespace zents
 {
 namespace
 {
-static bool RejectBigInt(JSContext* ctx, JSValueConst value)
+static bool RejectBigInt(js::Context* ctx, js::ValueConst value)
 {
-    if (JS_IsBigInt(ctx, value))
+    if (js::IsBigInt(ctx, value))
     {
-        JS_ThrowTypeError(ctx, "zents: BigInt marshal is not supported");
+        js::ThrowTypeError(ctx, "zents: BigInt marshal is not supported");
         return true;
     }
     return false;
 }
 
-static bool ToNumber(JSContext* ctx, JSValueConst value, double* out)
+static bool ToNumber(js::Context* ctx, js::ValueConst value, double* out)
 {
     if (RejectBigInt(ctx, value))
         return false;
-    if (!JS_IsNumber(value))
+    if (!js::IsNumber(value))
     {
-        JS_ThrowTypeError(ctx, "zents: cannot convert value to number (bad format)");
+        js::ThrowTypeError(ctx, "zents: cannot convert value to number (bad format)");
         return false;
     }
-    if (JS_ToFloat64(ctx, out, value))
+    if (js::ToFloat64(ctx, out, value))
         return false;
     return true;
 }
 
 template <typename T>
-static bool StoreIntegral(JSContext* ctx, JSValueConst value, void* address, T minV, T maxV)
+static bool StoreIntegral(js::Context* ctx, js::ValueConst value, void* address, T minV, T maxV)
 {
     double d = 0;
     if (!ToNumber(ctx, value, &d))
         return false;
     if (!std::isfinite(d) || std::floor(d) != d)
     {
-        JS_ThrowTypeError(ctx, "zents: cannot convert value to integer number");
+        js::ThrowTypeError(ctx, "zents: cannot convert value to integer number");
         return false;
     }
     if (d < (double)minV || d > (double)maxV)
     {
-        JS_ThrowRangeError(ctx, "zents: integer out of range");
+        js::ThrowRangeError(ctx, "zents: integer out of range");
         return false;
     }
     *reinterpret_cast<T*>(address) = (T)d;
@@ -77,132 +77,126 @@ static bool StoreIntegral(JSContext* ctx, JSValueConst value, void* address, T m
 }
 } // namespace
 
-void PrimitiveMarshal::Js2CsBool(JSContext* ctx, JSValueConst value, void* address, const MarshalMetaInfo* /*meta*/)
+void PrimitiveMarshal::Js2CsBool(js::Context* ctx, js::ValueConst value, void* address, const MarshalMetaInfo* /*meta*/)
 {
-    if (JS_IsBool(value))
+    if (js::IsBool(value))
     {
-        *reinterpret_cast<bool*>(address) = JS_ToBool(ctx, value) != 0;
+        *reinterpret_cast<bool*>(address) = js::ToBool(ctx, value) != 0;
         return;
     }
-    if (JS_IsNumber(value))
-    {
-        double d = 0;
-        if (JS_ToFloat64(ctx, &d, value))
-            return;
-        *reinterpret_cast<bool*>(address) = d != 0.0;
-        return;
-    }
-    JS_ThrowTypeError(ctx, "zents: expected boolean");
+    js::ThrowTypeError(ctx, "zents: expected boolean");
 }
 
-JSValue PrimitiveMarshal::Cs2JsBool(JSContext* ctx, void* address, const MarshalMetaInfo* /*meta*/)
+js::Value PrimitiveMarshal::Cs2JsBool(js::Context* ctx, void* address, const MarshalMetaInfo* /*meta*/)
 {
-    return JS_NewBool(ctx, *reinterpret_cast<bool*>(address));
+    return js::NewBool(ctx, *reinterpret_cast<bool*>(address));
 }
 
-void PrimitiveMarshal::Js2CsInt8(JSContext* ctx, JSValueConst value, void* address, const MarshalMetaInfo* /*meta*/)
+void PrimitiveMarshal::Js2CsInt8(js::Context* ctx, js::ValueConst value, void* address, const MarshalMetaInfo* /*meta*/)
 {
     StoreIntegral<int8_t>(ctx, value, address, INT8_MIN, INT8_MAX);
 }
 
-JSValue PrimitiveMarshal::Cs2JsInt8(JSContext* ctx, void* address, const MarshalMetaInfo* /*meta*/)
+js::Value PrimitiveMarshal::Cs2JsInt8(js::Context* ctx, void* address, const MarshalMetaInfo* /*meta*/)
 {
-    return JS_NewInt32(ctx, *reinterpret_cast<int8_t*>(address));
+    return js::NewInt32(ctx, *reinterpret_cast<int8_t*>(address));
 }
 
-void PrimitiveMarshal::Js2CsUInt8(JSContext* ctx, JSValueConst value, void* address, const MarshalMetaInfo* /*meta*/)
+void PrimitiveMarshal::Js2CsUInt8(js::Context* ctx, js::ValueConst value, void* address, const MarshalMetaInfo* /*meta*/)
 {
     StoreIntegral<uint8_t>(ctx, value, address, 0, UINT8_MAX);
 }
 
-JSValue PrimitiveMarshal::Cs2JsUInt8(JSContext* ctx, void* address, const MarshalMetaInfo* /*meta*/)
+js::Value PrimitiveMarshal::Cs2JsUInt8(js::Context* ctx, void* address, const MarshalMetaInfo* /*meta*/)
 {
-    return JS_NewInt32(ctx, *reinterpret_cast<uint8_t*>(address));
+    return js::NewInt32(ctx, *reinterpret_cast<uint8_t*>(address));
 }
 
-void PrimitiveMarshal::Js2CsInt16(JSContext* ctx, JSValueConst value, void* address, const MarshalMetaInfo* /*meta*/)
+void PrimitiveMarshal::Js2CsInt16(js::Context* ctx, js::ValueConst value, void* address, const MarshalMetaInfo* /*meta*/)
 {
     StoreIntegral<int16_t>(ctx, value, address, INT16_MIN, INT16_MAX);
 }
 
-JSValue PrimitiveMarshal::Cs2JsInt16(JSContext* ctx, void* address, const MarshalMetaInfo* /*meta*/)
+js::Value PrimitiveMarshal::Cs2JsInt16(js::Context* ctx, void* address, const MarshalMetaInfo* /*meta*/)
 {
-    return JS_NewInt32(ctx, *reinterpret_cast<int16_t*>(address));
+    return js::NewInt32(ctx, *reinterpret_cast<int16_t*>(address));
 }
 
-void PrimitiveMarshal::Js2CsUInt16(JSContext* ctx, JSValueConst value, void* address, const MarshalMetaInfo* /*meta*/)
+void PrimitiveMarshal::Js2CsUInt16(js::Context* ctx, js::ValueConst value, void* address, const MarshalMetaInfo* /*meta*/)
 {
     StoreIntegral<uint16_t>(ctx, value, address, 0, UINT16_MAX);
 }
 
-JSValue PrimitiveMarshal::Cs2JsUInt16(JSContext* ctx, void* address, const MarshalMetaInfo* /*meta*/)
+js::Value PrimitiveMarshal::Cs2JsUInt16(js::Context* ctx, void* address, const MarshalMetaInfo* /*meta*/)
 {
-    return JS_NewInt32(ctx, *reinterpret_cast<uint16_t*>(address));
+    return js::NewInt32(ctx, *reinterpret_cast<uint16_t*>(address));
 }
 
-void PrimitiveMarshal::Js2CsInt32(JSContext* ctx, JSValueConst value, void* address, const MarshalMetaInfo* /*meta*/)
+void PrimitiveMarshal::Js2CsInt32(js::Context* ctx, js::ValueConst value, void* address, const MarshalMetaInfo* /*meta*/)
 {
     StoreIntegral<int32_t>(ctx, value, address, INT32_MIN, INT32_MAX);
 }
 
-JSValue PrimitiveMarshal::Cs2JsInt32(JSContext* ctx, void* address, const MarshalMetaInfo* /*meta*/)
+js::Value PrimitiveMarshal::Cs2JsInt32(js::Context* ctx, void* address, const MarshalMetaInfo* /*meta*/)
 {
-    return JS_NewInt32(ctx, *reinterpret_cast<int32_t*>(address));
+    return js::NewInt32(ctx, *reinterpret_cast<int32_t*>(address));
 }
 
-void PrimitiveMarshal::Js2CsUInt32(JSContext* ctx, JSValueConst value, void* address, const MarshalMetaInfo* /*meta*/)
+void PrimitiveMarshal::Js2CsUInt32(js::Context* ctx, js::ValueConst value, void* address, const MarshalMetaInfo* /*meta*/)
 {
     StoreIntegral<uint32_t>(ctx, value, address, 0u, UINT32_MAX);
 }
 
-JSValue PrimitiveMarshal::Cs2JsUInt32(JSContext* ctx, void* address, const MarshalMetaInfo* /*meta*/)
+js::Value PrimitiveMarshal::Cs2JsUInt32(js::Context* ctx, void* address, const MarshalMetaInfo* /*meta*/)
 {
-    return JS_NewUint32(ctx, *reinterpret_cast<uint32_t*>(address));
+    return js::NewUint32(ctx, *reinterpret_cast<uint32_t*>(address));
 }
 
-void PrimitiveMarshal::Js2CsInt64(JSContext* ctx, JSValueConst value, void* address, const MarshalMetaInfo* /*meta*/)
+void PrimitiveMarshal::Js2CsInt64(js::Context* ctx, js::ValueConst value, void* address, const MarshalMetaInfo* /*meta*/)
 {
     double d = 0;
     if (!ToNumber(ctx, value, &d))
         return;
     if (!std::isfinite(d) || std::floor(d) != d)
     {
-        JS_ThrowTypeError(ctx, "zents: expected integer number");
+        js::ThrowTypeError(ctx, "zents: expected integer number");
         return;
     }
+    if(d < -9223372036854775808.0 || d >= 9223372036854775808.0){js::ThrowRangeError(ctx,"zents: Int64 out of range");return;}
     *reinterpret_cast<int64_t*>(address) = (int64_t)d;
 }
 
-JSValue PrimitiveMarshal::Cs2JsInt64(JSContext* ctx, void* address, const MarshalMetaInfo* /*meta*/)
+js::Value PrimitiveMarshal::Cs2JsInt64(js::Context* ctx, void* address, const MarshalMetaInfo* /*meta*/)
 {
     int64_t v = *reinterpret_cast<int64_t*>(address);
     if (v >= INT32_MIN && v <= INT32_MAX)
-        return JS_NewInt32(ctx, (int32_t)v);
-    return JS_NewFloat64(ctx, (double)v);
+        return js::NewInt32(ctx, (int32_t)v);
+    return js::NewFloat64(ctx, (double)v);
 }
 
-void PrimitiveMarshal::Js2CsUInt64(JSContext* ctx, JSValueConst value, void* address, const MarshalMetaInfo* /*meta*/)
+void PrimitiveMarshal::Js2CsUInt64(js::Context* ctx, js::ValueConst value, void* address, const MarshalMetaInfo* /*meta*/)
 {
     double d = 0;
     if (!ToNumber(ctx, value, &d))
         return;
     if (!std::isfinite(d) || std::floor(d) != d || d < 0)
     {
-        JS_ThrowTypeError(ctx, "zents: expected non-negative integer number");
+        js::ThrowTypeError(ctx, "zents: expected non-negative integer number");
         return;
     }
+    if(d >= 18446744073709551616.0){js::ThrowRangeError(ctx,"zents: UInt64 out of range");return;}
     *reinterpret_cast<uint64_t*>(address) = (uint64_t)d;
 }
 
-JSValue PrimitiveMarshal::Cs2JsUInt64(JSContext* ctx, void* address, const MarshalMetaInfo* /*meta*/)
+js::Value PrimitiveMarshal::Cs2JsUInt64(js::Context* ctx, void* address, const MarshalMetaInfo* /*meta*/)
 {
     uint64_t v = *reinterpret_cast<uint64_t*>(address);
     if (v <= (uint64_t)INT32_MAX)
-        return JS_NewInt32(ctx, (int32_t)v);
-    return JS_NewFloat64(ctx, (double)v);
+        return js::NewInt32(ctx, (int32_t)v);
+    return js::NewFloat64(ctx, (double)v);
 }
 
-void PrimitiveMarshal::Js2CsFloat(JSContext* ctx, JSValueConst value, void* address, const MarshalMetaInfo* /*meta*/)
+void PrimitiveMarshal::Js2CsFloat(js::Context* ctx, js::ValueConst value, void* address, const MarshalMetaInfo* /*meta*/)
 {
     double d = 0;
     if (!ToNumber(ctx, value, &d))
@@ -210,12 +204,12 @@ void PrimitiveMarshal::Js2CsFloat(JSContext* ctx, JSValueConst value, void* addr
     *reinterpret_cast<float*>(address) = (float)d;
 }
 
-JSValue PrimitiveMarshal::Cs2JsFloat(JSContext* ctx, void* address, const MarshalMetaInfo* /*meta*/)
+js::Value PrimitiveMarshal::Cs2JsFloat(js::Context* ctx, void* address, const MarshalMetaInfo* /*meta*/)
 {
-    return JS_NewFloat64(ctx, *reinterpret_cast<float*>(address));
+    return js::NewFloat64(ctx, *reinterpret_cast<float*>(address));
 }
 
-void PrimitiveMarshal::Js2CsDouble(JSContext* ctx, JSValueConst value, void* address, const MarshalMetaInfo* /*meta*/)
+void PrimitiveMarshal::Js2CsDouble(js::Context* ctx, js::ValueConst value, void* address, const MarshalMetaInfo* /*meta*/)
 {
     double d = 0;
     if (!ToNumber(ctx, value, &d))
@@ -223,97 +217,110 @@ void PrimitiveMarshal::Js2CsDouble(JSContext* ctx, JSValueConst value, void* add
     *reinterpret_cast<double*>(address) = d;
 }
 
-JSValue PrimitiveMarshal::Cs2JsDouble(JSContext* ctx, void* address, const MarshalMetaInfo* /*meta*/)
+js::Value PrimitiveMarshal::Cs2JsDouble(js::Context* ctx, void* address, const MarshalMetaInfo* /*meta*/)
 {
-    return JS_NewFloat64(ctx, *reinterpret_cast<double*>(address));
+    return js::NewFloat64(ctx, *reinterpret_cast<double*>(address));
 }
 
-void PrimitiveMarshal::Js2CsChar(JSContext* ctx, JSValueConst value, void* address, const MarshalMetaInfo* /*meta*/)
+void PrimitiveMarshal::Js2CsChar(js::Context* ctx, js::ValueConst value, void* address, const MarshalMetaInfo* /*meta*/)
 {
     StoreIntegral<uint16_t>(ctx, value, address, 0, UINT16_MAX);
 }
 
-JSValue PrimitiveMarshal::Cs2JsChar(JSContext* ctx, void* address, const MarshalMetaInfo* /*meta*/)
+js::Value PrimitiveMarshal::Cs2JsChar(js::Context* ctx, void* address, const MarshalMetaInfo* /*meta*/)
 {
-    return JS_NewInt32(ctx, *reinterpret_cast<Il2CppChar*>(address));
+    return js::NewInt32(ctx, *reinterpret_cast<Il2CppChar*>(address));
 }
 
-void PrimitiveMarshal::Js2CsIntPtr(JSContext* ctx, JSValueConst value, void* address, const MarshalMetaInfo* /*meta*/)
+void PrimitiveMarshal::Js2CsIntPtr(js::Context* ctx, js::ValueConst value, void* address, const MarshalMetaInfo* /*meta*/)
 {
     double d = 0;
     if (!ToNumber(ctx, value, &d))
         return;
     if (!std::isfinite(d) || std::floor(d) != d)
     {
-        JS_ThrowTypeError(ctx, "zents: expected integer number");
+        js::ThrowTypeError(ctx, "zents: expected integer number");
         return;
     }
     *reinterpret_cast<intptr_t*>(address) = (intptr_t)(int64_t)d;
 }
 
-JSValue PrimitiveMarshal::Cs2JsIntPtr(JSContext* ctx, void* address, const MarshalMetaInfo* /*meta*/)
+js::Value PrimitiveMarshal::Cs2JsIntPtr(js::Context* ctx, void* address, const MarshalMetaInfo* /*meta*/)
 {
     intptr_t v = *reinterpret_cast<intptr_t*>(address);
     if (v >= INT32_MIN && v <= INT32_MAX)
-        return JS_NewInt32(ctx, (int32_t)v);
-    return JS_NewFloat64(ctx, (double)v);
+        return js::NewInt32(ctx, (int32_t)v);
+    return js::NewFloat64(ctx, (double)v);
 }
 
-void PrimitiveMarshal::Js2CsUIntPtr(JSContext* ctx, JSValueConst value, void* address, const MarshalMetaInfo* /*meta*/)
+void PrimitiveMarshal::Js2CsUIntPtr(js::Context* ctx, js::ValueConst value, void* address, const MarshalMetaInfo* /*meta*/)
 {
     double d = 0;
     if (!ToNumber(ctx, value, &d))
         return;
     if (!std::isfinite(d) || std::floor(d) != d || d < 0)
     {
-        JS_ThrowTypeError(ctx, "zents: expected non-negative integer number");
+        js::ThrowTypeError(ctx, "zents: expected non-negative integer number");
         return;
     }
     *reinterpret_cast<uintptr_t*>(address) = (uintptr_t)(uint64_t)d;
 }
 
-JSValue PrimitiveMarshal::Cs2JsUIntPtr(JSContext* ctx, void* address, const MarshalMetaInfo* /*meta*/)
+js::Value PrimitiveMarshal::Cs2JsUIntPtr(js::Context* ctx, void* address, const MarshalMetaInfo* /*meta*/)
 {
     uintptr_t v = *reinterpret_cast<uintptr_t*>(address);
     if (v <= (uintptr_t)INT32_MAX)
-        return JS_NewInt32(ctx, (int32_t)v);
-    return JS_NewFloat64(ctx, (double)v);
+        return js::NewInt32(ctx, (int32_t)v);
+    return js::NewFloat64(ctx, (double)v);
 }
 
-void PrimitiveMarshal::Js2CsString(JSContext* ctx, JSValueConst value, void* address, const MarshalMetaInfo* /*meta*/)
+void PrimitiveMarshal::Js2CsString(js::Context* ctx, js::ValueConst value, void* address, const MarshalMetaInfo* /*meta*/)
 {
-    if (JS_IsNull(value) || JS_IsUndefined(value))
+    if (js::IsNull(value) || js::IsUndefined(value))
     {
         *reinterpret_cast<Il2CppString**>(address) = nullptr;
         return;
     }
 
-    const char* cstr = JS_ToCString(ctx, value);
+    size_t length=0;
+    const char* cstr = js::ToCStringLen(ctx, &length, value);
     if (cstr == nullptr)
         return;
-    *reinterpret_cast<Il2CppString**>(address) = il2cpp::vm::String::New(cstr);
-    JS_FreeCString(ctx, cstr);
+    *reinterpret_cast<Il2CppString**>(address) = il2cpp::vm::String::NewLen(cstr,(uint32_t)length);
+    js::FreeCString(ctx, cstr);
 }
 
-JSValue PrimitiveMarshal::Cs2JsString(JSContext* ctx, void* address, const MarshalMetaInfo* /*meta*/)
+js::Value PrimitiveMarshal::Cs2JsString(js::Context* ctx, void* address, const MarshalMetaInfo* /*meta*/)
 {
     Il2CppString* str = *reinterpret_cast<Il2CppString**>(address);
     if (str == nullptr)
-        return JS_NULL;
+        return js::Null();
     /* Reuse TLS buffer to avoid per-call std::string heap churn on hot paths. */
     static thread_local std::string s_utf8Scratch;
-    s_utf8Scratch = il2cpp::utils::StringUtils::Utf16ToUtf8(
-        il2cpp::utils::StringUtils::GetChars(str),
-        il2cpp::utils::StringUtils::GetLength(str));
-    return JS_NewStringLen(ctx, s_utf8Scratch.c_str(), s_utf8Scratch.size());
+    // Unity's Utf16ToUtf8(chars, maximumSize) still stops at NUL. Traverse the
+    // actual CLR string length and replace isolated surrogates like JS UTF-8 encoders.
+    s_utf8Scratch.clear();
+    const Il2CppChar* chars=il2cpp::utils::StringUtils::GetChars(str);
+    int length=il2cpp::utils::StringUtils::GetLength(str);
+    for(int i=0;i<length;++i)
+    {
+        uint32_t cp=chars[i];
+        if(cp>=0xd800&&cp<=0xdbff){if(i+1<length&&chars[i+1]>=0xdc00&&chars[i+1]<=0xdfff){cp=0x10000+((cp-0xd800)<<10)+(chars[++i]-0xdc00);}else cp=0xfffd;}
+        else if(cp>=0xdc00&&cp<=0xdfff)cp=0xfffd;
+        if(cp<0x80)s_utf8Scratch.push_back((char)cp);
+        else if(cp<0x800){s_utf8Scratch.push_back((char)(0xc0|(cp>>6)));s_utf8Scratch.push_back((char)(0x80|(cp&63)));}
+        else if(cp<0x10000){s_utf8Scratch.push_back((char)(0xe0|(cp>>12)));s_utf8Scratch.push_back((char)(0x80|((cp>>6)&63)));s_utf8Scratch.push_back((char)(0x80|(cp&63)));}
+        else {s_utf8Scratch.push_back((char)(0xf0|(cp>>18)));s_utf8Scratch.push_back((char)(0x80|((cp>>12)&63)));s_utf8Scratch.push_back((char)(0x80|((cp>>6)&63)));s_utf8Scratch.push_back((char)(0x80|(cp&63)));}
+    }
+    return js::NewStringLen(ctx, s_utf8Scratch.c_str(), s_utf8Scratch.size());
 }
 
-void PrimitiveMarshal::Js2CsVoid(JSContext* /*ctx*/, JSValueConst /*value*/, void* /*address*/, const MarshalMetaInfo* /*meta*/)
+void PrimitiveMarshal::Js2CsVoid(js::Context* /*ctx*/, js::ValueConst /*value*/, void* /*address*/, const MarshalMetaInfo* /*meta*/)
 {
 }
 
-JSValue PrimitiveMarshal::Cs2JsVoid(JSContext* /*ctx*/, void* /*address*/, const MarshalMetaInfo* /*meta*/)
+js::Value PrimitiveMarshal::Cs2JsVoid(js::Context* /*ctx*/, void* /*address*/, const MarshalMetaInfo* /*meta*/)
 {
-    return JS_UNDEFINED;
+    return js::Undefined();
 }
 }

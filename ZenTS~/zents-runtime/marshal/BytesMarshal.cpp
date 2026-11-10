@@ -27,56 +27,21 @@
 
 namespace zents
 {
-void BytesMarshal::Js2CsBytes(JSContext* ctx, JSValueConst value, void* address, const MarshalMetaInfo* /*meta*/)
+void BytesMarshal::Js2CsBytes(js::Context* ctx, js::ValueConst value, void* address, const MarshalMetaInfo*)
 {
-    if (JS_IsNull(value))
-    {
-        *reinterpret_cast<Il2CppArray**>(address) = nullptr;
-        return;
-    }
-    if (JS_IsUndefined(value))
-    {
-        JS_ThrowTypeError(ctx, "zents: undefined is not assignable to byte[] (Bytes)");
-        return;
-    }
-    if (!JS_IsString(value))
-    {
-        JS_ThrowTypeError(ctx, "zents: [JsMarshalAs(Bytes)] requires a JS string (raw octets)");
-        return;
-    }
-
-    size_t len = 0;
-    const char* cstr = JS_ToCStringLen(ctx, &len, value);
-    if (cstr == nullptr)
-    {
-        *reinterpret_cast<Il2CppArray**>(address) = il2cpp::vm::Array::New(il2cpp_defaults.byte_class, 0);
-        return;
-    }
-
-    Il2CppArray* arr = il2cpp::vm::Array::New(il2cpp_defaults.byte_class, (il2cpp_array_size_t)len);
-    char* dst = il2cpp::vm::Array::GetFirstElementAddress(arr);
-    std::memcpy(dst, cstr, len);
-    JS_FreeCString(ctx, cstr);
-    *reinterpret_cast<Il2CppArray**>(address) = arr;
+    if (js::IsNull(value)) { *reinterpret_cast<Il2CppArray**>(address)=nullptr; return; }
+    size_t length=0; const uint8_t* data=js::GetByteArrayData(ctx,value,&length);
+    if(!data){js::ThrowTypeError(ctx,"zents: Bytes requires an attached Uint8Array");return;}
+    Il2CppArray* array=il2cpp::vm::Array::New(il2cpp_defaults.byte_class,(il2cpp_array_size_t)length);
+    if(length)std::memcpy(il2cpp::vm::Array::GetFirstElementAddress(array),data,length);
+    *reinterpret_cast<Il2CppArray**>(address)=array;
 }
-
-JSValue BytesMarshal::Cs2JsBytes(JSContext* ctx, void* address, const MarshalMetaInfo* /*meta*/)
+js::Value BytesMarshal::Cs2JsBytes(js::Context* ctx, void* address, const MarshalMetaInfo*)
 {
-    Il2CppArray* arr = *reinterpret_cast<Il2CppArray**>(address);
-    if (arr == nullptr)
-        return JS_NULL;
-    uint32_t len = il2cpp::vm::Array::GetLength(arr);
-    char* src = il2cpp::vm::Array::GetFirstElementAddress(arr);
-    return JS_NewStringLen(ctx, src, len);
+    Il2CppArray* array=*reinterpret_cast<Il2CppArray**>(address);
+    if(!array)return js::Null();
+    return js::NewByteArrayCopy(ctx,reinterpret_cast<uint8_t*>(il2cpp::vm::Array::GetFirstElementAddress(array)),il2cpp::vm::Array::GetLength(array));
 }
-
-void BytesMarshal::Js2CsBytesTypeMismatch(JSContext* ctx, JSValueConst /*value*/, void* /*address*/, const MarshalMetaInfo* /*meta*/)
-{
-    JS_ThrowTypeError(ctx, "zents: [JsMarshalAs(Bytes)] pop requires byte[].");
-}
-
-JSValue BytesMarshal::Cs2JsBytesTypeMismatch(JSContext* ctx, void* /*address*/, const MarshalMetaInfo* /*meta*/)
-{
-    return JS_ThrowTypeError(ctx, "zents: [JsMarshalAs(Bytes)] push requires byte[].");
-}
+void BytesMarshal::Js2CsBytesTypeMismatch(js::Context* ctx, js::ValueConst, void*, const MarshalMetaInfo*) {js::ThrowTypeError(ctx,"zents: Bytes requires byte[]");}
+js::Value BytesMarshal::Cs2JsBytesTypeMismatch(js::Context* ctx, void*, const MarshalMetaInfo*) {return js::ThrowTypeError(ctx,"zents: Bytes requires byte[]");}
 }

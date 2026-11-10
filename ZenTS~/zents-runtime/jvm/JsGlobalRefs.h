@@ -29,12 +29,12 @@ namespace zents
     public:
         static void Initialize();
         static void Clear();
-        static void ClearAndFreeAll(JSContext* ctx);
+        static void ClearAndFreeAll(js::Context* ctx);
 
         /// Dup and store; returns stable ref index (>= 0).
-        static int Store(JSContext* ctx, JSValue value);
+        static int Store(js::Context* ctx, js::Value value);
         /// Borrowed value (do not Free unless you Dup first).
-        static JSValue Get(int refIndex);
-        static void FreeAndRelease(JSContext* ctx, int refIndex);
+        static js::Value Get(int refIndex);
+        static void FreeAndRelease(js::Context* ctx, int refIndex);
     };
 }

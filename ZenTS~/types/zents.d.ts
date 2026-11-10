@@ -23,7 +23,9 @@ declare namespace ZenTS {
     [key: string]: any;
   };
 
-  type TypeArg = TypeObject | string;
+  interface ClrObject { ToString(): string; }
+  interface SystemType { readonly __zents_systemType: unique symbol; }
+  type TypeArg = TypeObject | SystemType | string;
 
   interface CSharpAssembly {
     [typeFullName: string]: TypeObject;
@@ -83,7 +85,7 @@ declare namespace ZenTS {
       string: string;
     };
 
-    typeof(typeObject: TypeObject): unknown;
+    typeof(typeObject: TypeObject): SystemType;
     get_type_from_name(typeFullName: string): TypeObject;
 
     make_generic_type(genericBaseType: GenericDef<1>, typeArg: TypeArg): TypeObject;
@@ -91,7 +93,7 @@ declare namespace ZenTS {
     make_generic_type(genericBaseType: GenericDef<3>, t1: TypeArg, t2: TypeArg, t3: TypeArg): TypeObject;
     make_generic_type(genericBaseType: TypeObject, ...typeArgs: TypeArg[]): TypeObject;
 
-    make_generic_method(genericMethodBase: unknown, ...typeArgs: TypeArg[]): Function;
+    inflate(owner: TypeArg, nameOrSignature: string, ...typeArgs: TypeArg[]): Function;
     make_szarray_type(elementType: TypeArg): TypeObject;
     make_mdarray_type(elementType: TypeArg, rank: number): TypeObject;
     new_szarray_by_element_type<T = unknown>(elementType: TypeArg, length: number): SzArray<T>;
@@ -107,7 +109,6 @@ declare namespace ZenTS {
     box(typeArg: TypeArg, value: unknown): unknown;
     unbox(boxedValue: unknown): unknown;
     cast(obj: unknown, targetType: TypeArg): unknown;
-    register_method(aliasName: string, methodOrClosure: Function): void;
     signature(...typeArgs: TypeArg[]): string;
   }
 }

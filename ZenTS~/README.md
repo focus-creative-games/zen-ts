@@ -1,23 +1,21 @@
-# ZenTS~ package data
-
-See `Docs/spec/11-MULTI-VERSION.md`.
-
-## Layout
+# ZenTS package data
 
 | Path | Role |
 |------|------|
-| `zents-runtime/` | Install → `Local.../libil2cpp/zents` |
-| `quickjs-il2cpp/` | Vendored QuickJS for Il2Cpp（整目录拷贝，**无** patch） |
-| `patches/libil2cpp/` | Stock libil2cpp hooks only |
-| `jslib/` | Embedded JS (`zentslib.js`); also staged to `Library/ZenTS/CoreLibs/jslib` |
-| `types/` | `zents.d.ts` / `tsconfig.base.json` / scaffold; staged to `Library/ZenTS/CoreLibs/types` |
-| `mono-native/` | Editor QuickJS / Mono gate builds |
+| `zents-runtime/` | Installed native runtime, CLR bridge and static V8 SDK |
+| `v8/` | Official-source locks, SDK build tooling and native acceptance test |
+| `patches/libil2cpp/` | Stock libil2cpp hooks |
+| `jslib/` | Engine-independent JS facade and host-JS prototype |
+| `types/` | TypeScript declarations and project scaffold |
+| `host-js/` | Host VM transport contract and milestones |
+| `migration/` | Alignment evidence, architecture guards and measured acceptance |
 
-## Dev loop (Win64)
+## Win64 iteration
 
-1. Menu **ZenTS/Install...** (or batch `InstallIl2Cpp`)
-2. Menu **ZenTS/Export Build-Win64...** → `Build-Win64/`
-3. Edit `Build-Win64/Il2CppOutputProject/IL2CPP/libil2cpp/zents`（及必要时 `quickjs`）
-4. Build/test in the exported project
-5. `sync-runtime-zents.bat` → `ZenTS~/zents-runtime`（排除 `generated`）；QuickJS 改动手工回写 `ZenTS~/quickjs-il2cpp`
-6. Re-Install + clean rebuild when needed
+1. Build the pinned official V8 SDK outside Unity and run `v8/build_win64.py --sdk <exported SDK>`.
+2. Run **ZenTS/Install**, then export **Build-Win64** once.
+3. Edit the embedded package and synchronize `zents-runtime/` to the existing export, preserving `generated/` and its configured `V8Libraries.h`.
+4. Incrementally build and test the exported project. Regenerate C# output when managed Player code changes.
+5. Reinstall when package/native configuration changes.
+
+Current validated targets: Windows x64 Editor and Win64 Player. Other native SDK integrations and the host-JS backend remain pending.

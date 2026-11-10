@@ -26,34 +26,29 @@ namespace ZenTS.Marshaling
 {
     internal static class ArrayMarshal
     {
-        public static object FromJsArray(IntPtr ctx, JSValue jsArray)
+        public static object FromJsArray(IntPtr ctx, JsValue jsArray)
         {
-            var list = new List<object>();
-            uint idx = 0;
-            while (true)
+            JsValue lengthValue=EngineApi.GetPropertyStr(ctx,jsArray,"length");
+            int length;
+            try { length=Convert.ToInt32(PrimitiveMarshal.Pop(ctx,lengthValue)); }
+            finally {JsValueUtil.Free(ctx,lengthValue);}
+            var values=new object[length];
+            for(int i=0;i<length;++i)
             {
-                JSValue item = QuickJsDll.JS_GetPropertyUint32(ctx, jsArray, idx);
-                if (JsValueUtil.GetNormTag(item) == JsValueUtil.TagUndefined)
-                {
-                    JsValueUtil.Free(ctx, item);
-                    break;
-                }
-
-                list.Add(PrimitiveMarshal.Pop(ctx, item));
-                JsValueUtil.Free(ctx, item);
-                idx++;
+                if(EngineApi.HasOwnProperty(ctx,jsArray,i.ToString(System.Globalization.CultureInfo.InvariantCulture))!=1)throw new JsScriptException("zents: array holes are not supported");
+                JsValue item=EngineApi.GetPropertyUint32(ctx,jsArray,(uint)i);
+                try {values[i]=PrimitiveMarshal.Pop(ctx,item);}finally{JsValueUtil.Free(ctx,item);}
             }
-
-            return list.ToArray();
+            return values;
         }
 
-        public static JSValue ToJsArray(IntPtr ctx, Array array)
+        public static JsValue ToJsArray(IntPtr ctx, Array array)
         {
-            JSValue jsArray = QuickJsDll.JS_NewArray(ctx);
+            JsValue jsArray = EngineApi.NewArray(ctx);
             for (int i = 0; i < array.Length; i++)
             {
-                JSValue item = PrimitiveMarshal.Push(ctx, array.GetValue(i));
-                QuickJsDll.JS_SetPropertyUint32(ctx, jsArray, (uint)i, item);
+                JsValue item = PrimitiveMarshal.Push(ctx, array.GetValue(i));
+                EngineApi.SetPropertyUint32(ctx, jsArray, (uint)i, item);
                 // SetPropertyUint32 takes ownership of item.
             }
 

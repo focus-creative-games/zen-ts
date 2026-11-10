@@ -22,7 +22,6 @@
 
 /*
  * ZenTS Il2Cpp common include (spec 11-MULTI-VERSION §12).
- * Include order: ZenTSConf.inc → QuickJsCompatible → Il2CppCompatible.
  */
 
 #include "generated/ZenTSConf.inc"
@@ -34,7 +33,7 @@
 #error "ZENTS_TUANJIE_ENGINE must be defined by generated/ZenTSConf.inc"
 #endif
 
-#include "QuickJsCompatible.h"
+#include "engine/EngineApi.h"
 #include "Il2CppCompatible.h"
 
 namespace zents

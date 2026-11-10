@@ -24,6 +24,7 @@
 #include "JsLoader.h"
 #include "JsGlobalRefs.h"
 
+
 #include "../utils/MetadataUtil.h"
 
 #include "vm/Exception.h"
@@ -42,7 +43,6 @@ static bool s_hostInitialized = false;
 #if defined(_MSC_VER)
 static void ZentsOnSigAbrt(int)
 {
-    /* Best-effort breadcrumb if something still calls abort() outside QuickJS hook. */
     FILE* f = std::fopen("zents_il2cpp_assert.log", "a");
     if (f != nullptr)
     {
@@ -61,7 +61,6 @@ void JsAppDomain::InitializeProcessOnce()
         return;
 
 #if defined(_MSC_VER)
-    /* Suppress CRT abort modal for any remaining abort() outside QuickJS redefine. */
     _set_abort_behavior(0, _WRITE_ABORT_MSG | _CALL_REPORTFAULT);
     std::signal(SIGABRT, ZentsOnSigAbrt);
 #endif

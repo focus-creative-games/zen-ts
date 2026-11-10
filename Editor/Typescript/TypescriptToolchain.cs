@@ -81,7 +81,7 @@ namespace ZenTS.Editor.Typescript
         /// </summary>
         public static void PublishForBuildTarget(UnityEditor.BuildTarget target)
         {
-            if (target == UnityEditor.BuildTarget.Android || target == UnityEditor.BuildTarget.WebGL)
+            if (target == UnityEditor.BuildTarget.Android || HostJsPlatform.IsTarget(target))
             {
                 ClearDirectory(TsProjectPaths.StreamingZentsDir);
                 CopyOutToResources();

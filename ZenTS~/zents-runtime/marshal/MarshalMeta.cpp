@@ -19,6 +19,8 @@
 // SOFTWARE.
 
 #include "MarshalMeta.h"
+#include "BytesMarshal.h"
+#include <cstring>
 #include "ArrayMarshal.h"
 #include "ObjectMarshal.h"
 #include "PointerMarshal.h"
@@ -229,4 +231,54 @@ const MarshalMetaInfo* MarshalMeta::TryCreateDefault(const Il2CppType* type)
         s_cache[type] = meta;
     return meta;
 }
+}
+
+namespace zents {
+
+bool MarshalMeta::TryReadBigInt(js::Context* ctx, js::ValueConst value, const Il2CppType* type, uint64_t* bits)
+{
+    if(!js::IsBigInt(ctx,value))return false;
+    const char* text=js::ToCString(ctx,value);if(!text)return false;
+    const bool negative=text[0]=='-';const char* cursor=text+(negative?1:0);
+    uint64_t limit=type->type==IL2CPP_TYPE_U8?UINT64_MAX:(negative?uint64_t(INT64_MAX)+1:uint64_t(INT64_MAX));
+    bool ok=*cursor!=0 && (type->type==IL2CPP_TYPE_I8||type->type==IL2CPP_TYPE_U8) && !(negative&&type->type==IL2CPP_TYPE_U8);
+    uint64_t number=0;
+    for(;ok&&*cursor;++cursor){unsigned digit=(unsigned)(*cursor-'0');if(digit>9||number>(limit-digit)/10){ok=false;break;}number=number*10+digit;}
+    *bits=negative?uint64_t(0)-number:number;
+    js::FreeCString(ctx,text);return ok;
+}
+static void Js2CsBigInt(js::Context* ctx, js::ValueConst value, void* address, const MarshalMetaInfo* meta)
+{
+    uint64_t bits=0;if(!MarshalMeta::TryReadBigInt(ctx,value,meta->type,&bits)){js::ThrowRangeError(ctx,"zents: BigInt slot requires in-range bigint");return;}
+    std::memcpy(address,&bits,sizeof(bits));
+}
+static js::Value Cs2JsBigInt(js::Context* ctx, void* address, const MarshalMetaInfo* meta)
+{
+    std::string text=meta->type->type==IL2CPP_TYPE_U8?std::to_string(*reinterpret_cast<uint64_t*>(address)):std::to_string(*reinterpret_cast<int64_t*>(address));
+    js::Value global=js::GetGlobalObject(ctx),fn=js::GetPropertyStr(ctx,global,"BigInt"),arg=js::NewString(ctx,text.c_str());
+    js::Value result=js::Call(ctx,fn,js::Undefined(),1,&arg);js::FreeValue(ctx,arg);js::FreeValue(ctx,fn);js::FreeValue(ctx,global);return result;
+}
+static js::Value Cs2JsActualType(js::Context* ctx, void* address, const MarshalMetaInfo* meta)
+{
+    MarshalMetaInfo actual=*meta;actual.typeKlass=nullptr;return ObjectMarshal::Cs2JsObject(ctx,address,&actual);
+}
+const MarshalMetaInfo* MarshalMeta::WithStrategy(const Il2CppType* type, int kind)
+{
+    const MarshalMetaInfo* base=TryCreateDefault(type);if(!base)return nullptr;
+    if(kind==0)return base;
+    if(kind==2 && !(base->type->type==IL2CPP_TYPE_SZARRAY && base->typeKlass->element_class==il2cpp_defaults.byte_class))return base;
+    if(kind==1 && (base->typeKlass->enumtype || (il2cpp::vm::Class::IsValuetype(base->typeKlass) && base->type->type!=IL2CPP_TYPE_VALUETYPE && base->type->type!=IL2CPP_TYPE_GENERICINST)))return base;
+    if(kind==6 && (!base->passByValue || base->type->type==IL2CPP_TYPE_STRING))return base;
+    if(kind==7 && base->type->type!=IL2CPP_TYPE_I8 && base->type->type!=IL2CPP_TYPE_U8)return base;
+    static std::unordered_map<const MarshalMetaInfo*,std::unordered_map<int,const MarshalMetaInfo*>> policies;
+    auto& cached=policies[base];auto found=cached.find(kind);if(found!=cached.end())return found->second;
+    auto* meta=new MarshalMetaInfo(*base);meta->marshalAsKind=(MarshalAsKind)kind;
+    if(kind==7){meta->js2csWriter=Js2CsBigInt;meta->cs2jsWriter=Cs2JsBigInt;}
+    else if(kind==2){meta->js2csWriter=BytesMarshal::Js2CsBytes;meta->cs2jsWriter=BytesMarshal::Cs2JsBytes;}
+    else if(kind==6){meta->cs2jsWriter=Cs2JsActualType;}
+    else if(kind==1 && base->type->type==IL2CPP_TYPE_STRING){meta->js2csWriter=ObjectMarshal::Js2CsObject;meta->cs2jsWriter=ObjectMarshal::Cs2JsObject;}
+    cached[kind]=meta;
+    return meta;
+}
+
 }

@@ -42,6 +42,7 @@ namespace ZenTS.Editor
 
         public static void Generate()
         {
+            if(UnityEditor.EditorApplication.isPlaying)throw new InvalidOperationException("[ZenTS] XML generation is unavailable during Play Mode.");
             var installer = new LocalInstaller();
             if (!installer.HasInstalledToLocal())
             {

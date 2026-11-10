@@ -23,26 +23,25 @@ using System.Collections.Generic;
 using System.Reflection;
 using ZenTS.Emit;
 using ZenTS.Jvm;
+using ZenTS.Binding;
 using ZenTS.Utils;
 
 namespace ZenTS.Mt
 {
-    internal sealed class TypeBinding
+    internal sealed class TypeBinding : TypeBindingPlan
     {
-        public Type Type;
         public bool IsNullable;
         /// <summary>JS-visible STO (may be miss-Proxy wrapped).</summary>
-        public JSValue TypeObject;
-        /// <summary>Unwrapped STO for host writes (<c>register_method</c>).</summary>
-        public JSValue TypeObjectRaw;
+        public JsValue TypeObject;
+        /// <summary>Unwrapped STO for binding initialization.</summary>
+        public JsValue TypeObjectRaw;
         /// <summary>IEO prototype (not miss-wrapped). Classes: ByObj; structs: alias for <see cref="ByObjInstanceProto"/>.</summary>
-        public JSValue InstanceProto;
+        public JsValue InstanceProto;
         /// <summary>Struct ByVal instance dispatch proto; unused for reference types.</summary>
-        public JSValue ByValInstanceProto;
+        public JsValue ByValInstanceProto;
         /// <summary>Struct ByObj instance dispatch proto; unused for reference types.</summary>
-        public JSValue ByObjInstanceProto;
+        public JsValue ByObjInstanceProto;
         public bool HasJsValues;
-        public readonly HashSet<string> MemberKeys = new HashSet<string>(StringComparer.Ordinal);
     }
 
     internal static class TypeRegistry
@@ -73,7 +72,7 @@ namespace ZenTS.Mt
             return binding;
         }
 
-        public static JSValue PushTypeObject(JsEnv env, Type type)
+        public static JsValue PushTypeObject(JsEnv env, Type type)
         {
             TypeBinding binding = EnsureBinding(env, type);
             return JsValueUtil.Dup(binding.TypeObject);
@@ -87,7 +86,7 @@ namespace ZenTS.Mt
             }
         }
 
-        public static JSValue GetInstanceProto(JsEnv env, Type type)
+        public static JsValue GetInstanceProto(JsEnv env, Type type)
         {
             return JsValueUtil.Dup(EnsureBinding(env, type).InstanceProto);
         }
@@ -139,7 +138,7 @@ namespace ZenTS.Mt
             }
         }
 
-        private static bool IsDistinctJsObject(JSValue candidate, JSValue reference)
+        private static bool IsDistinctJsObject(JsValue candidate, JsValue reference)
         {
             if (JsValueUtil.GetNormTag(candidate) != JsValueUtil.TagObject)
             {
@@ -147,7 +146,7 @@ namespace ZenTS.Mt
             }
 
             return JsValueUtil.GetNormTag(reference) != JsValueUtil.TagObject ||
-                   candidate.Ptr != reference.Ptr;
+                   JsValueUtil.GetIdentity(candidate) != JsValueUtil.GetIdentity(reference);
         }
     }
 }

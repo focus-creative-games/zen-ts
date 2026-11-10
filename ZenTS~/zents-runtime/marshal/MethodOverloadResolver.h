@@ -31,22 +31,20 @@ enum class ConversionKind : int
     None = 1000,
     Identity = 0,
     ImplicitNumeric = 1,
-    ImplicitExtendedInteger = 2,
-    ImplicitReference = 3,
-    ImplicitBoxing = 4,
-    NullLiteral = 5,
+    ImplicitEnumeration = 2,
+    NullLiteral = 3,
+    ImplicitReference = 4,
+    ImplicitBoxing = 5,
 };
 
-struct OverloadGroup
-{
-    std::vector<MethodMarshalCtx*> candidates;
-};
+struct OverloadGroup : OverloadPlan<MethodMarshalCtx> {};
 
 class MethodOverloadResolver
 {
 public:
-    static ConversionKind GetConversionKind(JSContext* ctx, JSValueConst value, const MarshalMetaInfo* paramMeta);
-    static MethodMarshalCtx* Resolve(JSContext* ctx, OverloadGroup* group, int argc, JSValueConst* argv);
+    static ConversionKind GetConversionKind(js::Context* ctx, js::ValueConst value, const MarshalMetaInfo* paramMeta);
+    static bool IsApplicable(js::Context* ctx, const MethodMarshalCtx* method, int argc, js::ValueConst* argv);
+    static MethodMarshalCtx* Resolve(js::Context* ctx, OverloadGroup* group, int argc, js::ValueConst* argv);
     static std::string BuildSignatureKey(const MethodInfo* method);
 };
 }

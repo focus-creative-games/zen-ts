@@ -53,18 +53,19 @@ static void JsIl2CppAppDomain_ResetInternal(Il2CppDelegate* moduleLoader)
 
 static void JsIl2CppAppDomain_ProcessPendingRefReleases()
 {
+    JsEnv::DrainPendingJobs();
     std::vector<int> local;
     {
         std::lock_guard<std::mutex> lock(s_pendingMutex);
         local.swap(s_pendingRefReleases);
     }
 
-    JSContext* ctx = JsEnv::GetContext();
+    js::Context* ctx = JsEnv::GetContext();
     for (int refIndex : local)
         JsGlobalRefs::FreeAndRelease(ctx, refIndex);
 }
 
-static void JsMethod_AddPendingRef(JSContext* /*ctx*/, int32_t refIndex)
+static void JsMethod_AddPendingRef(js::Context* /*ctx*/, int32_t refIndex)
 {
     std::lock_guard<std::mutex> lock(s_pendingMutex);
     s_pendingRefReleases.push_back(refIndex);
@@ -109,10 +110,10 @@ static Il2CppObject* JsIl2CppAppDomain_GetFunctionInternal(
                 "jsModule/jsExportName", "must be non-empty"));
     }
 
-    JSContext* ctx = JsEnv::GetContext();
-    JSValue func = JsEnv::GetModuleExport(moduleName.c_str(), exportName.c_str());
+    js::Context* ctx = JsEnv::GetContext();
+    js::Value func = JsEnv::GetModuleExport(moduleName.c_str(), exportName.c_str());
     int funcRef = JsGlobalRefs::Store(ctx, func);
-    JS_FreeValue(ctx, func);
+    js::FreeValue(ctx, func);
 
     Il2CppDelegate* del = DelegateMarshal::CreateFromFuncRef(ctx, delegateClass, funcRef);
     return reinterpret_cast<Il2CppObject*>(del);
@@ -132,6 +133,11 @@ void JsInternalCalls::RegisterCoreInternalCalls()
     il2cpp::vm::InternalCalls::Add(
         "ZenTS.JsIl2CppAppDomain::GetFunctionInternal",
         (Il2CppMethodPointer)JsIl2CppAppDomain_GetFunctionInternal);
+    il2cpp::vm::InternalCalls::Add("ZenTS.JsHostJsAppDomain::InitializeInternal", (Il2CppMethodPointer)JsIl2CppAppDomain_InitializeInternal);
+    il2cpp::vm::InternalCalls::Add("ZenTS.JsHostJsAppDomain::ResetInternal", (Il2CppMethodPointer)JsIl2CppAppDomain_ResetInternal);
+    il2cpp::vm::InternalCalls::Add("ZenTS.JsHostJsAppDomain::ProcessPendingRefReleases", (Il2CppMethodPointer)JsIl2CppAppDomain_ProcessPendingRefReleases);
+    il2cpp::vm::InternalCalls::Add("ZenTS.JsHostJsAppDomain::GetFunctionInternal", (Il2CppMethodPointer)JsIl2CppAppDomain_GetFunctionInternal);
+    // Both native V8 and HostJs use the same CLR bridge and delegate lifecycle.
     il2cpp::vm::InternalCalls::Add(
         "ZenTS.JsMethod::AddPendingRef",
         (Il2CppMethodPointer)JsMethod_AddPendingRef);

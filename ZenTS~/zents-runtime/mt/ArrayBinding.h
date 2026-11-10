@@ -32,6 +32,6 @@ struct TypeBinding;
 class ArrayBinding
 {
 public:
-    static void AttachMembers(JSContext* ctx, JSValue proto, TypeBinding* binding, Il2CppClass* arrayKlass);
+    static void AttachMembers(js::Context* ctx, js::Value proto, TypeBinding* binding, Il2CppClass* arrayKlass);
 };
 }

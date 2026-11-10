@@ -38,7 +38,7 @@ namespace ZenTS.Editor
 
                     EditorGUILayout.LabelField("Il2Cpp", EditorStyles.boldLabel);
                     s.enable = EditorGUILayout.Toggle("Enable ZenTS", s.enable);
-                    s.quickjsVersionId = EditorGUILayout.TextField("QuickJS version id", s.quickjsVersionId ?? "");
+                    s.enableUnityOptimizations = EditorGUILayout.Toggle("Unity Optimizations", s.enableUnityOptimizations);
 
                     EditorGUILayout.Space();
                     EditorGUILayout.LabelField("TypeScript", EditorStyles.boldLabel);

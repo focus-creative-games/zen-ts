@@ -31,10 +31,10 @@ public:
 
     static const MarshalMetaInfo* Create(const Il2CppType* ptrType);
 
-    static void Js2CsPointer(JSContext* ctx, JSValueConst value, void* address, const MarshalMetaInfo* meta);
-    static JSValue Cs2JsPointer(JSContext* ctx, void* address, const MarshalMetaInfo* meta);
+    static void Js2CsPointer(js::Context* ctx, js::ValueConst value, void* address, const MarshalMetaInfo* meta);
+    static js::Value Cs2JsPointer(js::Context* ctx, void* address, const MarshalMetaInfo* meta);
 
-    static JSValue Push(JSContext* ctx, void* address, const Il2CppType* ptrType);
-    static void* Pop(JSContext* ctx, JSValueConst value, const Il2CppType* expectedPtrType);
+    static js::Value Push(js::Context* ctx, void* address, const Il2CppType* ptrType);
+    static void* Pop(js::Context* ctx, js::ValueConst value, const Il2CppType* expectedPtrType);
 };
 }

@@ -27,7 +27,7 @@ namespace ZenTS.Marshaling
 {
     internal static unsafe class PointerMarshal
     {
-        public static JSValue Push(IntPtr ctx, object value, Type pointerType)
+        public static JsValue Push(IntPtr ctx, object value, Type pointerType)
         {
             if (value == null)
             {
@@ -37,13 +37,13 @@ namespace ZenTS.Marshaling
             IntPtr addr = ExtractAddress(value);
             var handle = new PointerHandle(addr, pointerType);
             int id = ObjectRegistry.Register(handle, pointerType);
-            JSValue obj = QuickJsDll.JS_NewObject(ctx);
-            QuickJsDll.JS_SetPropertyStr(ctx, obj, "__zents_id", JsValueUtil.NewInt32(id));
-            QuickJsDll.JS_SetPropertyStr(ctx, obj, "__zents_pointer", JsValueUtil.NewBool(true));
+            JsValue obj = EngineApi.NewObject(ctx);
+            EngineApi.SetPropertyStr(ctx, obj, "__zents_id", JsValueUtil.NewInt32(id));
+            EngineApi.SetPropertyStr(ctx, obj, "__zents_pointer", JsValueUtil.NewBool(true));
             return obj;
         }
 
-        public static object Pop(IntPtr ctx, JSValue jsValue, Type expectedPointerType)
+        public static object Pop(IntPtr ctx, JsValue jsValue, Type expectedPointerType)
         {
             int tag = JsValueUtil.GetNormTag(jsValue);
             if (tag == JsValueUtil.TagNull)
@@ -62,10 +62,10 @@ namespace ZenTS.Marshaling
                 throw new JsScriptException($"zents: expected Pointer handle for {expectedPointerType.FullName}.");
             }
 
-            JSValue ptrFlag = QuickJsDll.JS_GetPropertyStr(ctx, jsValue, "__zents_pointer");
+            JsValue ptrFlag = EngineApi.GetPropertyStr(ctx, jsValue, "__zents_pointer");
             try
             {
-                if (JsValueUtil.GetNormTag(ptrFlag) != JsValueUtil.TagBool || ptrFlag.UInt64 == 0)
+                if (JsValueUtil.GetNormTag(ptrFlag) != JsValueUtil.TagBool || JsValueUtil.GetUInt64(ptrFlag) == 0)
                 {
                     throw new JsScriptException($"zents: expected Pointer handle for {expectedPointerType.FullName}.");
                 }

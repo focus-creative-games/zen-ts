@@ -27,11 +27,11 @@ namespace zents
 class BytesMarshal
 {
 public:
-    static void Js2CsBytes(JSContext* ctx, JSValueConst value, void* address, const MarshalMetaInfo* meta);
-    static JSValue Cs2JsBytes(JSContext* ctx, void* address, const MarshalMetaInfo* meta);
+    static void Js2CsBytes(js::Context* ctx, js::ValueConst value, void* address, const MarshalMetaInfo* meta);
+    static js::Value Cs2JsBytes(js::Context* ctx, void* address, const MarshalMetaInfo* meta);
 
     /** Mono parity: [JsMarshalAs(Bytes)] on a non-byte[] CLR type rejects at marshal time. */
-    static void Js2CsBytesTypeMismatch(JSContext* ctx, JSValueConst value, void* address, const MarshalMetaInfo* meta);
-    static JSValue Cs2JsBytesTypeMismatch(JSContext* ctx, void* address, const MarshalMetaInfo* meta);
+    static void Js2CsBytesTypeMismatch(js::Context* ctx, js::ValueConst value, void* address, const MarshalMetaInfo* meta);
+    static js::Value Cs2JsBytesTypeMismatch(js::Context* ctx, void* address, const MarshalMetaInfo* meta);
 };
 }

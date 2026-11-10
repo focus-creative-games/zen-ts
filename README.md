@@ -1,6 +1,6 @@
 # ZenTS
 
-ZenTS 是一个针对 Il2Cpp 优化的现代、简洁、易用的 Unity **TypeScript / JavaScript** 脚本方案，由 **QuickJS** 驱动，设计与 [ZLua](https://github.com/focus-creative-games/zlua) 对齐。
+ZenTS 是一个针对 Il2Cpp 优化的现代、简洁、易用的 Unity **TypeScript / JavaScript** 脚本方案，原生平台由 **V8** 驱动，WebGL / 微信小游戏使用平台内嵌 JS VM，设计与 [ZLua](https://github.com/focus-creative-games/zlua) 对齐。
 
 - 文档：[zents.code-philosophy.com](https://zents.code-philosophy.com/)
 - 对照产品（Lua）：[ZLua](https://doc.zlua.cn) / [zlua GitHub](https://github.com/focus-creative-games/zlua)
@@ -11,7 +11,7 @@ ZenTS 是一个针对 Il2Cpp 优化的现代、简洁、易用的 Unity **TypeSc
 
 ## 为什么选择 ZenTS
 
-相对 Puerts / xLua-JS 类方案，以及「自管 QuickJS + 手写绑定」：
+相对 Puerts / xLua-JS 类方案，以及「自管 V8 + 手写绑定」：
 
 | | |
 |--|--|
@@ -27,7 +27,7 @@ ZenTS 是一个针对 Il2Cpp 优化的现代、简洁、易用的 Unity **TypeSc
 
 | | ZLua | ZenTS |
 |--|------|-----|
-| 脚本侧 | Lua（PUC-Rio / LuaJIT） | JavaScript（QuickJS）；可选 TypeScript → ES module |
+| 脚本侧 | Lua（PUC-Rio / LuaJIT） | JavaScript（V8）；可选 TypeScript → ES module |
 | 宿主门面 | `LuaAppDomain` | `JsAppDomain` |
 | 类型入口 | `CSharp[...]` | 同左；另支持 `import { T } from "csharp:…"` |
 | 标准库 | `zlua.*` | `zents.*` |
@@ -53,17 +53,17 @@ ZenTS 是一个针对 Il2Cpp 优化的现代、简洁、易用的 Unity **TypeSc
 
 | 类别 | 已支持 |
 |------|--------|
-| **引擎** | Unity **2021.3.x** / **2022.3.x** / **6000.0.x** / **6000.3.x** / **6000.5.x**；**团结引擎 1.x.y** |
-| **脚本 VM** | QuickJS（pin 见包内 `ZenTS~/` / 文档） |
+| **引擎** | Unity **2022.3 LTS 及后续 LTS 版本**；基于 **2022.3 LTS** 的团结引擎 |
+| **脚本 VM** | 原生 V8（pin 见包内 `ZenTS~/`）；WebGL / 微信小游戏使用宿主 VM |
 | **运行时** | Editor **Mono** + Player **Il2Cpp** |
-| **平台（Editor）** | Windows x64、macOS（Apple Silicon / Intel） |
-| **平台（Player）** | Il2Cpp 支持的平台（含 Win64、Android、iOS、WebGL、微信小游戏、鸿蒙 / 车机等） |
+| **平台（Editor）** | 已验证 Windows x64、macOS arm64；使用静态链接 V8 的 Editor 插件 |
+| **平台（Player）** | 已验证 Win64、macOS arm64/x64、Android arm64/x64、iOS 模拟器；iOS 真机工程编译通过；WebGL / 微信小游戏使用平台 JS VM；微信已通过 Windows 开发者工具验收 |
 
 ---
 
 ## 用法一：纯 JavaScript
 
-运行时 **只** 加载 ES module（QuickJS）。模块名使用 **canonical specifier**（相对逻辑路径，**不含** `.js`）。
+运行时 **只** 加载 ES module（V8）。模块名使用 **canonical specifier**（相对逻辑路径，**不含** `.js`）。
 
 契约细节见文档站与 `Docs/spec/01-HOST-API.md`、`02-TYPE-SYSTEM.md`。
 
@@ -220,7 +220,7 @@ Player：构建时拷贝 `out/**/*.js` → `StreamingAssets/ZenTS/`，运行时 
 | 程序集 | 平台 | 说明 |
 |--------|------|------|
 | `ZenTS.Common` | 全平台 | `JsAppDomain` 门面、属性、公共类型 |
-| `ZenTS.Mono` | Editor | QuickJS P/Invoke + Mono Callback Gate + Emit |
+| `ZenTS.Mono` | Editor | V8 C ABI + Emit |
 | `ZenTS.Il2Cpp` | Player | Il2Cpp 宿主接线（实现于 `ZenTS~/zents-runtime`） |
 | `ZenTS.Editor` | Editor | Install / Export / TypeScript 工具链 / Settings |
 
@@ -228,27 +228,11 @@ Player：构建时拷贝 `out/**/*.js` → `StreamingAssets/ZenTS/`，运行时 
 
 ## Editor 原生依赖（Mono）
 
-```text
-Plugins/quickjs/
-  win32-x64/quickjs.dll          # QuickJS Win64（非 NAN boxing：JSValue = 16 字节）
-  zents_mono_gate.dll              # Editor-only JS→C# callback gate（Windows）
-  darwin-arm64/quickjs.dylib     # QuickJS macOS arm64
-  libzents_mono_gate.dylib         # Editor-only gate（macOS）
-```
+Editor 插件：Windows 使用 `Plugins/v8/win64/zents_v8.dll`；macOS 使用 `Plugins/v8/macos-arm64/libzents_v8.dylib` 或 `macos-x64/libzents_v8.dylib`。它们均在模块内静态链接官方 V8。
 
-构建（在包目录下）：
-
-```bat
-ZenTS~\mono-native\build_quickjs_msvc.bat
-```
-
-```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File ZenTS~\mono-native\build_zents_mono_gate.ps1
-```
-
-macOS：`ZenTS~/mono-native/build_quickjs_darwin.sh`、`build_zents_mono_gate_unix.sh`。
-
-Il2Cpp：菜单 **ZenTS / Install...** 将 `ZenTS~/zents-runtime` 与 QuickJS 源装入 LocalIl2Cpp；Windows 上可用 **ZenTS / Export Build-Win64...** 导出可 MSBuild 的 Player 工程。iOS 等目标按 Unity 导出 Xcode 后构建（见文档）。
+在 Unity 外构建官方 V8 静态 SDK，再执行 `python ZenTS~/v8/build_win64.py --sdk <导出 SDK 目录>`。
+`ZenTS/Install` 安装运行时和预编译静态 SDK，Win64 Player 静态链接两者。
+已验证 Windows / macOS arm64 Editor 和 Win64、macOS、Android、iOS 模拟器 Player。iOS 使用 JITless V8；真机工程已完成无签名编译，尚未验证物理设备运行。WebGL 直接使用平台 JS VM。构建、SDK 导入和详细验收范围见 [P5 原生平台记录](ZenTS~/migration/P5-NATIVE-PLATFORMS.md)。
 
 ---
 
@@ -264,3 +248,5 @@ MIT。欢迎自由使用、修改和分发。
 - QQ 群：`1095435513`（ZenTS 交流群）
 - Discord：[https://discord.gg/5bT7w9aRMz](https://discord.gg/5bT7w9aRMz)
 - Unreal（开发中）：[ZenTS-UE](https://github.com/focus-creative-games/ZenTS-UE)
+
+微信小游戏的构建入口、官方 SDK 依赖和验收范围见 [微信接入说明](ZenTS~/wechat/README.md)。

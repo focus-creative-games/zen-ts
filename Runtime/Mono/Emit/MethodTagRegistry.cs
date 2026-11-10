@@ -22,6 +22,7 @@ using System;
 using System.Collections.Generic;
 using System.Reflection;
 using ZenTS.Jvm;
+using ZenTS.Binding;
 using ZenTS.Utils;
 
 namespace ZenTS.Emit
@@ -30,13 +31,8 @@ namespace ZenTS.Emit
     /// Metadata for a JS method function (direct vs dispatch) used by
     /// <c>zents.register_method</c> / <c>zents.make_generic_method</c>.
     /// </summary>
-    internal sealed class MethodClosureTag
+    internal sealed class MethodClosureTag : MethodBindingPlan
     {
-        public MethodInfo Method;
-        public Type OwnerType;
-        public bool IsStatic;
-        public bool IsByVal;
-        public bool IsDirect;
     }
 
     internal static class MethodTagRegistry

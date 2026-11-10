@@ -27,13 +27,14 @@ namespace ZenTS
     /// <summary>
     /// JsExtensions XML registry: load rules; resolve extension classes on Bind (spec 13 §2).
     /// </summary>
-    public static class JsExtensionXmlRegistry
+    internal static class JsExtensionXmlRegistry
     {
         private static readonly object s_gate = new object();
         private static List<JsExtensionXmlRule> s_rules = new List<JsExtensionXmlRule>();
         private static Dictionary<string, List<JsExtensionXmlRule>> s_rulesByTargetKey =
             new Dictionary<string, List<JsExtensionXmlRule>>(StringComparer.Ordinal);
         private static bool s_loaded;
+        private static HashSet<Assembly> s_aotAssemblies = new HashSet<Assembly>();
 
         public static bool IsLoaded
         {
@@ -57,7 +58,7 @@ namespace ZenTS
             }
         }
 
-        public static void Clear()
+        internal static void Clear()
         {
             lock (s_gate)
             {
@@ -67,7 +68,7 @@ namespace ZenTS
             }
         }
 
-        public static void Load(IEnumerable<string> configuredPaths, string projectRoot)
+        internal static void Load(IEnumerable<string> configuredPaths, string projectRoot)
         {
             List<JsExtensionXmlRule> rules = JsExtensionXmlLoader.LoadFromConfiguredPaths(configuredPaths, projectRoot);
             var byKey = new Dictionary<string, List<JsExtensionXmlRule>>(StringComparer.Ordinal);
@@ -88,6 +89,7 @@ namespace ZenTS
             {
                 s_rules = rules;
                 s_rulesByTargetKey = byKey;
+                s_aotAssemblies = AotXmlPolicy.Capture();
                 s_loaded = true;
             }
         }
@@ -128,6 +130,7 @@ namespace ZenTS
                 return false;
             }
 
+            if(!s_aotAssemblies.Contains(targetType.Assembly))return false;
             string assemblyName = targetType.Assembly.GetName()?.Name;
             string typeFullName = targetType.FullName;
             if (string.IsNullOrEmpty(assemblyName) || string.IsNullOrEmpty(typeFullName))

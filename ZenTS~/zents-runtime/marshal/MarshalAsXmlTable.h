@@ -41,6 +41,8 @@ enum class JsMarshalType : uint8_t
     OpaqueValue = 3,
     UnpackedValues = 4,
     Table = 5,
+    ActualTypeUserData = 6,
+    BigInt = 7,
 };
 
 enum class JsMarshalAsXmlKind : uint8_t

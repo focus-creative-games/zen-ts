@@ -36,13 +36,37 @@
 #include "../generated/ExtensionBindings.h"
 
 #include <string>
+#include "utils/Exception.h"
+#include "vm/Thread.h"
+#include "vm/Exception.h"
+#include <cstdio>
 
 namespace zents
 {
-static JSRuntime* s_runtime = nullptr;
-static JSContext* s_context = nullptr;
+static js::Runtime* s_runtime = nullptr;
+static js::Context* s_context = nullptr;
 static int s_generation = 0;
-static std::unordered_map<std::string, JSValue> s_moduleNamespaces;
+static std::unordered_map<std::string, js::Value> s_moduleNamespaces;
+
+static void EnsureMainThread()
+{
+    static thread_local const bool isMainThread=il2cpp::vm::Thread::Current()!=nullptr
+        &&il2cpp::vm::Thread::Current()==il2cpp::vm::Thread::Main();
+    if(!isMainThread)il2cpp::vm::Exception::Raise(il2cpp::vm::Exception::GetInvalidOperationException(
+        "ZenTS can only be called from the Unity main thread."));
+}
+
+static js::Value TranslateClrException(js::Context* ctx,std::exception_ptr exception)
+{
+    try { std::rethrow_exception(exception); }
+    catch(const Il2CppExceptionWrapper& error)
+    {
+        std::string message=il2cpp::utils::Exception::FormatException(error.ex);
+        return js::ThrowInternalError(ctx,"zents: %s",message.c_str());
+    }
+    catch(const std::exception& error){return js::ThrowInternalError(ctx,"zents: %s",error.what());}
+    catch(...){return js::ThrowInternalError(ctx,"zents: unknown CLR callback failure");}
+}
 
 void JsEnv::ClearModuleNamespaceCache()
 {
@@ -53,31 +77,35 @@ void JsEnv::ClearModuleNamespaceCache()
     }
 
     for (auto& kv : s_moduleNamespaces)
-        JS_FreeValue(s_context, kv.second);
+        js::FreeValue(s_context, kv.second);
     s_moduleNamespaces.clear();
 }
 
 void JsEnv::Initialize()
 {
+    EnsureMainThread();
     if (s_context != nullptr)
         JsException::Throw("JsEnv is already initialized");
 
-    s_runtime = JS_NewRuntime();
+    s_runtime = js::NewRuntime();
+    if(s_runtime)js::SetExternalExceptionHandler(s_runtime,TranslateClrException);
     if (s_runtime == nullptr)
         JsException::Throw("JS_NewRuntime failed");
 
-    js_std_init_handlers(s_runtime);
+    js::StdInitHandlers(s_runtime);
 
-    s_context = JS_NewContext(s_runtime);
+    s_context = js::NewContext(s_runtime);
     if (s_context == nullptr)
     {
-        js_std_free_handlers(s_runtime);
-        JS_FreeRuntime(s_runtime);
+        js::StdFreeHandlers(s_runtime);
+        js::FreeRuntime(s_runtime);
         s_runtime = nullptr;
         JsException::Throw("JS_NewContext failed");
     }
 
-    js_std_add_helpers(s_context, 0, nullptr);
+    js::StdAddHelpers(s_context, 0, nullptr);
+    std::fprintf(stdout, "[ZenTS] Player engine=%s\n", js::GetBackend() == js::Backend::V8 ? "V8 (static)" : "HostJs (platform VM)");
+    std::fflush(stdout);
     JsLoader::InstallOnRuntime(s_runtime);
     JsGlobalRefs::Initialize();
     MethodBridge::Initialize();
@@ -90,6 +118,7 @@ void JsEnv::Initialize()
 
 void JsEnv::Shutdown()
 {
+    EnsureMainThread();
     if (s_context != nullptr)
     {
         ClearModuleNamespaceCache();
@@ -98,9 +127,9 @@ void JsEnv::Shutdown()
 
         /* Drop CSharp proxy cache so Dup'd type objects can reach refcount 0. */
         {
-            JSValue global = JS_GetGlobalObject(s_context);
-            JS_SetPropertyStr(s_context, global, "CSharp", JS_UNDEFINED);
-            JS_FreeValue(s_context, global);
+            js::Value global = js::GetGlobalObject(s_context);
+            js::SetPropertyStr(s_context, global, "CSharp", js::Undefined());
+            js::FreeValue(s_context, global);
         }
 
         TypeRegistry::Reset(s_context);
@@ -110,9 +139,9 @@ void JsEnv::Shutdown()
         AliasXmlTable::Clear();
         ExtensionXmlTable::Clear();
         if (s_runtime != nullptr)
-            JS_RunGC(s_runtime);
+            js::RunGC(s_runtime);
 
-        JS_FreeContext(s_context);
+        js::FreeContext(s_context);
         s_context = nullptr;
     }
     else
@@ -128,8 +157,8 @@ void JsEnv::Shutdown()
 
     if (s_runtime != nullptr)
     {
-        js_std_free_handlers(s_runtime);
-        JS_FreeRuntime(s_runtime);
+        js::StdFreeHandlers(s_runtime);
+        js::FreeRuntime(s_runtime);
         s_runtime = nullptr;
     }
 }
@@ -139,13 +168,14 @@ bool JsEnv::IsAlive()
     return s_context != nullptr;
 }
 
-JSRuntime* JsEnv::GetRuntime()
+js::Runtime* JsEnv::GetRuntime()
 {
     return s_runtime;
 }
 
-JSContext* JsEnv::GetContext()
+js::Context* JsEnv::GetContext()
 {
+    EnsureMainThread();
     return s_context;
 }
 
@@ -159,72 +189,74 @@ void JsEnv::DrainPendingJobs()
     if (s_runtime == nullptr)
         return;
 
-    JSContext* jobCtx = nullptr;
-    while (JS_IsJobPending(s_runtime))
+    js::Context* jobCtx = nullptr;
+    bool pollForeground = js::GetBackend() == js::Backend::V8;
+    while (pollForeground || js::IsJobPending(s_runtime))
     {
-        int status = JS_ExecutePendingJob(s_runtime, &jobCtx);
+        pollForeground = false;
+        int status = js::ExecutePendingJob(s_runtime, &jobCtx);
         if (status < 0)
         {
-            JSContext* errCtx = jobCtx != nullptr ? jobCtx : s_context;
-            JSValue ex = JS_GetException(errCtx);
+            js::Context* errCtx = jobCtx != nullptr ? jobCtx : s_context;
+            js::Value ex = js::GetException(errCtx);
             std::string msg = FormatJsValue(errCtx, ex);
-            JS_FreeValue(errCtx, ex);
+            js::FreeValue(errCtx, ex);
             JsException::ThrowFormat("pending job failed: %s", msg.c_str());
         }
     }
 }
 
-JSValue JsEnv::LoadModuleNamespace(const char* moduleName)
+js::Value JsEnv::LoadModuleNamespace(const char* moduleName)
 {
     if (s_context == nullptr)
         JsException::Throw("ZenTS is not initialized");
 
     auto it = s_moduleNamespaces.find(moduleName);
     if (it != s_moduleNamespaces.end())
-        return JS_DupValue(s_context, it->second);
+        return js::DupValue(s_context, it->second);
 
-    JSValue promise = JS_LoadModule(s_context, moduleName, moduleName);
-    if (JS_IsException(promise))
+    js::Value promise = js::LoadModule(s_context, moduleName, moduleName);
+    if (js::IsException(promise))
         ThrowPendingException();
 
     DrainPendingJobs();
 
-    int state = JS_PromiseState(s_context, promise);
-    if (state == JS_PROMISE_PENDING)
+    int state = js::PromiseState(s_context, promise);
+    if (state == js::PromisePending)
     {
-        JS_FreeValue(s_context, promise);
+        js::FreeValue(s_context, promise);
         JsException::ThrowFormat("module '%s' promise still pending", moduleName);
     }
 
-    JSValue ns = JS_PromiseResult(s_context, promise);
-    JS_FreeValue(s_context, promise);
+    js::Value ns = js::PromiseResult(s_context, promise);
+    js::FreeValue(s_context, promise);
 
-    if (state == JS_PROMISE_REJECTED)
+    if (state == js::PromiseRejected)
     {
         std::string msg = FormatJsValue(s_context, ns);
-        JS_FreeValue(s_context, ns);
+        js::FreeValue(s_context, ns);
         JsException::ThrowFormat("module '%s' rejected: %s", moduleName, msg.c_str());
     }
 
-    if (JS_IsException(ns))
+    if (js::IsException(ns))
         ThrowPendingException();
 
-    s_moduleNamespaces[moduleName] = JS_DupValue(s_context, ns);
+    s_moduleNamespaces[moduleName] = js::DupValue(s_context, ns);
     return ns;
 }
 
-JSValue JsEnv::GetModuleExport(const char* moduleName, const char* exportName)
+js::Value JsEnv::GetModuleExport(const char* moduleName, const char* exportName)
 {
-    JSValue ns = LoadModuleNamespace(moduleName);
-    JSValue exp = JS_GetPropertyStr(s_context, ns, exportName);
-    JS_FreeValue(s_context, ns);
+    js::Value ns = LoadModuleNamespace(moduleName);
+    js::Value exp = js::GetPropertyStr(s_context, ns, exportName);
+    js::FreeValue(s_context, ns);
 
-    if (JS_IsException(exp))
+    if (js::IsException(exp))
         ThrowPendingException();
 
-    if (!JS_IsFunction(s_context, exp))
+    if (!js::IsFunction(s_context, exp))
     {
-        JS_FreeValue(s_context, exp);
+        js::FreeValue(s_context, exp);
         JsException::ThrowFormat("export '%s.%s' is not callable", moduleName, exportName);
     }
 
@@ -233,43 +265,43 @@ JSValue JsEnv::GetModuleExport(const char* moduleName, const char* exportName)
 
 void JsEnv::ThrowPendingException()
 {
-    JSValue ex = JS_GetException(s_context);
+    js::Value ex = js::GetException(s_context);
     std::string msg = FormatJsValue(s_context, ex);
-    JS_FreeValue(s_context, ex);
+    js::FreeValue(s_context, ex);
     JsException::ThrowFormat("%s", msg.c_str());
 }
 
-std::string JsEnv::FormatJsValue(JSContext* ctx, JSValue val)
+std::string JsEnv::FormatJsValue(js::Context* ctx, js::Value val)
 {
-    if (JS_IsUndefined(val))
+    if (js::IsUndefined(val))
         return "undefined";
-    if (JS_IsNull(val))
+    if (js::IsNull(val))
         return "null";
 
-    if (JS_IsObject(val))
+    if (js::IsObject(val))
     {
-        JSValue msg = JS_GetPropertyStr(ctx, val, "message");
-        if (JS_IsString(msg))
+        js::Value msg = js::GetPropertyStr(ctx, val, "message");
+        if (js::IsString(msg))
         {
-            const char* cstr = JS_ToCString(ctx, msg);
+            const char* cstr = js::ToCString(ctx, msg);
             std::string result = cstr != nullptr ? cstr : "JS exception";
             if (cstr != nullptr)
-                JS_FreeCString(ctx, cstr);
-            JS_FreeValue(ctx, msg);
+                js::FreeCString(ctx, cstr);
+            js::FreeValue(ctx, msg);
             if (!result.empty())
                 return result;
         }
         else
         {
-            JS_FreeValue(ctx, msg);
+            js::FreeValue(ctx, msg);
         }
     }
 
-    const char* cstr = JS_ToCString(ctx, val);
+    const char* cstr = js::ToCString(ctx, val);
     if (cstr == nullptr)
         return "JS exception";
     std::string result = cstr;
-    JS_FreeCString(ctx, cstr);
+    js::FreeCString(ctx, cstr);
     return result;
 }
 }

@@ -35,9 +35,9 @@ namespace ZenTS.Emit
         private const int PropConfigurable = 1 << 0;
         private const int PropEnumerable = 1 << 2;
 
-        private static readonly Dictionary<Type, JSValue> Protos = new Dictionary<Type, JSValue>();
+        private static readonly Dictionary<Type, JsValue> Protos = new Dictionary<Type, JsValue>();
 
-        public static JSValue EnsureProto(JsEnv env, Type arrayType)
+        public static JsValue EnsureProto(JsEnv env, Type arrayType)
         {
             if (arrayType == null || !arrayType.IsArray)
             {
@@ -46,28 +46,28 @@ namespace ZenTS.Emit
 
             lock (Protos)
             {
-                if (Protos.TryGetValue(arrayType, out JSValue existing))
+                if (Protos.TryGetValue(arrayType, out JsValue existing))
                 {
                     return existing;
                 }
             }
 
             IntPtr ctx = env.Context;
-            JSValue proto = QuickJsDll.JS_NewObject(ctx);
+            JsValue proto = EngineApi.NewObject(ctx);
             Type elementType = arrayType.GetElementType() ?? typeof(object);
             int rank = arrayType.GetArrayRank();
 
-            QuickJsDll.JS_SetPropertyStr(ctx, proto, "get", JsCallbackGate.NewCFunction(
+            EngineApi.SetPropertyStr(ctx, proto, "get", JsCallbackGate.NewCFunction(
                 ctx, (c, thisVal, argc, argv) => ArrayGet(c, thisVal, argc, argv, elementType, rank), "get", rank));
-            QuickJsDll.JS_SetPropertyStr(ctx, proto, "set", JsCallbackGate.NewCFunction(
+            EngineApi.SetPropertyStr(ctx, proto, "set", JsCallbackGate.NewCFunction(
                 ctx, (c, thisVal, argc, argv) => ArraySet(c, thisVal, argc, argv, elementType, rank), "set", rank + 1));
 
-            JSValue lengthGet = JsCallbackGate.NewCFunction(ctx, ArrayLengthGet, "get_length", 0);
-            JSValue lengthSet = JsCallbackGate.NewCFunction(ctx, ArrayLengthSet, "set_length", 1);
-            uint atom = QuickJsDll.JS_NewAtom(ctx, "length");
-            QuickJsDll.JS_DefinePropertyGetSet(
+            JsValue lengthGet = JsCallbackGate.NewCFunction(ctx, ArrayLengthGet, "get_length", 0);
+            JsValue lengthSet = JsCallbackGate.NewCFunction(ctx, ArrayLengthSet, "set_length", 1);
+            uint atom = EngineApi.NewAtom(ctx, "length");
+            EngineApi.DefinePropertyGetSet(
                 ctx, proto, atom, lengthGet, lengthSet, PropConfigurable | PropEnumerable);
-            QuickJsDll.JS_FreeAtom(ctx, atom);
+            EngineApi.FreeAtom(ctx, atom);
             // DefinePropertyGetSet takes ownership of getter/setter.
 
             lock (Protos)
@@ -93,7 +93,7 @@ namespace ZenTS.Emit
             IntPtr ctx = env.Context;
             lock (Protos)
             {
-                foreach (JSValue proto in Protos.Values)
+                foreach (JsValue proto in Protos.Values)
                 {
                     JsValueUtil.Free(ctx, proto);
                 }
@@ -110,7 +110,7 @@ namespace ZenTS.Emit
             }
         }
 
-        private static JSValue ArrayLengthGet(IntPtr ctx, JSValue thisVal, int argc, IntPtr argv)
+        private static JsValue ArrayLengthGet(IntPtr ctx, JsValue thisVal, int argc, IntPtr argv)
         {
             try
             {
@@ -128,12 +128,12 @@ namespace ZenTS.Emit
             }
         }
 
-        private static JSValue ArrayLengthSet(IntPtr ctx, JSValue thisVal, int argc, IntPtr argv)
+        private static JsValue ArrayLengthSet(IntPtr ctx, JsValue thisVal, int argc, IntPtr argv)
         {
             return JsCallbackGate.ReturnErrorSentinel(ctx, "zents: array length is read-only.");
         }
 
-        private static JSValue ArrayGet(IntPtr ctx, JSValue thisVal, int argc, IntPtr argv, Type elementType, int rank)
+        private static JsValue ArrayGet(IntPtr ctx, JsValue thisVal, int argc, IntPtr argv, Type elementType, int rank)
         {
             try
             {
@@ -158,7 +158,7 @@ namespace ZenTS.Emit
             }
         }
 
-        private static JSValue ArraySet(IntPtr ctx, JSValue thisVal, int argc, IntPtr argv, Type elementType, int rank)
+        private static JsValue ArraySet(IntPtr ctx, JsValue thisVal, int argc, IntPtr argv, Type elementType, int rank)
         {
             try
             {

@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-/* Embedded zentslib.js - keep in sync with ZenTS~/jslib/zentslib.js */
+/* Embedded zentslib.js - generated from ZenTS~/jslib/zentslib.js */
 static const char kZentsLibJs[] = R"zents(globalThis.zents = globalThis.zents || {};
 
 /** console.* -> Unity log (Docs/spec/14-TYPESCRIPT.md). Host binds __zents_print(level, line). */
@@ -82,12 +82,10 @@ zents.make_generic_type = function (genericType) {
   return globalThis.__zents_make_generic_type(genericType, args);
 };
 
-zents.make_generic_method = function (genericMethodBase) {
-  var args = Array.prototype.slice.call(arguments, 1);
-  if (args.length === 1 && Array.isArray(args[0])) {
-    args = args[0];
-  }
-  return globalThis.__zents_make_generic_method(genericMethodBase, args);
+zents.inflate = function (owner, key) {
+  var args = Array.prototype.slice.call(arguments, 2);
+  if (args.length === 1 && Array.isArray(args[0])) args = args[0];
+  return globalThis.__zents_inflate(owner, key, args);
 };
 
 zents.make_szarray_type = function (elementType) {
@@ -150,9 +148,6 @@ zents.cast = function (obj, targetType) {
   return globalThis.__zents_cast(obj, targetType);
 };
 
-zents.register_method = function (aliasName, methodOrClosure) {
-  return globalThis.__zents_register_method(aliasName, methodOrClosure);
-};
 
 zents.signature = function () {
   var args = Array.prototype.slice.call(arguments);
@@ -246,8 +241,16 @@ globalThis.__zents_wrap_miss = function (target) {
       ) {
         return Reflect.get(t, p, recv);
       }
+      if (key === "then" && !Reflect.has(t, p)) return undefined;
       if (Reflect.has(t, p)) {
         return Reflect.get(t, p, recv);
+      }
+      if (key.indexOf("(") > 0 && typeof globalThis.__zents_resolve_signature === "function") {
+        var method = globalThis.__zents_resolve_signature(t, key);
+        if (typeof method === "function") {
+          Object.defineProperty(t, key, { value: method, configurable: true });
+          return method;
+        }
       }
       throw new Error("zents: member not found: " + key);
     },
@@ -257,12 +260,23 @@ globalThis.__zents_wrap_miss = function (target) {
       }
       var key = String(p);
       if (Reflect.has(t, p)) {
+        var owner = t, descriptor;
+        while (owner && !(descriptor = Object.getOwnPropertyDescriptor(owner, p))) owner = Object.getPrototypeOf(owner);
+        if (descriptor && typeof descriptor.value === "function") throw new Error("zents: not writable: " + key);
         if (!Reflect.set(t, p, v, recv)) {
           throw new Error("zents: not writable: " + key);
         }
         return true;
       }
       throw new Error("zents: member not found: " + key);
+    },
+    defineProperty: function (t, p, descriptor) {
+      if (typeof p === "symbol" || String(p).indexOf("__zents_") === 0) return Reflect.defineProperty(t, p, descriptor);
+      throw new Error("zents: not writable: " + String(p));
+    },
+    deleteProperty: function (t, p) {
+      if (Reflect.has(t, p)) throw new Error("zents: not writable: " + String(p));
+      return true;
     }
   });
 };

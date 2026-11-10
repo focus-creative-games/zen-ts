@@ -25,9 +25,10 @@ namespace ZenTS.Marshaling
 {
     internal static class EnumMarshal
     {
-        public static JSValue Push(IntPtr ctx, object enumValue)
+        public static JsValue Push(IntPtr ctx, object enumValue)
         {
-            return JsValueUtil.NewInt32(Convert.ToInt32(enumValue));
+            Type underlying=Enum.GetUnderlyingType(enumValue.GetType());
+            return TypedMarshal.Push(ctx,Convert.ChangeType(enumValue,underlying,System.Globalization.CultureInfo.InvariantCulture),underlying);
         }
     }
 }

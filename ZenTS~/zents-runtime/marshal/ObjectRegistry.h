@@ -32,19 +32,19 @@ struct TypeBinding;
 class ObjectRegistry
 {
 public:
-    static void Initialize(JSRuntime* rt);
+    static void Initialize(js::Runtime* rt);
     static void Reset();
 
     /** Push ByObj exotic (class instance or boxed valuetype). */
-    static JSValue Push(JSContext* ctx, Il2CppObject* obj, TypeBinding* binding);
+    static js::Value Push(js::Context* ctx, Il2CppObject* obj, TypeBinding* binding);
     /** Like Push but skips miss-Proxy wrap (needed for System.Type + host-owned tags). */
-    static JSValue PushUnwrapped(JSContext* ctx, Il2CppObject* obj, TypeBinding* binding);
+    static js::Value PushUnwrapped(js::Context* ctx, Il2CppObject* obj, TypeBinding* binding);
     /** Push ByVal exotic for a boxed struct copy (payload = Unbox(obj)). */
-    static JSValue PushByVal(JSContext* ctx, Il2CppObject* obj, TypeBinding* binding);
-    static Il2CppObject* Get(JSContext* ctx, JSValueConst value);
-    static TypeBinding* GetBinding(JSContext* ctx, JSValueConst value);
-    static bool IsZentsObject(JSContext* ctx, JSValueConst value);
+    static js::Value PushByVal(js::Context* ctx, Il2CppObject* obj, TypeBinding* binding);
+    static Il2CppObject* Get(js::Context* ctx, js::ValueConst value);
+    static TypeBinding* GetBinding(js::Context* ctx, js::ValueConst value);
+    static bool IsZentsObject(js::Context* ctx, js::ValueConst value);
     /** True when value is a ByVal exotic (`__zents_ud_kind` == "byval"). */
-    static bool IsByVal(JSContext* ctx, JSValueConst value);
+    static bool IsByVal(js::Context* ctx, js::ValueConst value);
 };
 }

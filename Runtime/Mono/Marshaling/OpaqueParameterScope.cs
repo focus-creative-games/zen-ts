@@ -31,48 +31,40 @@ namespace ZenTS.Marshaling
     internal static class OpaqueParameterScope
     {
         private static int _generation = 1;
-
+        private static readonly System.Collections.Generic.Stack<int> Scopes=new System.Collections.Generic.Stack<int>();
+        private static readonly System.Collections.Generic.HashSet<int> Active=new System.Collections.Generic.HashSet<int>();
+        private static readonly System.Collections.Generic.Dictionary<int,System.Collections.Generic.List<OpaqueValue>> Handles=new System.Collections.Generic.Dictionary<int,System.Collections.Generic.List<OpaqueValue>>();
         public static void Enter()
         {
-            // Nested Enter keeps the same generation so nested callbacks share the frame.
+            unchecked {if(++_generation<=0)_generation=1;}
+            Scopes.Push(_generation);Active.Add(_generation);Handles[_generation]=new System.Collections.Generic.List<OpaqueValue>();
         }
-
         public static void Leave(IntPtr ctx)
         {
-            unchecked
-            {
-                _generation++;
-                if (_generation <= 0)
-                {
-                    _generation = 1;
-                }
-            }
+            if(Scopes.Count==0)return;int id=Scopes.Pop();Active.Remove(id);
+            foreach(var handle in Handles[id])handle.Target=null;
+            Handles.Remove(id);
         }
-
         public static void Reset()
         {
-            unchecked
-            {
-                _generation++;
-                if (_generation <= 0)
-                {
-                    _generation = 1;
-                }
-            }
+            foreach(var handles in Handles.Values)foreach(var handle in handles)handle.Target=null;
+            Handles.Clear();Active.Clear();Scopes.Clear();
         }
 
-        public static JSValue Push(IntPtr ctx, object target)
+        public static JsValue Push(IntPtr ctx, object target, Type declaredType = null, JsMarshalAsAttribute marshal = null)
         {
-            var opaque = new OpaqueValue(target) { Generation = _generation };
-            JSValue handle = QuickJsDll.JS_NewObject(ctx);
+            if(Scopes.Count==0)throw new JsScriptException("zents: OpaqueValue requires an active call scope");
+            var opaque = new OpaqueValue(target) { Generation = Scopes.Peek(), DeclaredType = declaredType ?? target?.GetType(), Marshal = marshal?.JsMarshalType == JsMarshalType.OpaqueValue ? null : marshal };
+            Handles[Scopes.Peek()].Add(opaque);
+            JsValue handle = EngineApi.NewObject(ctx);
             int slot = ObjectRegistry.Register(opaque);
-            QuickJsDll.JS_SetPropertyStr(ctx, handle, "__zents_id", JsValueUtil.NewInt32(slot));
-            QuickJsDll.JS_SetPropertyStr(ctx, handle, "__zents_opaque", JsValueUtil.NewBool(true));
+            EngineApi.SetPropertyStr(ctx, handle, "__zents_id", JsValueUtil.NewInt32(slot));
+            EngineApi.SetPropertyStr(ctx, handle, "__zents_opaque", JsValueUtil.NewBool(true));
             opaque.JsValue = handle;
             return handle;
         }
 
-        public static JSValue PushExisting(IntPtr ctx, OpaqueValue opaque)
+        public static JsValue PushExisting(IntPtr ctx, OpaqueValue opaque)
         {
             EnsureAlive(opaque);
             if (JsValueUtil.GetNormTag(opaque.JsValue) == JsValueUtil.TagObject)
@@ -80,10 +72,10 @@ namespace ZenTS.Marshaling
                 return JsValueUtil.Dup(opaque.JsValue);
             }
 
-            return Push(ctx, opaque.Target);
+            return Push(ctx, opaque.Target, opaque.DeclaredType, opaque.Marshal);
         }
 
-        public static bool TryPop(IntPtr ctx, JSValue jsValue, out object target)
+        public static bool TryPop(IntPtr ctx, JsValue jsValue, out object target)
         {
             target = null;
             if (!ObjectRegistry.TryGetObject(ctx, jsValue, out object obj))
@@ -98,8 +90,8 @@ namespace ZenTS.Marshaling
                 return true;
             }
 
-            JSValue flag = QuickJsDll.JS_GetPropertyStr(ctx, jsValue, "__zents_opaque");
-            bool isOpaque = JsValueUtil.GetNormTag(flag) == JsValueUtil.TagBool && flag.UInt64 != 0;
+            JsValue flag = EngineApi.GetPropertyStr(ctx, jsValue, "__zents_opaque");
+            bool isOpaque = JsValueUtil.GetNormTag(flag) == JsValueUtil.TagBool && JsValueUtil.GetUInt64(flag) != 0;
             JsValueUtil.Free(ctx, flag);
             if (!isOpaque)
             {
@@ -123,7 +115,7 @@ namespace ZenTS.Marshaling
                 throw new JsScriptException("zents: invalid opaque parameter handle.");
             }
 
-            if (opaque.Generation != _generation)
+            if (!Active.Contains(opaque.Generation))
             {
                 throw new JsScriptException("zents: invalid opaque parameter handle (expired).");
             }

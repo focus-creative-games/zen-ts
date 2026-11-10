@@ -19,7 +19,12 @@
 // SOFTWARE.
 
 #include "TableMarshal.h"
+#include "gc/GarbageCollector.h"
 #include "MarshalMeta.h"
+#include "MethodOverloadResolver.h"
+#include "../utils/MetadataUtil.h"
+#include "vm/Runtime.h"
+#include "vm/Exception.h"
 
 #include "vm/Class.h"
 #include "vm/Field.h"
@@ -82,37 +87,43 @@ void ResolveMemberStorage(Il2CppClass* storageKlass, void* address, Il2CppClass*
     *outMemberAddr = address;
 }
 
-void WriteFieldFromJs(
-    JSContext* ctx,
-    JSValueConst prop,
-    void* structAddr,
-    FieldInfo* field,
-    const MarshalMetaInfo* fieldMeta,
-    const char* name)
+const PropertyInfo* FindInstanceProperty(Il2CppClass* klass,const char* name)
 {
-    if (field == nullptr || fieldMeta == nullptr)
+    for(Il2CppClass* walk=klass;walk;walk=walk->parent)
     {
-        JS_ThrowTypeError(ctx, "zents: Table/Unpacked unknown member '%s'", name);
-        return;
+        void* it=nullptr;
+        while(const PropertyInfo* p=il2cpp::vm::Class::GetProperties(walk,&it))
+            if(std::strcmp(p->name,name)==0 && p->get && MetadataUtil::IsPublicMethod(p->get) && !MetadataUtil::IsStaticMethod(p->get) && p->get->parameters_count==0)return p;
     }
-
-    void* slot = FieldAddr(structAddr, field);
-    void* tempStorage = nullptr;
-    void* dest = fieldMeta->passByValue ? &tempStorage : slot;
-    fieldMeta->js2csWriter(ctx, prop, dest, fieldMeta);
-    if (JS_HasException(ctx))
-        return;
-    if (fieldMeta->passByValue)
-        *reinterpret_cast<void**>(slot) = tempStorage;
+    return nullptr;
 }
-
-JSValue ReadFieldToJs(
-    JSContext* ctx, void* structAddr, FieldInfo* field, const MarshalMetaInfo* fieldMeta)
+void WriteMember(js::Context* ctx,js::ValueConst prop,void* address,const TableMarshalMeta* tm,size_t i)
 {
-    if (field == nullptr || fieldMeta == nullptr)
-        return JS_UNDEFINED;
-    void* slot = FieldAddr(structAddr, field);
-    return fieldMeta->cs2jsWriter(ctx, slot, fieldMeta);
+    FieldInfo* field=tm->fields[i];auto* property=tm->properties[i];auto* meta=tm->fieldMetas[i];
+    if(!meta||(!field&&!property)){js::ThrowTypeError(ctx,"zents: unknown Composite member '%s'",tm->members[i].c_str());return;}
+    if(MethodOverloadResolver::GetConversionKind(ctx,prop,meta)==ConversionKind::None){js::ThrowTypeError(ctx,"zents: invalid Composite member '%s'",tm->members[i].c_str());return;}
+    void* storage=alloca((size_t)meta->size);meta->js2csWriter(ctx,prop,storage,meta);if(js::HasException(ctx))return;
+    if(field)
+    {
+        void* slot=FieldAddr(address,field);std::memcpy(slot,storage,(size_t)meta->size);
+        if(field->parent->has_references)il2cpp::gc::GarbageCollector::SetWriteBarrier(reinterpret_cast<void**>(slot),(size_t)meta->size);
+    }
+    else
+    {
+        if(!property->set||!MetadataUtil::IsPublicMethod(property->set)){js::ThrowTypeError(ctx,"zents: Composite property is read-only");return;}
+        void* args[]={meta->passByValue?*reinterpret_cast<void**>(storage):storage};Il2CppException* exception=nullptr;
+        il2cpp::vm::Runtime::Invoke(property->set,address,args,&exception);if(exception)il2cpp::vm::Exception::Raise(exception);
+    }
+}
+js::Value ReadMember(js::Context* ctx,void* address,const TableMarshalMeta* tm,size_t i)
+{
+    auto* meta=tm->fieldMetas[i];if(!meta)return js::ThrowTypeError(ctx,"zents: unknown Composite member");
+    if(tm->fields[i])return meta->cs2jsWriter(ctx,FieldAddr(address,tm->fields[i]),meta);
+    auto* property=tm->properties[i];if(!property||!property->get)return js::ThrowTypeError(ctx,"zents: Composite property has no getter");
+    Il2CppException* exception=nullptr;Il2CppObject* value=il2cpp::vm::Runtime::Invoke(property->get,address,nullptr,&exception);
+    if(exception)il2cpp::vm::Exception::Raise(exception);
+    if(meta->passByValue)return meta->cs2jsWriter(ctx,&value,meta);
+    return meta->cs2jsWriter(ctx,ObjectUnbox(value),meta);
 }
 } // namespace
 
@@ -147,16 +158,22 @@ const MarshalMetaInfo* TableMarshal::Create(
         tm->members.push_back(name);
         tm->optional.push_back(opt);
 
-        FieldInfo* field = FindInstanceField(fieldOwner, name.c_str());
-        tm->fields.push_back(field);
-        const MarshalMetaInfo* fieldMeta =
-            field != nullptr ? MarshalMeta::TryCreateDefault(field->type) : nullptr;
-        tm->fieldMetas.push_back(fieldMeta);
+        FieldInfo* field=FindInstanceField(fieldOwner,name.c_str());
+        const PropertyInfo* property=field?nullptr:FindInstanceProperty(fieldOwner,name.c_str());
+        tm->fields.push_back(field);tm->properties.push_back(property);
+        int32_t strategy=0;std::vector<std::string> nested;
+        const Il2CppType* memberType=field?field->type:property?property->get->return_type:nullptr;
+        if(field)MetadataUtil::TryReadFieldMarshalAs(field,&strategy,&nested);
+        else if(property)MetadataUtil::TryReadJsMarshalAs(property->get,-1,&strategy,&nested);
+        const MarshalMetaInfo* memberMeta=memberType?MarshalMeta::WithStrategy(memberType,strategy):nullptr;
+        if(memberType&&(strategy==4||strategy==5))memberMeta=Create(memberType,il2cpp::vm::Class::FromIl2CppType(memberType),nested,(MarshalAsKind)strategy);
+        tm->fieldMetas.push_back(memberMeta);
+
     }
 
     if (kind == MarshalAsKind::UnpackedValues)
     {
-        tm->js2csWriter = nullptr; /* multi-arg path via Js2CsUnpacked */
+        tm->js2csWriter = Js2CsPacked; /* single JS result; arguments use Js2CsUnpacked */
         tm->cs2jsWriter = Cs2JsUnpacked;
         tm->jsArgSlots = (int32_t)tm->members.size();
     }
@@ -176,21 +193,21 @@ int TableMarshal::GetJsArgSlotCount(const MarshalMetaInfo* meta)
     return meta->jsArgSlots > 0 ? meta->jsArgSlots : 1;
 }
 
-void TableMarshal::Js2CsTable(JSContext* ctx, JSValueConst value, void* address, const MarshalMetaInfo* meta)
+void TableMarshal::Js2CsTable(js::Context* ctx, js::ValueConst value, void* address, const MarshalMetaInfo* meta)
 {
     auto* tm = static_cast<const TableMarshalMeta*>(meta);
     Il2CppClass* storageKlass = meta->typeKlass;
     std::memset(address, 0, (size_t)meta->size);
 
-    if (JS_IsNull(value) || JS_IsUndefined(value))
+    if (js::IsNull(value) || js::IsUndefined(value))
     {
-        /* Mono v1 quirk retained by matrix: null Table → NRE-like message. */
-        JS_ThrowTypeError(ctx, "Object reference not set to an instance of an object.");
+        if(storageKlass && storageKlass->nullabletype)return;
+        js::ThrowTypeError(ctx, "zents: non-nullable Table requires an object");
         return;
     }
-    if (!JS_IsObject(value))
+    if (!js::IsObject(value))
     {
-        JS_ThrowTypeError(ctx, "zents: Table marshal expects a plain object");
+        js::ThrowTypeError(ctx, "zents: Table marshal expects a plain object");
         return;
     }
 
@@ -201,19 +218,13 @@ void TableMarshal::Js2CsTable(JSContext* ctx, JSValueConst value, void* address,
     for (size_t i = 0; i < tm->members.size(); ++i)
     {
         const char* name = tm->members[i].c_str();
-        JSValue prop = JS_GetPropertyStr(ctx, value, name);
-        if (JS_IsUndefined(prop))
-        {
-            JS_FreeValue(ctx, prop);
-            if (tm->optional[i])
-                continue;
-            JS_ThrowTypeError(ctx, "zents: Table missing required member '%s'", name);
-            return;
-        }
+        int own=js::HasOwnProperty(ctx,value,name);
+        if(own!=1){if(own==0&&tm->optional[i])continue;js::ThrowTypeError(ctx,"zents: Table missing member '%s'",name);return;}
+        js::Value prop=js::GetPropertyStr(ctx,value,name);
 
-        WriteFieldFromJs(ctx, prop, memberAddr, tm->fields[i], tm->fieldMetas[i], name);
-        JS_FreeValue(ctx, prop);
-        if (JS_HasException(ctx))
+        WriteMember(ctx,prop,memberAddr,tm,i);
+        js::FreeValue(ctx, prop);
+        if (js::HasException(ctx))
             return;
     }
 
@@ -221,34 +232,34 @@ void TableMarshal::Js2CsTable(JSContext* ctx, JSValueConst value, void* address,
         *reinterpret_cast<uint8_t*>(address) = 1;
 }
 
-JSValue TableMarshal::Cs2JsTable(JSContext* ctx, void* address, const MarshalMetaInfo* meta)
+js::Value TableMarshal::Cs2JsTable(js::Context* ctx, void* address, const MarshalMetaInfo* meta)
 {
     auto* tm = static_cast<const TableMarshalMeta*>(meta);
     Il2CppClass* storageKlass = meta->typeKlass;
     if (storageKlass != nullptr && storageKlass->nullabletype
         && !il2cpp::vm::Object::NullableHasValue(storageKlass, address))
-        return JS_NULL;
+        return js::Null();
 
     Il2CppClass* memberKlass = nullptr;
     void* memberAddr = nullptr;
     ResolveMemberStorage(storageKlass, address, &memberKlass, &memberAddr);
 
-    JSValue obj = JS_NewObject(ctx);
+    js::Value obj = js::NewObject(ctx);
     for (size_t i = 0; i < tm->members.size(); ++i)
     {
         const char* name = tm->members[i].c_str();
-        JSValue prop = ReadFieldToJs(ctx, memberAddr, tm->fields[i], tm->fieldMetas[i]);
-        if (JS_IsException(prop))
+        js::Value prop = ReadMember(ctx,memberAddr,tm,i);
+        if (js::IsException(prop))
             return prop;
-        if (JS_IsUndefined(prop))
+        if (js::IsUndefined(prop))
             continue;
-        JS_SetPropertyStr(ctx, obj, name, prop);
+        js::SetPropertyStr(ctx, obj, name, prop);
     }
     return obj;
 }
 
 void TableMarshal::Js2CsUnpacked(
-    JSContext* ctx, JSValueConst* argv, int jsStart, int argc, void* address, const MarshalMetaInfo* meta)
+    js::Context* ctx, js::ValueConst* argv, int jsStart, int argc, void* address, const MarshalMetaInfo* meta)
 {
     auto* tm = static_cast<const TableMarshalMeta*>(meta);
     Il2CppClass* storageKlass = meta->typeKlass;
@@ -257,7 +268,7 @@ void TableMarshal::Js2CsUnpacked(
     const int slots = (int)tm->members.size();
     if (jsStart + slots > argc)
     {
-        /* Soft-fill with zeroed struct (Mono PopArgs defaulting behavior). */
+        js::ThrowTypeError(ctx,"zents: incomplete UnpackedValues argument");
         return;
     }
 
@@ -268,9 +279,8 @@ void TableMarshal::Js2CsUnpacked(
     for (int i = 0; i < slots; ++i)
     {
         const char* name = tm->members[(size_t)i].c_str();
-        WriteFieldFromJs(
-            ctx, argv[jsStart + i], memberAddr, tm->fields[(size_t)i], tm->fieldMetas[(size_t)i], name);
-        if (JS_HasException(ctx))
+        WriteMember(ctx,argv[jsStart+i],memberAddr,tm,(size_t)i);
+        if (js::HasException(ctx))
             return;
     }
 
@@ -278,26 +288,40 @@ void TableMarshal::Js2CsUnpacked(
         *reinterpret_cast<uint8_t*>(address) = 1;
 }
 
-JSValue TableMarshal::Cs2JsUnpacked(JSContext* ctx, void* address, const MarshalMetaInfo* meta)
+js::Value TableMarshal::Cs2JsUnpacked(js::Context* ctx, void* address, const MarshalMetaInfo* meta)
 {
     auto* tm = static_cast<const TableMarshalMeta*>(meta);
     Il2CppClass* storageKlass = meta->typeKlass;
     if (storageKlass != nullptr && storageKlass->nullabletype
         && !il2cpp::vm::Object::NullableHasValue(storageKlass, address))
-        return JS_NULL;
+        return js::Null();
 
     Il2CppClass* memberKlass = nullptr;
     void* memberAddr = nullptr;
     ResolveMemberStorage(storageKlass, address, &memberKlass, &memberAddr);
 
-    JSValue arr = JS_NewArray(ctx);
+    js::Value arr = js::NewArray(ctx);
     for (size_t i = 0; i < tm->members.size(); ++i)
     {
-        JSValue prop = ReadFieldToJs(ctx, memberAddr, tm->fields[i], tm->fieldMetas[i]);
-        if (JS_IsException(prop))
+        js::Value prop = ReadMember(ctx,memberAddr,tm,i);
+        if (js::IsException(prop))
             return prop;
-        JS_SetPropertyUint32(ctx, arr, (uint32_t)i, prop);
+        js::SetPropertyUint32(ctx, arr, (uint32_t)i, prop);
     }
     return arr;
+}
+}
+
+namespace zents {
+void TableMarshal::Js2CsPacked(js::Context* ctx,js::ValueConst value,void* address,const MarshalMetaInfo* meta)
+{
+    auto* tm=static_cast<const TableMarshalMeta*>(meta);
+    if(!js::IsArray(ctx,value)){js::ThrowTypeError(ctx,"zents: UnpackedValues result requires an Array");return;}
+    js::Value length=js::GetPropertyStr(ctx,value,"length");int32_t count=0;js::ToInt32(ctx,&count,length);js::FreeValue(ctx,length);
+    if(count!=(int32_t)tm->members.size()){js::ThrowTypeError(ctx,"zents: UnpackedValues result length mismatch");return;}
+    std::vector<js::Value> args(count);
+    for(int32_t i=0;i<count;++i)args[i]=js::GetPropertyUint32(ctx,value,(uint32_t)i);
+    Js2CsUnpacked(ctx,args.data(),0,count,address,meta);
+    for(auto arg:args)js::FreeValue(ctx,arg);
 }
 }

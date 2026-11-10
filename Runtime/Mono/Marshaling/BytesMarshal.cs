@@ -24,59 +24,17 @@ using ZenTS.Jvm;
 
 namespace ZenTS.Marshaling
 {
-    /// <summary>[JsMarshalAs(Bytes)] : byte[] ↔ JS string (raw octets).</summary>
+    // Always copies. No UTF-8 roundtrip, no shared CLR/JS backing store.
     internal static class BytesMarshal
     {
-        public static JSValue Push(IntPtr ctx, byte[] bytes)
+        public static JsValue Push(IntPtr ctx, byte[] bytes) => bytes == null ? JsValueUtil.Null : EngineApi.NewByteArrayCopy(ctx, bytes);
+        public static byte[] Pop(IntPtr ctx, JsValue value)
         {
-            if (bytes == null)
-            {
-                return JsValueUtil.Null;
-            }
-
-            return QuickJsDll.JS_NewStringLen(ctx, bytes, (UIntPtr)bytes.Length);
-        }
-
-        public static byte[] Pop(IntPtr ctx, JSValue jsValue)
-        {
-            int tag = JsValueUtil.GetNormTag(jsValue);
-            if (tag == JsValueUtil.TagNull)
-            {
-                return null;
-            }
-
-            if (tag == JsValueUtil.TagUndefined)
-            {
-                throw new JsScriptException("zents: undefined is not assignable to byte[] (Bytes).");
-            }
-
-            if (tag != JsValueUtil.TagString)
-            {
-                throw new JsScriptException("zents: [JsMarshalAs(Bytes)] requires a JS string (raw octets).");
-            }
-
-            IntPtr cstr = QuickJsDll.JS_ToCStringLen2(ctx, out UIntPtr len, jsValue, 0);
-            if (cstr == IntPtr.Zero)
-            {
-                return Array.Empty<byte>();
-            }
-
-            try
-            {
-                int n = (int)len;
-                if (n <= 0)
-                {
-                    return Array.Empty<byte>();
-                }
-
-                var bytes = new byte[n];
-                Marshal.Copy(cstr, bytes, 0, n);
-                return bytes;
-            }
-            finally
-            {
-                QuickJsDll.JS_FreeCString(ctx, cstr);
-            }
+            if (JsValueUtil.GetNormTag(value)==JsValueUtil.TagNull) return null;
+            IntPtr data=EngineApi.GetByteArrayData(ctx,value,out UIntPtr length);
+            if(data==IntPtr.Zero)throw new JsScriptException("zents: Bytes requires an attached Uint8Array");
+            int count=checked((int)length.ToUInt64());var bytes=new byte[count];
+            if(count>0)Marshal.Copy(data,bytes,0,count);return bytes;
         }
     }
 }

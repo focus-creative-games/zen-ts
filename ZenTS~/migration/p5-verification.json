@@ -1,0 +1,362 @@
+{
+  "verified_utc": "2026-11-10T04:06:49.746975+00:00",
+  "scope": "P5 native V8 SDKs, Unity integration and applicable runtime tests",
+  "editor": {
+    "windows_x64": "8/8 smoke; 56/56 JS; 3/3 TS; Domain Reload",
+    "macos_arm64": "8/8 smoke; 56/56 JS; 3/3 TS; Domain Reload"
+  },
+  "players": {
+    "p5-player.log": "10/10 smoke; 56/56 JS; 3/3 TS",
+    "p5-macos-player.log": "10/10 smoke; 56/56 JS; 3/3 TS",
+    "p5-macos-x64-player.log": "10/10 smoke; 56/56 JS; 3/3 TS",
+    "p5-ios-simulator-player.log": "10/10 smoke; 56/56 JS; 3/3 TS",
+    "p5-android-x64-player.log": "10/10 smoke; 56/56 JS; 3/3 TS",
+    "p5-android-arm64-player.log": "10/10 smoke; 56/56 JS; 3/3 TS"
+  },
+  "ios_device": {
+    "unsigned_build": "passed",
+    "physical_device_runtime": "not verified"
+  },
+  "android_test_device": "MuMu localhost:7555, Android API 32; arm64 uses emulator translation",
+  "webgl": "host VM; 10/10 smoke; 56/56 JS; 3/3 TS; GC; exception/UTF8",
+  "sdks": {
+    "macos-arm64": {
+      "manifest_sha256": "3c35d9897af5b57a1a9ff6d9ce5554283dc3582a6390e1a3cd15272505307e8c",
+      "static_libraries_sha256": {
+        "libzents_v8_engine.a": "5c5a450e4e5ef0e7b7ba7d28adde62e1076a62b7efc1f1b9dd9fa5c4dcc16161",
+        "libv8_monolith.a": "16abee87fed94ff295892eaa76d7d94d4bed57fdfc2549949c9d789a007ceeb3"
+      },
+      "jitless": false,
+      "source_commit": "b0a55a7dad7f536cce1f9aaddba89894c8533946"
+    },
+    "macos-x64": {
+      "manifest_sha256": "a6b4206f0a4547d4bcd413f7908207325842dc7dc08a7d7a5cbcc379ba442503",
+      "static_libraries_sha256": {
+        "libzents_v8_engine.a": "8a3657083dccda59a8f52cad099b6d31da7caf619fdc150817a75f85ee213339",
+        "libv8_monolith.a": "b2fb7f09a570f22ec2ab83f84d58cacd3741532040892998455c883f34619d18"
+      },
+      "jitless": false,
+      "source_commit": "b0a55a7dad7f536cce1f9aaddba89894c8533946"
+    },
+    "ios-arm64": {
+      "manifest_sha256": "5064cb5352f63a0a43a3d28a062c03ac83ae2b3ac9e990451b68173046272ed1",
+      "static_libraries_sha256": {
+        "libzents_v8_engine.a": "2abda66514fab6ff7966591002ea46173a5a7ece573d4c0ec7af5ab75d105d91",
+        "libv8_monolith.a": "cc2973bc161268ceda1a1fc915f7e47a293607a57229effae7231df603e2732c"
+      },
+      "jitless": true,
+      "source_commit": "b0a55a7dad7f536cce1f9aaddba89894c8533946"
+    },
+    "ios-simulator-x64": {
+      "manifest_sha256": "f05a0105d7cd03c98ae4c44bd135b05ac390d9f19936c7236fe425e151fb7f6c",
+      "static_libraries_sha256": {
+        "libzents_v8_engine.a": "e6391ba71e31acc9b0c806cffcc8ac098a206f4371a8b9bfb99619bbdf74da87",
+        "libv8_monolith.a": "3d8fa0ebc36656f13f9f0ea9f3de622cc59a386e5009c65dac3b2a2db5b443d6"
+      },
+      "jitless": true,
+      "source_commit": "b0a55a7dad7f536cce1f9aaddba89894c8533946"
+    },
+    "android-x64": {
+      "manifest_sha256": "7390346b923e5893fad04c5bb3eb50bf3ce15da52b2c485432d0f8eb2ab39324",
+      "static_libraries_sha256": {
+        "libzents_v8_engine.a": "938541e0f2d25ba3015628c7e87050c7f18ec130b31923331c9378ca219a4cb1",
+        "libv8_monolith.a": "de5fc82d1b7a5b45bf59f522fa4f0c91fd9b9e6bfbae489f38f3dc24be660e24"
+      },
+      "jitless": false,
+      "source_commit": "b0a55a7dad7f536cce1f9aaddba89894c8533946"
+    },
+    "android-arm64": {
+      "manifest_sha256": "21d1836977d42a734b14952522dd310f5f7115dc38d2ead6029544ad859209f4",
+      "static_libraries_sha256": {
+        "libzents_v8_engine.a": "22dcca815ea5d5f2e339029d3feaf855554eb8a5c82c38fa5384032e5f136fa8",
+        "libv8_monolith.a": "428a136528b2960e665489f167ab5b7958da2357e464b1b197de176d650fb555"
+      },
+      "jitless": false,
+      "source_commit": "b0a55a7dad7f536cce1f9aaddba89894c8533946"
+    }
+  },
+  "logs": {
+    "p5-editor.log": {
+      "path": "D:\\workspace\\zts\\ZenTSTest\\p5-editor.log",
+      "sha256": "5becffa4c65a6e51072e4c170bfb27f05aa1a9f0091864338a4dae4bf07e1d87"
+    },
+    "p5-domain-reload.log": {
+      "path": "D:\\workspace\\zts\\ZenTSTest\\p5-domain-reload.log",
+      "sha256": "fffd0fe2e59f99b860441cf158640545070dc10d366df45787d15fe5339200cd"
+    },
+    "p5-player.log": {
+      "path": "D:\\workspace\\zts\\ZenTSTest\\p5-player.log",
+      "sha256": "615e0db9bd0177d5078131d0a3207431a5e471ea67dfafc34a1d1422eb85a192"
+    },
+    "p5-macos-editor.log": {
+      "path": "D:\\workspace\\zts\\ZenTSTest\\p5-macos-editor.log",
+      "sha256": "d01f80988f3fb4b7cd7657ba5746c342005a8c1e6908ee87b6f7a9699967ff52"
+    },
+    "p5-macos-domain-reload.log": {
+      "path": "D:\\workspace\\zts\\ZenTSTest\\p5-macos-domain-reload.log",
+      "sha256": "94aed35007e88cda7fffa006a3b6f543e36cba2b1d5116993bc9faef221e8f1c"
+    },
+    "p5-macos-player.log": {
+      "path": "D:\\workspace\\zts\\ZenTSTest\\p5-macos-player.log",
+      "sha256": "7c9451bb584eebc4131ecbe23821588c019e56a174086072c7cdd6e71ba5bc40"
+    },
+    "p5-macos-x64-player.log": {
+      "path": "D:\\workspace\\zts\\ZenTSTest\\p5-macos-x64-player.log",
+      "sha256": "f0290e0d66ba83f0f3f1e36abce641101259180311c6bf0122110e6d08ed0274"
+    },
+    "p5-ios-simulator-player.log": {
+      "path": "D:\\workspace\\zts\\ZenTSTest\\p5-ios-simulator-player.log",
+      "sha256": "406748c3200a5bcede3373e5d0901edda2f168a0a27e1f0177d7045555eb3653"
+    },
+    "p5-ios-device-build.log": {
+      "path": "D:\\workspace\\zts\\ZenTSTest\\p5-ios-device-build.log",
+      "sha256": "e79f1a6ae6a8a85226fdf13be98a4da22ef027a4bca6569f3bcef1f4f177259a"
+    },
+    "p5-android-x64-player.log": {
+      "path": "D:\\workspace\\zts\\ZenTSTest\\p5-android-x64-player.log",
+      "sha256": "bee167d456db9951316affec1d1f3e1591bfec33b60a9446f2e1a267fc4fe3d3"
+    },
+    "p5-android-arm64-player.log": {
+      "path": "D:\\workspace\\zts\\ZenTSTest\\p5-android-arm64-player.log",
+      "sha256": "75a0dacb943ac918a470658beebd857113f697be8f077827c45688cb6f13713b"
+    },
+    "p5-webgl-build.log": {
+      "path": "D:\\workspace\\zts\\ZenTSTest\\p5-webgl-build.log",
+      "sha256": "2d5e8a4add80f3d5c8908a4be8f7d68c4581bb6fc275275fc0819ce79115bb29"
+    },
+    "p5-webgl-browser.log": {
+      "path": "D:\\workspace\\zts\\ZenTSTest\\p5-webgl-browser.log",
+      "sha256": "7455e5fb382e912745a0a343c020e3b541190b4ef8696b242ad6403b3d217e2c"
+    }
+  },
+  "apk_artifacts": {
+    "x64": {
+      "sha256": "3d424c781c48646a973a20eda96ce2eaf85d356eb2ce542e58c05086c8306451",
+      "native_abi": "x86_64",
+      "elf_machine": 62
+    },
+    "arm64": {
+      "sha256": "d3c8594e0d9c2aee132fd512d59846ec522bd9a31ab642117494d3355c4b99a9",
+      "native_abi": "arm64-v8a",
+      "elf_machine": 183
+    }
+  },
+  "source_hashes": {
+    "Runtime/Common/AotXmlPolicy.cs": "e184d4b3fa66d7b973f9e67570a107881447f89e816f1401d65eedbce493ff6d",
+    "Runtime/Common/AssemblyInfo.cs": "f8a99aebe94ee0430d545ddef2bdf9cbc9ce4ce651ca3d450f1b8c619864ba92",
+    "Runtime/Common/CsharpVirtualModule.cs": "ef3e8ba5624ff24422d18bcb4b21f219e0d9115a63b92e53ae0468fd87625cf7",
+    "Runtime/Common/IJsRuntime.cs": "cd6b1991be4a1b419372ff639c71bf85ab190733c9d6b5870091237508e1b0e8",
+    "Runtime/Common/JsAliasAttribute.cs": "dedadfa6c0e7a42bd8a14c3082825d65ae65c5fdd6622b7fcbcf8828aa27ed59",
+    "Runtime/Common/JsAliasConfigurationException.cs": "ec3fb6952116224924275d3a36586a3011f41c59a42fa35857dc891e859b1247",
+    "Runtime/Common/JsAliasXmlLoader.cs": "df9f80351a99a67889300749b8389932a7327302359383480dfdd0cc6a65c6ea",
+    "Runtime/Common/JsAliasXmlModels.cs": "6819afc46acefac0087a61afdb84876645f313fde3a5acfb116cab40444e019c",
+    "Runtime/Common/JsAliasXmlRegistry.cs": "55cc8dd03268c0bbe81e4e50eaad22804375643412367b96b484e646b0ea658c",
+    "Runtime/Common/JsAppDomain.cs": "09b0a25ca628acc43b5bbc18a05772c57805dbcf3d4601048ad3bd186a669fba",
+    "Runtime/Common/JsExtensionAttribute.cs": "118eb760b194b6cb4212190d717a546212417c1f4079de1dcf16381051876581",
+    "Runtime/Common/JsExtensionConfigurationException.cs": "df8785fcc3b3ec6a0ccc5e720d299404363ddb8fb05d99adfd3573eb1dadf67f",
+    "Runtime/Common/JsExtensionXmlLoader.cs": "8e5a4f1e682a24acbca020c4070e7e4625d07fcc9c43eef08025cb0747ca3f43",
+    "Runtime/Common/JsExtensionXmlModels.cs": "1943349b092ba55887cb26d00da7e106bb40f2f0d0f702a8fd09ad1b9c34a4f7",
+    "Runtime/Common/JsExtensionXmlRegistry.cs": "dc2a013537007e42cb65bde52a90a28ed99adeb9166c975c398bb0550f41412e",
+    "Runtime/Common/JsFileModuleLoader.cs": "eb7e7f1ecd86341433d95547194d00d0a9444b64896de5832b64c1115dd015c3",
+    "Runtime/Common/JsFramePump.cs": "ef271a96908be47e6e6bd5b1b5021f3a3376aad8763bed438dfd14c7df15d190",
+    "Runtime/Common/JsHostDetect.cs": "46eddd3cf660bd80c748f13e12f94161b3197d32707702300e1057fc64e9131a",
+    "Runtime/Common/JsMainThread.cs": "7203a9eb14bb96ebbfb77b531aa193998a8d3eaae621779dbc6d3324d3f8663f",
+    "Runtime/Common/JsMarshalAsAttribute.cs": "ac47fbd02154f928ce7f8e5682ab67fb71d33f28973e9f6603ad10b1fcb56c12",
+    "Runtime/Common/JsMarshalAsConfigurationException.cs": "b21835546798a6cda2890533d608f948f90dc34740bdab0923788491b16fc7c4",
+    "Runtime/Common/JsMarshalAsValidation.cs": "179ea2d14eff59d71613e409ab07633d7ae8f579ff3f4dab732045f4d3bbf5c5",
+    "Runtime/Common/JsMarshalAsXmlLoader.cs": "3c4fa1b7568e4b7af8794835a1886f29dd9650c2331b67238dfdfcf1cd05577e",
+    "Runtime/Common/JsMarshalAsXmlModels.cs": "88ad3d6fd9970acb2244dccefb7ea0100e189859e253667fa132a40ff915d43a",
+    "Runtime/Common/JsMarshalAsXmlRegistry.cs": "be047ffb5cbbcc7afe3f6ab3b1d3469784881e52f6f4f65465c2587bbcf4fccd",
+    "Runtime/Common/JsModuleSpecifier.cs": "02292618b627dcfa2370e294b0ecde7dedd818ff9da2124cdb5ec9d3ad5f4460",
+    "Runtime/Common/JsScriptException.cs": "2587bc52eeb28623b6d470192eff552d339483ff73a417b86f2e8a68b1bcbfd2",
+    "Runtime/Common/JsXmlPathUtil.cs": "86065882198ba77ad73bdca49bd6dcb937277c93c70b021c4e531758a77a455c",
+    "Runtime/Common/MonoJsCallbackAttribute.cs": "19ffacaab6d1dde346c5e24ba403424e71e5a3718594c35a64bf056f4b4fd01a",
+    "Runtime/Common/TsExportManifest.cs": "f8dc6ec50126a77309343f1252fa9bffeed1b7f122e5418fadd8079ce13f79d3",
+    "Runtime/HostJs/JsHostJsAppDomain.cs": "adc74f78a6044db746e7d5237414c8f01a9dfc62cdc61f056ea537f38a192a0c",
+    "Runtime/Il2Cpp/AssemblyInfo.cs": "f9402e7524496a000d037ce750a0008c86d9fc43fcec513dc5c0422693d0ba99",
+    "Runtime/Il2Cpp/JsIl2CppAppDomain.cs": "1ba4feb07d58035a8212cde50fe688ba58c9314e0b4d7c76d71a549a46860612",
+    "Runtime/Il2Cpp/JsMethod.cs": "f2aad6b7e1e91f4c8a8ebcff7585639b14c12952cab985089055015494a81e9b",
+    "Runtime/Mono/ZentsLib.cs": "6e90e2c8ad3b2c8c8a8e93a797f98f2480f1024a157e53a670569883e886430b",
+    "Runtime/Mono/Binding/BindingPlan.cs": "3d0ca4b75341f04d18b593a6622b6e1899e5fd41d0cd064e311df35afa5dc7ce",
+    "Runtime/Mono/DelegateImpl/DynamicBridgeFactory.cs": "24cd2de7eb5f5721d41e0aae6461da93ab85c11b90d54e99af524bdb07fcf2b0",
+    "Runtime/Mono/DelegateImpl/JsDelegateBinder.cs": "b3ebade9a6b26de5152b5458c8e82f1f583470083dc19efd4cca9c5306f5be6f",
+    "Runtime/Mono/Emit/ArrayBinding.cs": "37c38006613f7529562d5b9ea4b4523d66c27a02a78f7c95e061111f1ac63e5c",
+    "Runtime/Mono/Emit/JsCallPlan.cs": "d7dd0a77b03135057cb0619bc84c3884936da0cf72bfb4a8432bf16a0ccfc0b8",
+    "Runtime/Mono/Emit/MetaBinding.cs": "d01ce3f20282e622603aa9709521a04ea183ef134a5463fa27af047714cea645",
+    "Runtime/Mono/Emit/MethodEmitter.cs": "c91b974a26653709283f5aa1dde949749f0f27bd99b731fe9046c1f52e6de047",
+    "Runtime/Mono/Emit/MethodTagRegistry.cs": "9b0ee49817ad1c26def91fb679e44f5e92b921ae17254ff0df28999a64c64a57",
+    "Runtime/Mono/Engine/EngineApi.cs": "d024337296ebbf5f6f53715aac26b1a80c950893503ad3d276603438430b5948",
+    "Runtime/Mono/Engine/EngineCallbacks.cs": "9b240d22492b50013d5cf585976ef1be62e219d9caf35446925eeb9f8de6691c",
+    "Runtime/Mono/Engine/EngineValue.cs": "174a259e3d060aafa23d8581fd6f708fc4bae07445888cc51ee176d4ebe19c8f",
+    "Runtime/Mono/Jvm/JsEnv.cs": "5c274b529f5b2fefafbc05bb1f7243d864a8c09579e843c12db40ba351bddebb",
+    "Runtime/Mono/Jvm/JsMonoAppDomain.cs": "a5ecd29bdbb43903bbdc60d11068abeb0ed108c1845f95d7d0739c58e769d2ce",
+    "Runtime/Mono/Marshaling/ArrayMarshal.cs": "9da4d0c0c66fef228015821a91d36f6ddd1f267ba448ef47b2fd6bf9798d6a6f",
+    "Runtime/Mono/Marshaling/BytesMarshal.cs": "6d71528a4c11111114be8287e4426722ba75bfa79a282abf62b4967c3898ce61",
+    "Runtime/Mono/Marshaling/DelegateMarshal.cs": "aa5572795a5fe1bbc00d869bda75d83ced4093ab8a67692f71edb4c437fc129a",
+    "Runtime/Mono/Marshaling/EnumMarshal.cs": "e236e6f2239e342cc5840dce7835b92fc9b732231fa8b6f729869ee199a40ba0",
+    "Runtime/Mono/Marshaling/OpaqueParameterScope.cs": "cad673ba8c77ff60ff4980e24f3ee52a39c1a02481b73e13ee6aff9804332ea1",
+    "Runtime/Mono/Marshaling/OpaqueValue.cs": "9d1a68e50e3e859dd54ec402b5a1ba5698837e4bb9a48a0116cb6c3aced99e76",
+    "Runtime/Mono/Marshaling/PointerAwareInvoker.cs": "045c6a572631a9dadc80fef40b462eead91cf080408331e563bccc16b6947c87",
+    "Runtime/Mono/Marshaling/PointerHandle.cs": "cf1a2539b90f4cf3177bf59056a6f4f5486ab86fcc3cdd89e2ad4412d95ff482",
+    "Runtime/Mono/Marshaling/PointerMarshal.cs": "a2dc9f14b007c5e2ebf0db0d8f439f16f2362becd4a0c5c9e8c2f49486c93e87",
+    "Runtime/Mono/Marshaling/PrimitiveMarshal.cs": "26683b0368267d43aba596dade03cac33a9b3789de9bece65afbfd0a5746ce07",
+    "Runtime/Mono/Marshaling/StructMarshal.cs": "63156bd2d103cd59e973316abeed0f3123ef90f767121eed0c4c8e5287f2ae59",
+    "Runtime/Mono/Marshaling/TableMarshal.cs": "8e774ef2708b6c56b1a034e2041522f360304f51081fd7912d297715dfbaf1aa",
+    "Runtime/Mono/Marshaling/TypedMarshal.cs": "42ee0588870627f3b38dfd15c80e0fcf7ec6b6f79f63bb0a0c6b491fbe6024e7",
+    "Runtime/Mono/Mt/AssemblyRegistry.cs": "a47862af727d0fd4eb9a7c144ceb01c69dc28c760588602d32eb910549c11040",
+    "Runtime/Mono/Mt/ObjectRegistry.cs": "4a8dd9e5f20fd4ef0ddf7ba05120225509306150f6db3876839fa62c54dc22b8",
+    "Runtime/Mono/Mt/TypeRegistry.cs": "08d809f9ebd4f675ab6decc57c9bfb0bcd7e273e87c40971276d2ccb5c678cdb",
+    "Runtime/Mono/Utils/EditorSettingsAccess.cs": "9af22cd04fd66425a7651f28b363fc5c33f6f662b54d9eef02a676dd8d59becc",
+    "Runtime/Mono/Utils/JsPrintBuffer.cs": "c3b3b9e639f8d1bad696d3ae031bb1611bb03ba36c9e8c7cfe9618d16f9c0225",
+    "Runtime/Mono/Utils/NestedJsCallPendingError.cs": "5437515399bf1fddc359c7e612e1c05523077479d851935d361fe550598ad802",
+    "Runtime/Mono/Engine/V8/V8Callbacks.cs": "685dbd224feaebd8e5341c658a001fd76574b27ff7149fac2c62733aacf1a2f7",
+    "Runtime/Mono/Engine/V8/V8EngineBackend.cs": "346a076a4586a34a8d9640e1ad15ffc57bc5b1d9626b04cd37f24fa80ab1bd85",
+    "Runtime/Mono/Engine/V8/V8Native.cs": "ec02aaa1bd76c3a75d58cef66354a42149d8ef7cfc7da3ebe2c6a1e5cd7441df",
+    "Editor/CommonDirs.cs": "039356e8f70ca4bab971143da62e0c28fddae872462caf1a5d1e81b9b847a8bb",
+    "Editor/CoreLibsEnsure.cs": "91fff8d418c47f0075b2c5e5685d51c9b51f8cb1a5d9cef35d897661ba58070d",
+    "Editor/JsAliasXmlBootstrap.cs": "49a7afeac39f29560cc8723d8db4907b9382a01690bc585d8cfc4c8f43c3549f",
+    "Editor/JsExtensionXmlBootstrap.cs": "9e56fc39033dd63109da1e4e9d22f30567f76d34e1a4aae212c6009bbc29bf7b",
+    "Editor/JsMarshalAsXmlBootstrap.cs": "bcfec2e2253f3b76383b7ec0db2681e2c9a7cb1aeb56f9e0a82cb74d5478e75b",
+    "Editor/LocalInstaller.cs": "3d9cb234c9b49ea3d8578deeab66cbf02b6bac42564132d352d0ffb6a9d17025",
+    "Editor/Menus.cs": "dea5a9f072146848b8dfb70339d238eb59c6ff1967c93c6181fdda3cc10f24ea",
+    "Editor/P3Acceptance.cs": "d8e99772bb7bd92973ece2a8fba8e699615f94be127786e2588a968a949a380c",
+    "Editor/P4Acceptance.cs": "3d421ffe553c2c8bae07ce59a2a447cc2ac77686c47dd8f529d0785e0edbc0a6",
+    "Editor/P5Acceptance.cs": "62f2ceed1329d83a514ccd4fa315d0c11c6addb0cb91cc0c27e81cd17472e37a",
+    "Editor/Settings.cs": "0e1dd421405bf52ec2f7557fa6bcd43a38ceed2d052d6c955d8ca10cf5065c9c",
+    "Editor/TsSettings.cs": "037ea6befd9d4777d2fdb397b0beb40dbb837f50c5fd3953030b5bb38e2530fa",
+    "Editor/V8Acceptance.cs": "83ec055e3f07b13fa8e2f142ee36f09d3a374f730a555e18780a21c65adae686",
+    "Editor/XmlRulesLoaders.cs": "6e7abe199792c38ce1091e8f6f6e6b0c827bf4d2474971857277bf013d43f960",
+    "Editor/ZentsEditorMenus.cs": "08603762f1592d4a742942bb05621e921bda8bcea047f33ef5bc094a886d608e",
+    "Editor/ZentsSettingsProvider.cs": "d41f9f03a7cda74ac4ad19f4304f19ff0a6b8b6c13a2c308e58593001caa2c26",
+    "Editor/BuildProcessors/AddLil2cppSourceCodeToXcodeproj2020Or2021.cs": "15fe27d4c51c48521c73c337873a1e0a26b6fb0c2f2766e52e2233483d19d189",
+    "Editor/BuildProcessors/AddLil2cppSourceCodeToXcodeproj2022OrNewer.cs": "186502a7aabb5d0d49a34e11abe73d6714d72bad8b4183b23d4677f15993e6c2",
+    "Editor/BuildProcessors/AddLil2cppSourceCodeToXcodeproj2023OrNewer.cs": "50e95ac7d07d8834dbe90211958507278685191620cda30a2e4a236e1fea9a20",
+    "Editor/BuildProcessors/CheckLocalInstall.cs": "14fbaf1a79e6a3afe47f89d11299ff79d579febe48a8bfd400c5f8629aaf073c",
+    "Editor/BuildProcessors/CopyTypescriptStreaming.cs": "f60d8a7dad97f732c6213933e60347f5298839d68de17dcfd2b057ca0484429c",
+    "Editor/BuildProcessors/GenerateXmlBindingsOnBuild.cs": "8a93755c87ca35e955ee27c949c70a9ebb22833873c125344817394604709106",
+    "Editor/BuildProcessors/HostJsBuildSetup.cs": "3dd89bda5fdc4a9422b1a6894b28c16708aa3c037ed073d5f346b5de94d998f9",
+    "Editor/BuildProcessors/HostJsModulesBuild.cs": "a9d2977c680c0fcf7dff7d8da713041136c43d48b368a44097bdb581013fe3d7",
+    "Editor/BuildProcessors/LinkXmlProcess.cs": "32872e6caef6d5c4384e1ce2b59fcf6ba3ead7c2a20949961220ea8bf5e5afa7",
+    "Editor/BuildProcessors/SetupIl2CppEnv.cs": "e793b56a75139cc505ab2c83da85005de6517a4bd39a80915e55e8e741514968",
+    "Editor/BuildProcessors/V8BuildSetup.cs": "995483ef81f07956e5b5d7bed25396fa69d13860d8c378be40951219d342ef2c",
+    "Editor/BuildProcessors/V8IosBuildSetup.cs": "fa09bc9e37b65ae49ed66928158586bb99ec478623e23cf422c8beb6689893a2",
+    "Editor/BuildProcessors/V8PlatformBuildSetup.cs": "cf954e062e755345d32140f303c12fd6198a67debd22509e7a97f6958efda2eb",
+    "Editor/Commands/ExportWin64Command.cs": "3f7d9060b2e88c683ad88391acbc208d05b6f39dc8625930a3555992d772e0f8",
+    "Editor/Commands/XmlBindingsGenerate.cs": "9f6b2753277fa24ff625e5e3fe7c6291eaa6a102cd7edb661540c09248bbcec5",
+    "Editor/CppCodeGen/AliasCodegen.cs": "a45fae126c4fd86d18136706da392fea73d9f00cafeb1b3be3ab62b2262e45ff",
+    "Editor/CppCodeGen/CodeWriter.cs": "4318f4c20235acbbc4e8edfb49e6d35c1732665a95780dc312af9178b6e92679",
+    "Editor/CppCodeGen/ExtensionCodegen.cs": "cfc22b41061ce17b2d9378b5a53f0cb4dac67322e3df55a0946384ac5b23b982",
+    "Editor/CppCodeGen/MarshalAsCodegen.cs": "98bcd0e2c79f180f8c0c48235cb9773c0395f7fddcdda1b0320d32139a1592cd",
+    "Editor/Diagnostics/IZentsJsDebuggerHost.cs": "312553a420cf67d53355aad9fa9b8933e83044d449038a043a8e82c42a90d59a",
+    "Editor/Diagnostics/JsDebuggerBootstrap.cs": "fd7217316c7d63f272224357a1f34bebd6b22b8a960ddea359821bc64e36c291",
+    "Editor/MonoHooks/GetIl2CppFolderHook.cs": "b5f2adc5121aba9457041bb59a3b5873b76abdbfb26746384719cbe8f9ba905a",
+    "Editor/Typescript/CsharpDtsGenerator.cs": "1363d812e893852a9eeb6eda30f38086d30b34298e7e940b17368bd7f015e9e7",
+    "Editor/Typescript/NodeCli.cs": "ac4bc61add784fdee0b360334b3359d6570baf091173861b42e1ee7d744d30e6",
+    "Editor/Typescript/TsPlayGate.cs": "b96380d7ef5f4fa3d1962079f7c21ea25912b95d6f7b30ebaa4f74c4ddeba5c6",
+    "Editor/Typescript/TsProjectPaths.cs": "b47c6d8e85a4c3be6cb3f6929bcdefbe5cc43294556e46ad2de1e3e3a59d9d32",
+    "Editor/Typescript/TsScaffold.cs": "584d36ac138d83b22ed38f033385ae389239987f71b15641820065163ca1d288",
+    "Editor/Typescript/TypescriptToolchain.cs": "bca8c766d40afac172b3310c6013846dd2fa938b38d5d3ef1db254955c965c9c",
+    "Editor/Utils/DirectoryUtil.cs": "61be27cdc701219f5b78d43ad49eb3a6beff15d1768f9516e3dd4ea46f93cc95",
+    "Editor/Utils/EngineVersionUtil.cs": "d6ca7fc09e73be139bbe8a8739c4ac4cbb69d6060038d2df9cc4006b91c283c9",
+    "Editor/Utils/InstallFingerprint.cs": "c072c368bb4069185805050049581826fa5412eb0fa3b15c48461bf2d688236a",
+    "Editor/Utils/PatchApplier.cs": "455cbe1fdda2aaba8d089112f25638026c0a122b3e73cb63bfce94affd389c25",
+    "Editor/Utils/UnityIl2CppPatchUtil.cs": "d70af4086831cc976eea4805dc8719cc68dbc1c92fe8083e9f391dcc5bbc1dea",
+    "Editor/Utils/UnityVersion.cs": "ed2e7ab754fbdaa16d9ad10d7d478f5f7b170dc01866c652a09e98f9eb441bd2",
+    "Editor/Utils/ZenTSConfWriter.cs": "d7abb7bc63214a400218371f4c612ce9d6e1b3626afa07980fb3c82e3d26a70c",
+    "Editor/3rds/UnityHook/CodePatcher.cs": "711d4ea484511b2c7e357a16c699401cf6a2c9c8960513ade46e49c1c549e05e",
+    "Editor/3rds/UnityHook/HookPool.cs": "876fe9c1ec24b5a53a743c5a23fa202abc44e094df7d5f1faa1aac3e06b08e51",
+    "Editor/3rds/UnityHook/HookUtils.cs": "c16bd5e77db9bb53a7fbc9b0a07915318d21b3ecaa3ae87666578d3fe39eb1f5",
+    "Editor/3rds/UnityHook/HookUtils_OSX.cs": "6c391ea735c4db081d230e9585fbb90c403fba32c0e0c5a7b2b0292e16371c2c",
+    "Editor/3rds/UnityHook/LDasm.cs": "255a48f5c7e6d6aae3415fa3bcede3e8bac6876fe189970bdb71898812fc41a0",
+    "Editor/3rds/UnityHook/MethodHook.cs": "ea5e6155c2a2005f395cecb6c4fe1313c9cf6c4b7efcf415a5c468d479192d8a",
+    "Editor/3rds/UnityHook/Plugins/Utils.cpp": "8581fe469ebb546856033e799fcc36e5f5ea9d365ff03af9c81d43343506d971",
+    "Plugins/WebGL/HostEngine.jslib": "1fc7666443420675cab1dafa62e36ad07de894252d32b7b69c73b379922bc8c2",
+    "ZenTS~/zents-runtime/Il2CppCompatible.h": "23daa6c15c8a6819f94f5f6a7686ec45165dba23e019b05b83d78df32a42c499",
+    "ZenTS~/zents-runtime/ZenTSCommon.h": "5d55068687265b539d87cdb8b13acf4ba5f294e7bde7cf473e7d66e29a958b42",
+    "ZenTS~/zents-runtime/binding/BindingPlan.h": "ecf7b7dd4032a771c0795a9698c6456cb63a9c3cb8d30e6ecc5acec79dee0fb6",
+    "ZenTS~/zents-runtime/bridge/BridgeDefs.h": "266a97c2d4c778346fd63731b8ddb37ae85119e75577da8c6e46d658b593d808",
+    "ZenTS~/zents-runtime/bridge/MethodBridge.cpp": "1b41ecaf2b435e9a9ca20a5c92f5de2f1175fe26e7e2c8be3d146940ebf6f43f",
+    "ZenTS~/zents-runtime/bridge/MethodBridge.h": "4477e42a16f642760a3e3de4b38a9b97ba32ef6e8943cf6744774cbc41889c58",
+    "ZenTS~/zents-runtime/engine/EngineApi.h": "8d10030f8e1a5a320ac9577d1a818a29bac34218e339ade649f51a110a0aa8cd",
+    "ZenTS~/zents-runtime/jvm/HostModuleSource.cpp": "3e03e862651dd71abf4e8047d5e83675765ed58049ec5a3e9fefd8cd7740a3c4",
+    "ZenTS~/zents-runtime/jvm/JsAppDomain.cpp": "fbf529fd494ac820c372f74e510f1b6c09fa9e3470de61ec730e2fe574421d4c",
+    "ZenTS~/zents-runtime/jvm/JsAppDomain.h": "bc3661edf30fba54b06df2c72749ddd2aa31a7a4e29b18c4b22f5423f857f0f3",
+    "ZenTS~/zents-runtime/jvm/JsEnv.cpp": "00f62d9b4e9c9ee1eaefab567320c9dd38a6b44706d6495494a140e9eb394e3e",
+    "ZenTS~/zents-runtime/jvm/JsEnv.h": "20fbafa063159d0a989662b3b4976de6a9e5cc0dd4e3bd05ef0874cbb8aad739",
+    "ZenTS~/zents-runtime/jvm/JsGlobalRefs.cpp": "c1f1dd8998b72ea913f3cede7e600cce0ad0ad4520d96ac96c2c5c3154aef5ec",
+    "ZenTS~/zents-runtime/jvm/JsGlobalRefs.h": "778d7f1972c9b93018846508c909e019ba2a3d00a4e86ed0c0522e1b039d1792",
+    "ZenTS~/zents-runtime/jvm/JsInternalCalls.cpp": "0362de2ec9a89f5d509f339ec0b9aaa1a932925af776148c8ca8fc61591e7658",
+    "ZenTS~/zents-runtime/jvm/JsInternalCalls.h": "a9ac8a862dd46340f5ca9009504cde5291e9bc822fa778d6503585ba4337f05f",
+    "ZenTS~/zents-runtime/jvm/JsLib.cpp": "803b6d2240e711f3eca2e81f9e22a251c6f31d735ca3119e0547c87face470a7",
+    "ZenTS~/zents-runtime/jvm/JsLib.h": "c3c4d5e880f82b613f5cbdc01d547208553bae90db1497cdce7a03f98887e584",
+    "ZenTS~/zents-runtime/jvm/JsLoader.cpp": "8ff8f58f671da6f9b7c39873832fb2024c55210d78d983cdc193b277af43cb67",
+    "ZenTS~/zents-runtime/jvm/JsLoader.h": "5faf985f931c48dd7819ba8c3386c294f5db5c7fe41a10c9690876b51c44bbba",
+    "ZenTS~/zents-runtime/marshal/ArrayMarshal.cpp": "7f5b62ba23d54d3c0892704fa5c6e055f861b3465df06b06d4f8380814c73303",
+    "ZenTS~/zents-runtime/marshal/ArrayMarshal.h": "6427ff0b0294624a278ab59983ca8115e0d856da4a4d7b054d8cb940837b2a28",
+    "ZenTS~/zents-runtime/marshal/BytesMarshal.cpp": "9dbdc11bf56e6aeb5f070fcf14133271115674bf744fed55d06915e3b217009a",
+    "ZenTS~/zents-runtime/marshal/BytesMarshal.h": "52934429f88997bf00c9316809bbea6b9eef8ca7210f9c96dd07de872a7d1335",
+    "ZenTS~/zents-runtime/marshal/DelegateMarshal.cpp": "3d0affefa14077967bee28046bd782c6ff5182ea475ef7f61a9222bbb6ac4b06",
+    "ZenTS~/zents-runtime/marshal/DelegateMarshal.h": "39b22c0dc324f8e364493cf64ef70c532e3a5b86342be41c976a4f0714c706f4",
+    "ZenTS~/zents-runtime/marshal/MarshalAsXmlTable.cpp": "05bd97dfb988f1670d5b6d6f8884a1b9346e911d9c2a7b427a10d071016ae770",
+    "ZenTS~/zents-runtime/marshal/MarshalAsXmlTable.h": "85bde87a0893aaeda34998503cb956b29fc741d88862b951876029a023079eb8",
+    "ZenTS~/zents-runtime/marshal/MarshalDefs.h": "01b217f6ed1fb9757318879e9b530161925cd4b590296c6a1b89f623f6a57fb9",
+    "ZenTS~/zents-runtime/marshal/MarshalMeta.cpp": "93023eb108116bd82f131bc1f68f5f91819e6ef0a863d57d2348f47303efdbed",
+    "ZenTS~/zents-runtime/marshal/MarshalMeta.h": "121663bc4a45a642e930a727eb39c91b938a90386833e236a976843c698a8f87",
+    "ZenTS~/zents-runtime/marshal/MethodOverloadResolver.cpp": "af066345da9e5399dcb07b9daaf5839f047949ba9949c8be127fd1cc5d0cd968",
+    "ZenTS~/zents-runtime/marshal/MethodOverloadResolver.h": "595be2898842e28dc1fc1d08a80fd19e2f7f852c407e315a5c491c61ae99e227",
+    "ZenTS~/zents-runtime/marshal/ObjectMarshal.cpp": "bc0fb11e97310407157cbcc9e865a7a8105e39e305279be894fc1ffeb146e5de",
+    "ZenTS~/zents-runtime/marshal/ObjectMarshal.h": "15b82adc75a1ecc6550f36b1314c79a696194b664a1f8e6777fe97ee6a5a6de4",
+    "ZenTS~/zents-runtime/marshal/ObjectRegistry.cpp": "c59f72fda323b1fbffc76e9a797015a1bc61c0ec91765e1ca6c2275730f0188f",
+    "ZenTS~/zents-runtime/marshal/ObjectRegistry.h": "5fdb9b603de70003b818536daa3dc6c9e9b06b9666035a2eb84658fe38063e0f",
+    "ZenTS~/zents-runtime/marshal/OpaqueValueMarshal.cpp": "da0094e681a0f6058253a1c633e62755792238bcbe3c7a616498fd6e47bba425",
+    "ZenTS~/zents-runtime/marshal/OpaqueValueMarshal.h": "f2bdc3522efe9e81ba9d3aaa70c462196d2b6cd206dd36b5a8728c75d31abd65",
+    "ZenTS~/zents-runtime/marshal/PointerMarshal.cpp": "e53b053f14f3c8f73cc331c2be01cef7fa5ca7a5dc08a40671a0232745235a3e",
+    "ZenTS~/zents-runtime/marshal/PointerMarshal.h": "49c4b16b88f75855f47d7f7e1920222a8569734dd86f4a1e3db1ba3bedc9919f",
+    "ZenTS~/zents-runtime/marshal/PrimitiveMarshal.cpp": "13683907bb9ed2301e71b3689db6021b38d415fc550eb165b797800f1295e53e",
+    "ZenTS~/zents-runtime/marshal/PrimitiveMarshal.h": "dc8531ac4e6f67f08a2be8e50b0a13240f9c00d989396975bd769a463f4ef457",
+    "ZenTS~/zents-runtime/marshal/StructMarshal.cpp": "b1a2a05dbc9c4acf7d09aa8c9c38e772a182e127d9b6e45050cd45dbb6634c0b",
+    "ZenTS~/zents-runtime/marshal/StructMarshal.h": "df3d0397b6ec16191fac921b25659e37f259f41c6f4ea829237b6ef8c6a2a544",
+    "ZenTS~/zents-runtime/marshal/TableMarshal.cpp": "155150e4597696d24bc16a685cb4b019998cdc321de7372266630962ffa67698",
+    "ZenTS~/zents-runtime/marshal/TableMarshal.h": "d5e09d23e4f9a7e4c78cd937701c62a3b00746d9155cdeb507cc7551a44f9d2d",
+    "ZenTS~/zents-runtime/mt/AliasXmlTable.cpp": "b49e3546546f34842d27bd2932bd98aa84b71dd9af706bf5361ae83e7334a832",
+    "ZenTS~/zents-runtime/mt/AliasXmlTable.h": "7756b209f36aaa5ce8d8ceec9d1c4809d61876d322f8aca8ec3d9d5fe860c251",
+    "ZenTS~/zents-runtime/mt/ArrayBinding.cpp": "fb3d6a42a31138053967e83a1df37aff71ea3737533e8ed5bc012e15a06db039",
+    "ZenTS~/zents-runtime/mt/ArrayBinding.h": "8b09b76847394c9219a1f3d8d9e580a984a24e1e880f78e7d1653651024da4da",
+    "ZenTS~/zents-runtime/mt/ExtensionXmlTable.cpp": "1f90725d9cb62f4ea69af27370b54e44f0347f6cedae3bf05cb04a37098c93f5",
+    "ZenTS~/zents-runtime/mt/ExtensionXmlTable.h": "35531eedd6c30d0a0714675668876c797b104edae6e3739056b6f3b8353c9a15",
+    "ZenTS~/zents-runtime/mt/MetaBinding.cpp": "9b0dfad45b01176098b9a0f4e0be3fe648d6aae22dd892997f72480022785297",
+    "ZenTS~/zents-runtime/mt/MetaBinding.h": "2d25d0d5b2639063a5c63a437f54cdf20d1ea78bd4f64888db131910bed9e961",
+    "ZenTS~/zents-runtime/mt/TypeRegistry.cpp": "828815e4f36029649b8c32df0efb44c8fdec1d321da99894b369a923de7f14b0",
+    "ZenTS~/zents-runtime/mt/TypeRegistry.h": "c91964f90a63f4d0c790faf3106e73bcaa9ca30291dca00ef19be0baa0622ace",
+    "ZenTS~/zents-runtime/utils/CsStringHash.h": "777921f1047a5798dd7ef74a0d412b0d5b46fffc35b1ac7b4d0c4b2b44137291",
+    "ZenTS~/zents-runtime/utils/JsException.cpp": "409ae90b8d8212d0726efebbb113b1f82952f81d87975fc560fac05f9fc96270",
+    "ZenTS~/zents-runtime/utils/JsException.h": "f494088e53d4acf289e503140412aaf11a674d1577f7481fc76a4bdf653202a2",
+    "ZenTS~/zents-runtime/utils/MetadataUtil.cpp": "b3f972b68560581c6b62e73bd37e50a29ba24d169dd85f3e3572409b8005be3e",
+    "ZenTS~/zents-runtime/utils/MetadataUtil.h": "8491ea1082a76c885fd63625f91601fb403d14805e1b6910f06a48ce844d8900",
+    "ZenTS~/zents-runtime/utils/XmlBindingUtil.cpp": "39dc3a89ded201895506575b2cf7cf525045d1cabe452a1f59d4062d73dde538",
+    "ZenTS~/zents-runtime/utils/XmlBindingUtil.h": "7c59740e968b5ad52ad2f800c0010000f9bbd5bb038c8d616ac5d5c235166f01",
+    "ZenTS~/zents-runtime/engine/host/HostEngine.cpp": "a171f892d597f97ff557214dbd0ea7c845b8b3e054aab82a36e09dc9bec41fdf",
+    "ZenTS~/zents-runtime/engine/v8/AndroidLibcxxBridge.cpp": "0b63746ef3dc8eae149816b3bddb6da246fbf86591891bd28e5bb555c3c36a9f",
+    "ZenTS~/zents-runtime/engine/v8/V8Engine.cpp": "375300804f0926d4faaf21acc03177661a00ba5f709c6cb5d71c99b88bb5a6c7",
+    "ZenTS~/zents-runtime/engine/v8/V8Libraries.h": "cdac584f4533cf609394b9347de0bd2610aee785c8fd0a8fcaa8cd11f862025d",
+    "ZenTS~/zents-runtime/engine/v8/V8Link.cpp": "458527d58aaf479f90160856129911172f4e950d81e406967effa716dd13e447",
+    "ZenTS~/zents-runtime/engine/v8/V8Mono.cpp": "19dfb8ce560fe48e656fcd56814fce5483fb16a26fc22ed58131e924e719f110",
+    "ZenTS~/v8/build.py": "c2853dc2d9980f1ba120f0c0f3f96afb4677f5e7828c4205d7e42dab3462ef5c",
+    "ZenTS~/v8/build_official.py": "f903d6171a04913a2b49b87a6ac4d9a0c06df3b9fbb28fbf604eaaed77244ab3",
+    "ZenTS~/v8/build_platform.py": "d08ad448dc4b2e1817882deee6b600b53948f0a9dad50687758cdcd81f410d22",
+    "ZenTS~/v8/build_win64.py": "7cc13ad445e7d04087c6f3db3f458515e62641b2a012c407c93d844676cf1955",
+    "ZenTS~/v8/engine-smoke.cpp": "4e66db90047eb0cb236260dcfe8515f66260a4013c8e6e2f6559777c16a1ca64",
+    "ZenTS~/v8/import_platform.py": "cd1933c7683e0ded37857a0e0b082d2256c15431f76eb77cea5671ae03e94a2f",
+    "ZenTS~/v8/p5_linux.py": "6016dca7f706f47322594ffa3eacc2065dd7609bd5a4b09af17626b047f70b6a",
+    "ZenTS~/v8/p5_remote.py": "c243b6a661651933606139d32c92ea5a3d9717ecbe21044169eca12d558b85fe"
+  },
+  "macos_x64_execution": "Rosetta on Apple M1",
+  "macos_node_cli": "TypeScript check exited 0 with PATH=/usr/bin:/bin:/usr/sbin:/sbin",
+  "limitations": [
+    "Remote Unity 2022.3.56f1c1 on macOS 26 can hang in Curl Job shutdown after Domain Reload PASS; CI process terminated after assertions; see p5-macos-editor-quit-sample.txt",
+    "Physical iOS/Android devices not tested",
+    "Intel macOS Editor not installed",
+    "Multi-ABI Android APK and macOS universal SDK not included",
+    "Tuanjie not tested in this environment"
+  ]
+}

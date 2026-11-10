@@ -27,10 +27,10 @@ namespace zents
 class StructMarshal
 {
 public:
-    static void Js2CsStruct(JSContext* ctx, JSValueConst value, void* address, const MarshalMetaInfo* meta);
-    static JSValue Cs2JsStruct(JSContext* ctx, void* address, const MarshalMetaInfo* meta);
+    static void Js2CsStruct(js::Context* ctx, js::ValueConst value, void* address, const MarshalMetaInfo* meta);
+    static js::Value Cs2JsStruct(js::Context* ctx, void* address, const MarshalMetaInfo* meta);
 
-    static void Js2CsNullable(JSContext* ctx, JSValueConst value, void* address, const MarshalMetaInfo* meta);
-    static JSValue Cs2JsNullable(JSContext* ctx, void* address, const MarshalMetaInfo* meta);
+    static void Js2CsNullable(js::Context* ctx, js::ValueConst value, void* address, const MarshalMetaInfo* meta);
+    static js::Value Cs2JsNullable(js::Context* ctx, void* address, const MarshalMetaInfo* meta);
 };
 }

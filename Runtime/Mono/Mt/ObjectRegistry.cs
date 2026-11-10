@@ -34,7 +34,7 @@ namespace ZenTS.Mt
         private static readonly List<Type> ViewTypes = new List<Type> { null };
         private static readonly Queue<int> PendingRelease = new Queue<int>();
         private static readonly Dictionary<object, int> Reverse = new Dictionary<object, int>(ReferenceEqualityComparer.Instance);
-        private static readonly Dictionary<(int id, Type view), JSValue> ViewCache = new Dictionary<(int, Type), JSValue>();
+        private static readonly Dictionary<(int id, Type view), JsValue> ViewCache = new Dictionary<(int, Type), JsValue>();
         private static int _nextId = 1;
 
         public static int Register(object obj) => Register(obj, obj?.GetType());
@@ -118,7 +118,7 @@ namespace ZenTS.Mt
             }
         }
 
-        public static bool TryGetObject(IntPtr ctx, JSValue jsValue, out object obj)
+        public static bool TryGetObject(IntPtr ctx, JsValue jsValue, out object obj)
         {
             obj = null;
             if (JsValueUtil.GetNormTag(jsValue) != JsValueUtil.TagObject)
@@ -126,14 +126,14 @@ namespace ZenTS.Mt
                 return false;
             }
 
-            JSValue idVal = QuickJsDll.JS_GetPropertyStr(ctx, jsValue, "__zents_id");
+            JsValue idVal = EngineApi.GetPropertyStr(ctx, jsValue, "__zents_id");
             if (JsValueUtil.GetNormTag(idVal) != JsValueUtil.TagInt)
             {
                 JsValueUtil.Free(ctx, idVal);
                 return false;
             }
 
-            int id = unchecked((int)idVal.UInt64);
+            int id = unchecked((int)JsValueUtil.GetUInt64(idVal));
             JsValueUtil.Free(ctx, idVal);
             lock (Slots)
             {
@@ -147,7 +147,7 @@ namespace ZenTS.Mt
             }
         }
 
-        public static bool TryGetViewType(IntPtr ctx, JSValue jsValue, out Type viewType)
+        public static bool TryGetViewType(IntPtr ctx, JsValue jsValue, out Type viewType)
         {
             viewType = null;
             if (!TryGetObject(ctx, jsValue, out _) )
@@ -155,8 +155,8 @@ namespace ZenTS.Mt
                 return false;
             }
 
-            JSValue idVal = QuickJsDll.JS_GetPropertyStr(ctx, jsValue, "__zents_id");
-            int id = unchecked((int)idVal.UInt64);
+            JsValue idVal = EngineApi.GetPropertyStr(ctx, jsValue, "__zents_id");
+            int id = unchecked((int)JsValueUtil.GetUInt64(idVal));
             JsValueUtil.Free(ctx, idVal);
             lock (Slots)
             {
@@ -171,21 +171,21 @@ namespace ZenTS.Mt
         }
 
         /// <summary>Replace the CLR object held by an existing ByObj handle (byref writeback).</summary>
-        public static bool TryReplaceObject(IntPtr ctx, JSValue jsValue, object newValue)
+        public static bool TryReplaceObject(IntPtr ctx, JsValue jsValue, object newValue)
         {
             if (newValue == null || JsValueUtil.GetNormTag(jsValue) != JsValueUtil.TagObject)
             {
                 return false;
             }
 
-            JSValue idVal = QuickJsDll.JS_GetPropertyStr(ctx, jsValue, "__zents_id");
+            JsValue idVal = EngineApi.GetPropertyStr(ctx, jsValue, "__zents_id");
             if (JsValueUtil.GetNormTag(idVal) != JsValueUtil.TagInt)
             {
                 JsValueUtil.Free(ctx, idVal);
                 return false;
             }
 
-            int id = unchecked((int)idVal.UInt64);
+            int id = unchecked((int)JsValueUtil.GetUInt64(idVal));
             JsValueUtil.Free(ctx, idVal);
             lock (Slots)
             {
@@ -211,29 +211,29 @@ namespace ZenTS.Mt
             }
         }
 
-        public static JSValue CreateJsHandle(IntPtr ctx, int id) => CreateJsHandle(ctx, id, default, null);
+        public static JsValue CreateJsHandle(IntPtr ctx, int id) => CreateJsHandle(ctx, id, default, null);
 
-        public static JSValue CreateJsHandle(IntPtr ctx, int id, JSValue proto) =>
+        public static JsValue CreateJsHandle(IntPtr ctx, int id, JsValue proto) =>
             CreateJsHandle(ctx, id, proto, null);
 
-        public static JSValue CreateJsHandle(IntPtr ctx, int id, JSValue proto, string udKind)
+        public static JsValue CreateJsHandle(IntPtr ctx, int id, JsValue proto, string udKind)
         {
-            JSValue obj = JsValueUtil.GetNormTag(proto) == JsValueUtil.TagObject
-                ? QuickJsDll.JS_NewObjectProto(ctx, proto)
-                : QuickJsDll.JS_NewObject(ctx);
-            QuickJsDll.JS_SetPropertyStr(ctx, obj, "__zents_id", JsValueUtil.NewInt32(id));
+            JsValue obj = JsValueUtil.GetNormTag(proto) == JsValueUtil.TagObject
+                ? EngineApi.NewObjectProto(ctx, proto)
+                : EngineApi.NewObject(ctx);
+            EngineApi.SetPropertyStr(ctx, obj, "__zents_id", JsValueUtil.NewInt32(id));
             if (!string.IsNullOrEmpty(udKind))
             {
-                QuickJsDll.JS_SetPropertyStr(ctx, obj, "__zents_ud_kind", QuickJsDll.NewString(ctx, udKind));
+                EngineApi.SetPropertyStr(ctx, obj, "__zents_ud_kind", EngineApi.NewString(ctx, udKind));
             }
 
             return obj;
         }
 
-        public static JSValue PushObject(IntPtr ctx, object obj, Type viewType, JSValue instanceProto) =>
+        public static JsValue PushObject(IntPtr ctx, object obj, Type viewType, JsValue instanceProto) =>
             PushObject(ctx, obj, viewType, instanceProto, udKind: "byobj");
 
-        public static JSValue PushObject(IntPtr ctx, object obj, Type viewType, JSValue instanceProto, string udKind)
+        public static JsValue PushObject(IntPtr ctx, object obj, Type viewType, JsValue instanceProto, string udKind)
         {
             if (obj == null)
             {

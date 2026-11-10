@@ -29,9 +29,8 @@ namespace ZenTS.Utils
     public sealed class InstallFingerprintData
     {
         public string unityVersion;
-        public string quickjsVersionId;
+        public string engineVersionId;
         public string libil2cppPatchKey;
-        public string quickjsPatchKey;
         public string packageContentStamp;
         public string defines;
     }

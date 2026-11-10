@@ -42,7 +42,7 @@ namespace ZenTS.CppCodeGen
             try
             {
                 // Load + validate against Editor-loaded assemblies (name resolve; not final AOT tokens).
-                JsMarshalAsXmlRegistry.Load(Settings.Instance.marshalAsXmlPaths, projectRoot);
+                JsMarshalAsXmlRegistry.Load(Settings.Instance.EffectiveMarshalAsXmlPaths, projectRoot);
                 JsMarshalAsXmlRegistry.ValidateAllLoadedAssemblies();
                 rules = new List<JsMarshalAsXmlRule>(JsMarshalAsXmlRegistry.Rules);
             }

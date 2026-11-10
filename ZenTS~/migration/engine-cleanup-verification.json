@@ -1,0 +1,31 @@
+{
+  "status": "passed",
+  "active_package_reference_matches": [],
+  "retired_engine_filename_matches": [],
+  "historical_baseline_records_preserved": [
+    "P0-BASELINE.md",
+    "P1-ENGINE-BOUNDARY.md",
+    "p0-baseline.json",
+    "p0-rules.json",
+    "p0-spec-sections.json",
+    "p0-test-inventory.json",
+    "p1-source-hashes.json",
+    "verification.json"
+  ],
+  "editor": {
+    "smoke": "8/8",
+    "js_suites": "55/55",
+    "typescript_demos": "3/3",
+    "domain_reload": "1 -> 0 -> 1"
+  },
+  "win64": {
+    "smoke": "10/10",
+    "js_suites": "55/55",
+    "typescript_demos": "3/3",
+    "incremental_msbuild": "passed"
+  },
+  "native_v8_smoke": "passed",
+  "install": "passed",
+  "unsupported_platforms": "explicit error until matching V8 SDK or complete HostJs backend is supplied",
+  "p2_report_sha256": "ca1bf029289600263cc678533dc2b08d2a6fd8753fce0fe068fc2eef6d716280"
+}

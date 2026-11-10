@@ -30,6 +30,8 @@ namespace ZenTS
         OpaqueValue,
         UnpackedValues,
         Table,
+        ActualTypeUserData,
+        BigInt,
     }
 
     [AttributeUsage(

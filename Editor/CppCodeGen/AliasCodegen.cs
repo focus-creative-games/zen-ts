@@ -41,7 +41,7 @@ namespace ZenTS.CppCodeGen
             List<JsAliasXmlRule> rules;
             try
             {
-                JsAliasXmlRegistry.Load(Settings.Instance.jsAliasXmlPaths, projectRoot);
+                JsAliasXmlRegistry.Load(Settings.Instance.EffectiveAliasXmlPaths, projectRoot);
                 JsAliasXmlRegistry.ValidateAllLoadedAssemblies();
                 rules = new List<JsAliasXmlRule>(JsAliasXmlRegistry.Rules);
             }

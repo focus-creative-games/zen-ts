@@ -1,0 +1,21 @@
+# Native build outputs (build locally or download matching CI artifacts).
+*.a
+*.lib
+*.dll
+*.dylib
+*.so
+*.so.*
+*.exe
+*.o
+*.obj
+*.exp
+*.pdb
+*.ilk
+*.pch
+*.dSYM/
+
+# Exported V8 SDKs: generated headers, libraries, licenses and manifests.
+/ZenTS~/zents-runtime/engine/v8/sdk/
+/ZenTS~/zents-runtime/engine/v8/sdks/
+
+# Keep source/version locks, build scripts, and Unity .meta importer settings.

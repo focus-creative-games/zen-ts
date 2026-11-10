@@ -21,64 +21,35 @@
 #pragma once
 
 #include "../ZenTSCommon.h"
+#include "../binding/BindingPlan.h"
 
 namespace zents
 {
 struct MarshalMetaInfo;
 
-typedef void (*FnMarshalJs2Cs)(JSContext* ctx, JSValueConst value, void* address, const MarshalMetaInfo* meta);
-typedef JSValue (*FnMarshalCs2Js)(JSContext* ctx, void* address, const MarshalMetaInfo* meta);
+typedef void (*FnMarshalJs2Cs)(js::Context* ctx, js::ValueConst value, void* address, const MarshalMetaInfo* meta);
+typedef js::Value (*FnMarshalCs2Js)(js::Context* ctx, void* address, const MarshalMetaInfo* meta);
 
-/* JsMarshalType special forms used by Table / UnpackedValues. */
-enum class MarshalAsKind : uint8_t
-{
-    None = 0,
-    UnpackedValues = 4,
-    Table = 5,
-};
 
-struct MarshalMetaInfo
+struct MarshalMetaInfo : MarshalPlan
 {
     FnMarshalJs2Cs js2csWriter;
     FnMarshalCs2Js cs2jsWriter;
-    const Il2CppType* type;
-    Il2CppClass* typeKlass;
-    int32_t size;
-    bool passByValue; // true → params[i] is the pointer value itself (ref types)
-    int32_t jsArgSlots; // JS argv slots consumed (UnpackedValues = Members.Length)
-    MarshalAsKind marshalAsKind;
 };
 
 struct MethodMarshalCtx;
 
-typedef JSValue (*FnJs2CsInvoker)(
-    JSContext* ctx,
+typedef js::Value (*FnJs2CsInvoker)(
+    js::Context* ctx,
     void* target,
     int argc,
-    JSValueConst* argv,
+    js::ValueConst* argv,
     const MethodInfo* method,
     const MethodMarshalCtx* mctx);
 
-/** Trailing C# default params materialized once at bind (no metadata blob parse per call). */
-struct MethodDefaultArgs
-{
-    uint8_t firstDefaultParamIndex;
-    uint8_t defaultParamCount;
-    void** defaultValueSlots;          /* [defaultParamCount] valuetype native buffers */
-    Il2CppObject** defaultObjectSlots; /* [defaultParamCount]; nullptr if no reference defaults */
-};
 
-struct MethodMarshalCtx
+struct MethodMarshalCtx : MethodPlan<MarshalMetaInfo>
 {
-    const MethodInfo* method;
     FnJs2CsInvoker js2CsInvoker;
-    const MarshalMetaInfo** paramsMeta;
-    const MarshalMetaInfo* retMeta;
-    const MethodDefaultArgs* defaults; /* nullptr when method has no optional defaults */
-    int32_t arity;    /* max JS argv slots */
-    int32_t minArity; /* required JS argv slots (optional trailing omitted) */
-    bool sealed;
-    bool isExtension;
-    bool hasParamsArray; /* trailing params T[] — single JS slot, may be omitted */
 };
 }

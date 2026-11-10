@@ -33,8 +33,8 @@ namespace zents
 {
 namespace
 {
-static JSClassID s_objectClassId = 0;
-static JSRuntime* s_registeredRuntime = nullptr;
+static js::ClassID s_objectClassId = 0;
+static js::Runtime* s_registeredRuntime = nullptr;
 
 static Il2CppObject** s_objects = nullptr;
 static TypeBinding** s_bindings = nullptr;
@@ -97,23 +97,23 @@ static void FreeSlot(uint32_t idx)
     s_free.push_back(idx);
 }
 
-static void ObjectFinalizer(JSRuntime* /*rt*/, JSValue val)
+static void ObjectFinalizer(js::Runtime* /*rt*/, js::Value val)
 {
-    void* opaque = JS_GetOpaque(val, s_objectClassId);
+    void* opaque = js::GetOpaque(val, s_objectClassId);
     if (opaque == nullptr)
         return;
     FreeSlot((uint32_t)(uintptr_t)opaque);
 }
 
 /* Works for raw ZentsObject and Proxy-wrapped instances (Mono-aligned __zents_id). */
-static bool TryGetSlot(JSContext* ctx, JSValueConst value, uint32_t* outSlot)
+static bool TryGetSlot(js::Context* ctx, js::ValueConst value, uint32_t* outSlot)
 {
-    if (ctx == nullptr || outSlot == nullptr || !JS_IsObject(value))
+    if (ctx == nullptr || outSlot == nullptr || !js::IsObject(value))
         return false;
 
-    if (s_registeredRuntime != nullptr && JS_GetClassID(value) == s_objectClassId)
+    if (s_registeredRuntime != nullptr && js::GetClassID(value) == s_objectClassId)
     {
-        void* opaque = JS_GetOpaque(value, s_objectClassId);
+        void* opaque = js::GetOpaque(value, s_objectClassId);
         if (opaque != nullptr)
         {
             *outSlot = (uint32_t)(uintptr_t)opaque;
@@ -121,12 +121,12 @@ static bool TryGetSlot(JSContext* ctx, JSValueConst value, uint32_t* outSlot)
         }
     }
 
-    JSValue idVal = JS_GetPropertyStr(ctx, value, "__zents_id");
-    if (JS_IsException(idVal))
+    js::Value idVal = js::GetPropertyStr(ctx, value, "__zents_id");
+    if (js::IsException(idVal))
         return false;
     int32_t id = 0;
-    bool ok = JS_IsNumber(idVal) && JS_ToInt32(ctx, &id, idVal) == 0 && id >= 0;
-    JS_FreeValue(ctx, idVal);
+    bool ok = js::IsNumber(idVal) && js::ToInt32(ctx, &id, idVal) == 0 && id >= 0;
+    js::FreeValue(ctx, idVal);
     if (!ok)
         return false;
     *outSlot = (uint32_t)id;
@@ -134,18 +134,18 @@ static bool TryGetSlot(JSContext* ctx, JSValueConst value, uint32_t* outSlot)
 }
 } // namespace
 
-void ObjectRegistry::Initialize(JSRuntime* rt)
+void ObjectRegistry::Initialize(js::Runtime* rt)
 {
     if (rt == nullptr)
         return;
-    /* JS_NewClass is per-runtime; reuse ClassID across domains. */
+    /* js::NewClass is per-runtime; reuse ClassID across domains. */
     if (s_registeredRuntime == rt)
         return;
-    JS_NewClassID(&s_objectClassId);
-    JSClassDef def = {};
+    js::NewClassID(&s_objectClassId);
+    js::ClassDef def = {};
     def.class_name = "ZentsObject";
     def.finalizer = ObjectFinalizer;
-    JS_NewClass(rt, s_objectClassId, &def);
+    js::NewClass(rt, s_objectClassId, &def);
     s_registeredRuntime = rt;
 }
 
@@ -167,72 +167,72 @@ void ObjectRegistry::Reset()
 
 namespace
 {
-JSValue ResolveByObjProto(TypeBinding* binding)
+js::Value ResolveByObjProto(TypeBinding* binding)
 {
     if (binding == nullptr)
-        return JS_UNDEFINED;
-    if (!JS_IsUndefined(binding->byobjInstanceProto) && JS_IsObject(binding->byobjInstanceProto))
+        return js::Undefined();
+    if (!js::IsUndefined(binding->byobjInstanceProto) && js::IsObject(binding->byobjInstanceProto))
         return binding->byobjInstanceProto;
     return binding->instanceProto;
 }
 
-JSValue ResolveByValProto(TypeBinding* binding)
+js::Value ResolveByValProto(TypeBinding* binding)
 {
     if (binding == nullptr)
-        return JS_UNDEFINED;
-    if (!JS_IsUndefined(binding->byvalInstanceProto) && JS_IsObject(binding->byvalInstanceProto))
+        return js::Undefined();
+    if (!js::IsUndefined(binding->byvalInstanceProto) && js::IsObject(binding->byvalInstanceProto))
         return binding->byvalInstanceProto;
     return ResolveByObjProto(binding);
 }
 
-JSValue PushWithProto(
-    JSContext* ctx, Il2CppObject* obj, TypeBinding* binding, JSValueConst proto, const char* udKind)
+js::Value PushWithProto(
+    js::Context* ctx, Il2CppObject* obj, TypeBinding* binding, js::ValueConst proto, const char* udKind)
 {
     if (obj == nullptr || binding == nullptr)
         JsException::Throw("zents: ObjectRegistry::Push null");
 
-    ObjectRegistry::Initialize(JS_GetRuntime(ctx));
+    ObjectRegistry::Initialize(js::GetRuntime(ctx));
     uint32_t slot = AllocSlot(obj, binding);
-    JSValue js = JS_NewObjectClass(ctx, s_objectClassId);
-    JS_SetOpaque(js, (void*)(uintptr_t)slot);
-    if (!JS_IsUndefined(proto) && JS_IsObject(proto))
+    js::Value js = js::NewObjectClass(ctx, s_objectClassId);
+    js::SetOpaque(js, (void*)(uintptr_t)slot);
+    if (!js::IsUndefined(proto) && js::IsObject(proto))
     {
-        if (JS_SetPrototype(ctx, js, proto) < 0)
+        if (js::SetPrototype(ctx, js, proto) < 0)
             JsException::Throw("zents: failed to set instance prototype");
     }
     /* Members live on instanceProto — do not AttachInstanceMembers per Push. */
-    JS_SetPropertyStr(ctx, js, "__zents_id", JS_NewInt32(ctx, (int32_t)slot));
+    js::SetPropertyStr(ctx, js, "__zents_id", js::NewInt32(ctx, (int32_t)slot));
     if (udKind != nullptr)
-        JS_SetPropertyStr(ctx, js, "__zents_ud_kind", JS_NewString(ctx, udKind));
+        js::SetPropertyStr(ctx, js, "__zents_ud_kind", js::NewString(ctx, udKind));
     return js;
 }
 } // namespace
 
-JSValue ObjectRegistry::Push(JSContext* ctx, Il2CppObject* obj, TypeBinding* binding)
+js::Value ObjectRegistry::Push(js::Context* ctx, Il2CppObject* obj, TypeBinding* binding)
 {
     if (obj == nullptr)
-        return JS_NULL;
+        return js::Null();
 
-    JSValue js = PushUnwrapped(ctx, obj, binding);
-    if (JS_IsException(js))
+    js::Value js = PushUnwrapped(ctx, obj, binding);
+    if (js::IsException(js))
         return js;
     return MetaBinding::WrapStrictMiss(ctx, js);
 }
 
-JSValue ObjectRegistry::PushUnwrapped(JSContext* ctx, Il2CppObject* obj, TypeBinding* binding)
+js::Value ObjectRegistry::PushUnwrapped(js::Context* ctx, Il2CppObject* obj, TypeBinding* binding)
 {
     return PushWithProto(ctx, obj, binding, ResolveByObjProto(binding), "byobj");
 }
 
-JSValue ObjectRegistry::PushByVal(JSContext* ctx, Il2CppObject* obj, TypeBinding* binding)
+js::Value ObjectRegistry::PushByVal(js::Context* ctx, Il2CppObject* obj, TypeBinding* binding)
 {
-    JSValue js = PushWithProto(ctx, obj, binding, ResolveByValProto(binding), "byval");
-    if (JS_IsException(js))
+    js::Value js = PushWithProto(ctx, obj, binding, ResolveByValProto(binding), "byval");
+    if (js::IsException(js))
         return js;
     return MetaBinding::WrapStrictMiss(ctx, js);
 }
 
-Il2CppObject* ObjectRegistry::Get(JSContext* ctx, JSValueConst value)
+Il2CppObject* ObjectRegistry::Get(js::Context* ctx, js::ValueConst value)
 {
     uint32_t slot = 0;
     if (!TryGetSlot(ctx, value, &slot))
@@ -242,7 +242,7 @@ Il2CppObject* ObjectRegistry::Get(JSContext* ctx, JSValueConst value)
     return s_objects[slot];
 }
 
-TypeBinding* ObjectRegistry::GetBinding(JSContext* ctx, JSValueConst value)
+TypeBinding* ObjectRegistry::GetBinding(js::Context* ctx, js::ValueConst value)
 {
     uint32_t slot = 0;
     if (!TryGetSlot(ctx, value, &slot))
@@ -252,28 +252,28 @@ TypeBinding* ObjectRegistry::GetBinding(JSContext* ctx, JSValueConst value)
     return s_bindings[slot];
 }
 
-bool ObjectRegistry::IsZentsObject(JSContext* ctx, JSValueConst value)
+bool ObjectRegistry::IsZentsObject(js::Context* ctx, js::ValueConst value)
 {
     uint32_t slot = 0;
     return TryGetSlot(ctx, value, &slot);
 }
 
-bool ObjectRegistry::IsByVal(JSContext* ctx, JSValueConst value)
+bool ObjectRegistry::IsByVal(js::Context* ctx, js::ValueConst value)
 {
     if (!IsZentsObject(ctx, value))
         return false;
-    JSValue kind = JS_GetPropertyStr(ctx, value, "__zents_ud_kind");
-    if (JS_IsException(kind))
+    js::Value kind = js::GetPropertyStr(ctx, value, "__zents_ud_kind");
+    if (js::IsException(kind))
         return false;
     bool ok = false;
-    if (JS_IsString(kind))
+    if (js::IsString(kind))
     {
-        const char* s = JS_ToCString(ctx, kind);
+        const char* s = js::ToCString(ctx, kind);
         ok = s != nullptr && std::strcmp(s, "byval") == 0;
         if (s != nullptr)
-            JS_FreeCString(ctx, s);
+            js::FreeCString(ctx, s);
     }
-    JS_FreeValue(ctx, kind);
+    js::FreeValue(ctx, kind);
     return ok;
 }
 }

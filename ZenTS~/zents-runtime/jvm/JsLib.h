@@ -27,7 +27,7 @@ namespace zents
 class JsLib
 {
 public:
-    static void RegisterGlobals(JSContext* ctx);
-    static void Reset(JSContext* ctx);
+    static void RegisterGlobals(js::Context* ctx);
+    static void Reset(js::Context* ctx);
 };
 }

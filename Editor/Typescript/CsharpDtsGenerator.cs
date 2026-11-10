@@ -243,9 +243,9 @@ namespace ZenTS.Editor.Typescript
                     continue;
                 }
 
-                long raw = Convert.ToInt64(Enum.Parse(t, name), CultureInfo.InvariantCulture);
+                object raw = Convert.ChangeType(Enum.Parse(t,name),Enum.GetUnderlyingType(t),CultureInfo.InvariantCulture);
                 sb.Append("    readonly ").Append(name).Append(": ")
-                    .Append(raw.ToString(CultureInfo.InvariantCulture)).AppendLine(";");
+                    .Append(Convert.ToString(raw,CultureInfo.InvariantCulture)).AppendLine(";");
             }
 
             sb.AppendLine("  };");
@@ -286,7 +286,7 @@ namespace ZenTS.Editor.Typescript
                         continue;
                     }
 
-                    string ts = MapType(field.FieldType, moduleSpecifier, known);
+                    string ts = MapSlotType(field.FieldType, JsMarshalAsXmlRegistry.ResolveFieldMarshal(field), moduleSpecifier, known);
                     string mod = field.IsStatic ? "static " : "";
                     string ro = field.IsInitOnly || field.IsLiteral ? "readonly " : "";
                     sb.Append("    ").Append(mod).Append(ro).Append(Ident(field.Name)).Append(": ").Append(ts)
@@ -303,7 +303,7 @@ namespace ZenTS.Editor.Typescript
                             sb.Append("    ").Append(prop.GetGetMethod()?.IsStatic == true ? "static " : "")
                                 .Append("get_Item(");
                             AppendParams(sb, idx, moduleSpecifier, known);
-                            sb.Append("): ").Append(MapType(prop.PropertyType, moduleSpecifier, known))
+                            sb.Append("): ").Append(MapSlotType(prop.PropertyType, JsMarshalAsXmlRegistry.ResolvePropertyMarshal(prop), moduleSpecifier, known))
                                 .AppendLine(";");
                         }
 
@@ -317,7 +317,7 @@ namespace ZenTS.Editor.Typescript
                                 sb.Append(", ");
                             }
 
-                            sb.Append("value: ").Append(MapType(prop.PropertyType, moduleSpecifier, known))
+                            sb.Append("value: ").Append(MapSlotType(prop.PropertyType, JsMarshalAsXmlRegistry.ResolvePropertyMarshal(prop), moduleSpecifier, known))
                                 .AppendLine("): void;");
                         }
 
@@ -333,17 +333,17 @@ namespace ZenTS.Editor.Typescript
                     if (prop.CanRead && prop.CanWrite)
                     {
                         sb.Append("    ").Append(mod).Append(Ident(prop.Name)).Append(": ")
-                            .Append(MapType(prop.PropertyType, moduleSpecifier, known)).AppendLine(";");
+                            .Append(MapSlotType(prop.PropertyType, JsMarshalAsXmlRegistry.ResolvePropertyMarshal(prop), moduleSpecifier, known)).AppendLine(";");
                     }
                     else if (prop.CanRead)
                     {
                         sb.Append("    ").Append(mod).Append("readonly ").Append(Ident(prop.Name)).Append(": ")
-                            .Append(MapType(prop.PropertyType, moduleSpecifier, known)).AppendLine(";");
+                            .Append(MapSlotType(prop.PropertyType, JsMarshalAsXmlRegistry.ResolvePropertyMarshal(prop), moduleSpecifier, known)).AppendLine(";");
                     }
                     else if (prop.CanWrite)
                     {
                         sb.Append("    ").Append(mod).Append("set ").Append(Ident(prop.Name)).Append("(v: ")
-                            .Append(MapType(prop.PropertyType, moduleSpecifier, known)).AppendLine(");");
+                            .Append(MapSlotType(prop.PropertyType, JsMarshalAsXmlRegistry.ResolvePropertyMarshal(prop), moduleSpecifier, known)).AppendLine(");");
                     }
                 }
 
@@ -394,7 +394,7 @@ namespace ZenTS.Editor.Typescript
                         RenderMethod(sb, method, kv.Key, moduleSpecifier, known, skipFirst: false);
                     }
 
-                    if (kv.Value.Count >= 2)
+                    if (kv.Value.Count >= 1)
                     {
                         foreach (MethodInfo method in kv.Value)
                         {
@@ -419,6 +419,7 @@ namespace ZenTS.Editor.Typescript
                 }
 
                 RenderMethod(sb, ext, key, moduleSpecifier, known, skipFirst: true);
+                RenderMethod(sb, ext, FormatSignatureKey(ext), moduleSpecifier, known, skipFirst: true, quotedName: true);
             }
         }
 
@@ -489,9 +490,15 @@ namespace ZenTS.Editor.Typescript
                 sb.Append(jsName).Append("(");
             }
 
+            if(method.IsGenericMethodDefinition)
+            {
+                var types=method.GetGenericArguments();
+                for(int i=0;i<types.Length;++i){if(i>0)sb.Append(", ");sb.Append("type").Append(i).Append(": ZenTS.SystemType");}
+                if(slice.Any(p=>!p.IsOut))sb.Append(", ");
+            }
             AppendParams(sb, slice, moduleSpecifier, known);
             sb.Append("): ")
-                .Append(method.ReturnType == typeof(void) ? "void" : MapType(method.ReturnType, moduleSpecifier, known))
+                .Append(MapMethodReturn(method, moduleSpecifier, known))
                 .AppendLine(";");
         }
 
@@ -501,38 +508,81 @@ namespace ZenTS.Editor.Typescript
             string moduleSpecifier,
             HashSet<Type> known)
         {
-            for (int i = 0; i < ps.Length; i++)
+            var parts=new List<string>();
+            for(int i=0;i<ps.Length;++i)
             {
-                if (i > 0)
+                ParameterInfo p=ps[i];if(p.ParameterType.IsByRef&&p.IsOut&&!p.IsIn)continue;
+                string name=CsharpVirtualModule.IsJsIdentifier(p.Name)?p.Name:"p"+i;
+                Type type=p.ParameterType.IsByRef?p.ParameterType.GetElementType():p.ParameterType;
+                var mas=JsMarshalAsXmlRegistry.ResolveParameterMarshal(p);
+                if(p.GetCustomAttribute<ParamArrayAttribute>()!=null)
                 {
-                    sb.Append(", ");
+                    string element=MapType(type.GetElementType(),moduleSpecifier,known);
+                    parts.Add("..."+name+": "+element+"[] | [ZenTS.SzArray<"+element+">]");continue;
                 }
-
-                ParameterInfo p = ps[i];
-                string name = CsharpVirtualModule.IsJsIdentifier(p.Name) ? p.Name : ("p" + i);
-                bool isParams = p.GetCustomAttribute<ParamArrayAttribute>() != null;
-                if (isParams)
+                if(mas?.JsMarshalType==JsMarshalType.UnpackedValues)
                 {
-                    sb.Append("...");
+                    foreach(string member in mas.Members)parts.Add(name+"_"+member+": "+MapMemberSlot(type,member,moduleSpecifier,known));
+                    continue;
                 }
-                else if (p.IsOptional)
-                {
-                    name += "?";
-                }
-
-                sb.Append(name).Append(": ").Append(MapParamType(p, moduleSpecifier, known));
+                string mapped=MapSlotType(type,mas,moduleSpecifier,known);
+                if(p.ParameterType.IsByRef)mapped+=" | ZenTS.OpaqueHandle<"+mapped+">";
+                parts.Add(name+(p.IsOptional?"?":"")+": "+mapped);
             }
+            sb.Append(string.Join(", ",parts));
+        }
+        private static void AppendCallbackParams(StringBuilder sb,ParameterInfo[] parameters,string moduleSpecifier,HashSet<Type> known)
+        {
+            var parts=new List<string>();
+            for(int i=0;i<parameters.Length;++i)
+            {
+                var p=parameters[i];Type type=p.ParameterType.IsByRef?p.ParameterType.GetElementType():p.ParameterType;
+                var mas=JsMarshalAsXmlRegistry.ResolveParameterMarshal(p);string name=CsharpVirtualModule.IsJsIdentifier(p.Name)?p.Name:"p"+i;
+                string mapped=MapSlotType(type,mas,moduleSpecifier,known);
+                if(p.ParameterType.IsByRef)parts.Add(name+": ZenTS.OpaqueHandle<"+mapped+">");
+                else if(mas?.JsMarshalType==JsMarshalType.UnpackedValues)foreach(string member in mas.Members)parts.Add(name+"_"+member+": "+MapMemberSlot(type,member,moduleSpecifier,known));
+                else parts.Add(name+": "+mapped);
+            }
+            sb.Append(string.Join(", ",parts));
         }
 
-        private static string MapParamType(ParameterInfo p, string moduleSpecifier, HashSet<Type> known)
+        private static string MapParamType(ParameterInfo p,string moduleSpecifier,HashSet<Type> known)
         {
-            Type t = p.ParameterType;
-            if (t.IsByRef)
+            Type t=p.ParameterType.IsByRef?p.ParameterType.GetElementType():p.ParameterType;
+            return MapSlotType(t,JsMarshalAsXmlRegistry.ResolveParameterMarshal(p),moduleSpecifier,known);
+        }
+        private static string MapMemberSlot(Type type,string name,string moduleSpecifier,HashSet<Type> known)
+        {
+            if(name.EndsWith("?",StringComparison.Ordinal))name=name.Substring(0,name.Length-1);
+            var field=type.GetField(name);var property=type.GetProperty(name);
+            var mas=field!=null?JsMarshalAsXmlRegistry.ResolveFieldMarshal(field):property!=null?JsMarshalAsXmlRegistry.ResolvePropertyMarshal(property):null;
+            return MapSlotType(field?.FieldType??property?.PropertyType??typeof(object),mas,moduleSpecifier,known);
+        }
+        private static Type MemberType(Type type,string name)
+        {
+            if(name.EndsWith("?",StringComparison.Ordinal))name=name.Substring(0,name.Length-1);
+            return type.GetField(name)?.FieldType??type.GetProperty(name)?.PropertyType??typeof(object);
+        }
+        private static string MapSlotType(Type type,JsMarshalAsAttribute mas,string moduleSpecifier,HashSet<Type> known)
+        {
+            if(type.IsByRef)type=type.GetElementType();
+            switch(mas?.JsMarshalType)
             {
-                return "ZenTS.OpaqueHandle<" + MapType(t.GetElementType(), moduleSpecifier, known) + ">";
+                case JsMarshalType.BigInt:return "bigint";
+                case JsMarshalType.Bytes:return "Uint8Array | null";
+                case JsMarshalType.Object:if(type==typeof(string))return "ZenTS.ClrObject";break;
+                case JsMarshalType.UnpackedValues:return "["+string.Join(", ",mas.Members.Select(m=>MapMemberSlot(type,m,moduleSpecifier,known)))+"]";
+                case JsMarshalType.Table:return "{ "+string.Join("; ",mas.Members.Select(m=>m+": "+MapMemberSlot(type,m,moduleSpecifier,known)))+" }";
             }
-
-            return MapType(t, moduleSpecifier, known);
+            return MapType(type,moduleSpecifier,known);
+        }
+        private static string MapMethodReturn(MethodInfo method,string moduleSpecifier,HashSet<Type> known)
+        {
+            var values=new List<string>();
+            if(method.ReturnType!=typeof(void))values.Add(MapSlotType(method.ReturnType,JsMarshalAsXmlRegistry.ResolveReturnMarshal(method),moduleSpecifier,known));
+            var outs=method.GetParameters().Where(p=>p.ParameterType.IsByRef&&p.IsOut&&!p.IsIn).ToArray();
+            foreach(var p in outs)values.Add(MapSlotType(p.ParameterType.GetElementType(),JsMarshalAsXmlRegistry.ResolveParameterMarshal(p),moduleSpecifier,known));
+            return outs.Length>0?"["+string.Join(", ",values)+"]":values.Count==0?"void":values[0];
         }
 
         private static string MapType(Type t, string moduleSpecifier, HashSet<Type> known)
@@ -586,11 +636,11 @@ namespace ZenTS.Editor.Typescript
                 {
                     var sb = new StringBuilder();
                     sb.Append("(");
-                    AppendParams(sb, invoke.GetParameters(), moduleSpecifier, known);
+                    AppendCallbackParams(sb, invoke.GetParameters(), moduleSpecifier, known);
                     sb.Append(") => ");
                     sb.Append(invoke.ReturnType == typeof(void)
                         ? "void"
-                        : MapType(invoke.ReturnType, moduleSpecifier, known));
+                        : MapSlotType(invoke.ReturnType, JsMarshalAsXmlRegistry.ResolveReturnMarshal(invoke), moduleSpecifier, known));
                     return sb.ToString();
                 }
             }
@@ -631,12 +681,14 @@ namespace ZenTS.Editor.Typescript
                 return alias.Alias;
             }
 
+            if(member is MethodInfo method && JsAliasXmlRegistry.TryGetAlias(method,out string xml))return xml;
             return member.Name;
         }
 
         private static string FormatSignatureKey(MethodInfo method)
         {
             ParameterInfo[] ps = method.GetParameters();
+            if(method.IsDefined(typeof(System.Runtime.CompilerServices.ExtensionAttribute),false))ps=ps.Skip(1).ToArray();
             var sb = new StringBuilder(method.Name);
             sb.Append('(');
             for (int i = 0; i < ps.Length; i++)

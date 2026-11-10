@@ -27,9 +27,7 @@ using ZenTS.Utils;
 
 namespace ZenTS
 {
-    /// <summary>
-    /// QuickJS runtime wrapper for Editor Mono backend.
-    /// </summary>
+    /// <summary>V8 runtime wrapper for the Editor Mono backend.</summary>
     public sealed class JsEnv : IDisposable
     {
         internal static readonly object SyncRoot = new object();
@@ -37,7 +35,7 @@ namespace ZenTS
         private IntPtr _runtime;
         private IntPtr _context;
         private Func<string, object> _moduleLoader;
-        private readonly Dictionary<string, JSValue> _moduleNamespaces = new Dictionary<string, JSValue>(StringComparer.Ordinal);
+        private readonly Dictionary<string, JsValue> _moduleNamespaces = new Dictionary<string, JsValue>(StringComparer.Ordinal);
         private bool _disposed;
 
         internal IntPtr Context => _context;
@@ -48,6 +46,7 @@ namespace ZenTS
 
         internal void Initialize(Func<string, object> moduleLoader, int generation)
         {
+            JsMainThread.EnsureMainThread();
             if (_context != IntPtr.Zero)
             {
                 throw new InvalidOperationException("JsEnv is already initialized.");
@@ -56,28 +55,28 @@ namespace ZenTS
             _moduleLoader = moduleLoader ?? throw new ArgumentNullException(nameof(moduleLoader));
             Generation = generation;
 
-            _runtime = QuickJsDll.JS_NewRuntime();
+            _runtime = EngineApi.NewRuntime();
+            UnityEngine.Debug.Log($"[ZenTS] Editor engine={EngineApi.Backend}");
             if (_runtime == IntPtr.Zero)
             {
                 throw new JsScriptException("zents: JS_NewRuntime failed.");
             }
 
-            QuickJsDll.js_std_init_handlers(_runtime);
+            EngineApi.StdInitHandlers(_runtime);
 
-            _context = QuickJsDll.JS_NewContext(_runtime);
+            _context = EngineApi.NewContext(_runtime);
             if (_context == IntPtr.Zero)
             {
-                QuickJsDll.JS_FreeRuntime(_runtime);
+                EngineApi.FreeRuntime(_runtime);
                 _runtime = IntPtr.Zero;
                 throw new JsScriptException("zents: JS_NewContext failed.");
             }
 
-            QuickJsDll.JS_SetContextOpaque(_context, GCHandle.ToIntPtr(GCHandle.Alloc(this)));
-            QuickJsDll.js_std_add_helpers(_context, 0, IntPtr.Zero);
+            EngineApi.SetContextOpaque(_context, GCHandle.ToIntPtr(GCHandle.Alloc(this)));
+            EngineApi.StdAddHelpers(_context, 0, IntPtr.Zero);
             JsCallbackGate.EnsureInitialized(_context);
-            // module_normalize = NULL → QuickJS default (resolves ./ and ../ against base module name).
             // Host loader then receives the normalized specifier (e.g. "assert.js").
-            QuickJsDll.JS_SetModuleLoaderFunc(_runtime, IntPtr.Zero, ModuleLoaderCallback, IntPtr.Zero);
+            EngineApi.SetModuleLoaderFunc(_runtime, IntPtr.Zero, ModuleLoaderCallback, IntPtr.Zero);
         }
 
         internal void SetModuleLoader(Func<string, object> moduleLoader)
@@ -107,12 +106,12 @@ namespace ZenTS
             }
 
             byte[] bytes = Encoding.UTF8.GetBytes(source);
-            JSValue result = QuickJsDll.JS_Eval(
+            JsValue result = EngineApi.Eval(
                 _context,
                 bytes,
                 (UIntPtr)bytes.Length,
                 filename ?? "<eval>",
-                QuickJsDll.JsEvalTypeGlobal);
+                EngineApi.JsEvalTypeGlobal);
 
             if (JsValueUtil.IsException(result) || JsValueUtil.GetTag(result) == JsValueUtil.TagException)
             {
@@ -122,7 +121,7 @@ namespace ZenTS
             JsValueUtil.Free(_context, result);
         }
 
-        internal JSValue LoadModuleNamespace(string moduleName)
+        internal JsValue LoadModuleNamespace(string moduleName)
         {
             EnsureAlive();
             if (string.IsNullOrEmpty(moduleName))
@@ -132,14 +131,14 @@ namespace ZenTS
 
             lock (_moduleNamespaces)
             {
-                if (_moduleNamespaces.TryGetValue(moduleName, out JSValue cached))
+                if (_moduleNamespaces.TryGetValue(moduleName, out JsValue cached))
                 {
                     return JsValueUtil.Dup(cached);
                 }
             }
 
             // JS_LoadModule returns a Promise that fulfills with the module namespace.
-            JSValue promise = QuickJsDll.JS_LoadModule(_context, moduleName, moduleName);
+            JsValue promise = EngineApi.LoadModule(_context, moduleName, moduleName);
             if (JsValueUtil.IsException(promise))
             {
                 ThrowPendingException();
@@ -149,14 +148,14 @@ namespace ZenTS
             {
                 DrainPendingJobs();
 
-                int state = QuickJsDll.JS_PromiseState(_context, promise);
-                if (state == QuickJsDll.JsPromisePending)
+                int state = EngineApi.PromiseState(_context, promise);
+                if (state == EngineApi.JsPromisePending)
                 {
                     throw new JsScriptException($"zents: module '{moduleName}' promise still pending after draining jobs.");
                 }
 
-                JSValue ns = QuickJsDll.JS_PromiseResult(_context, promise);
-                if (state == QuickJsDll.JsPromiseRejected)
+                JsValue ns = EngineApi.PromiseResult(_context, promise);
+                if (state == EngineApi.JsPromiseRejected)
                 {
                     string message = FormatJsValue(_context, ns);
                     int tag = JsValueUtil.GetTag(ns);
@@ -164,12 +163,12 @@ namespace ZenTS
                         tag == 4 /* JS_TAG_UNINITIALIZED */)
                     {
                         // Fall back to pending exception / ToString path.
-                        JSValue pending = QuickJsDll.JS_GetException(_context);
+                        JsValue pending = EngineApi.GetException(_context);
                         try
                         {
                             if (JsValueUtil.GetNormTag(pending) != JsValueUtil.TagUndefined &&
                                 JsValueUtil.GetNormTag(pending) != JsValueUtil.TagNull &&
-                                JsValueUtil.GetTag(pending) != 4)
+                                JsValueUtil.GetTag(pending) != JsValueUtil.TagUninitialized)
                             {
                                 message = FormatJsValue(_context, pending);
                             }
@@ -191,7 +190,7 @@ namespace ZenTS
 
                 lock (_moduleNamespaces)
                 {
-                    if (_moduleNamespaces.TryGetValue(moduleName, out JSValue cached))
+                    if (_moduleNamespaces.TryGetValue(moduleName, out JsValue cached))
                     {
                         JsValueUtil.Free(_context, ns);
                         return JsValueUtil.Dup(cached);
@@ -208,15 +207,17 @@ namespace ZenTS
             }
         }
 
-        private void DrainPendingJobs()
+        internal void DrainPendingJobs()
         {
-            while (QuickJsDll.JS_IsJobPending(_runtime) != 0)
+            bool pollForeground = EngineApi.Backend == EngineBackend.V8;
+            while (pollForeground || EngineApi.IsJobPending(_runtime) != 0)
             {
-                int status = QuickJsDll.JS_ExecutePendingJob(_runtime, out IntPtr jobCtx);
+                pollForeground = false;
+                int status = EngineApi.ExecutePendingJob(_runtime, out IntPtr jobCtx);
                 if (status < 0)
                 {
                     IntPtr errCtx = jobCtx != IntPtr.Zero ? jobCtx : _context;
-                    JSValue ex = QuickJsDll.JS_GetException(errCtx);
+                    JsValue ex = EngineApi.GetException(errCtx);
                     string message = FormatJsValue(errCtx, ex);
                     JsValueUtil.Free(errCtx, ex);
                     throw new JsScriptException($"zents: pending job failed: {message}");
@@ -224,18 +225,18 @@ namespace ZenTS
             }
         }
 
-        internal JSValue GetModuleExport(string moduleName, string exportName)
+        internal JsValue GetModuleExport(string moduleName, string exportName)
         {
-            JSValue ns = LoadModuleNamespace(moduleName);
+            JsValue ns = LoadModuleNamespace(moduleName);
             try
             {
-                JSValue export = QuickJsDll.JS_GetPropertyStr(_context, ns, exportName);
+                JsValue export = EngineApi.GetPropertyStr(_context, ns, exportName);
                 if (JsValueUtil.IsException(export))
                 {
                     ThrowPendingException();
                 }
 
-                if (QuickJsDll.JS_IsFunction(_context, export) == 0)
+                if (EngineApi.IsFunction(_context, export) == 0)
                 {
                     JsValueUtil.Free(_context, export);
                     throw new JsScriptException($"zents: export '{moduleName}.{exportName}' is not callable.");
@@ -251,13 +252,13 @@ namespace ZenTS
 
         internal void ThrowPendingException()
         {
-            JSValue ex = QuickJsDll.JS_GetException(_context);
+            JsValue ex = EngineApi.GetException(_context);
             string message = FormatJsValue(_context, ex);
             JsValueUtil.Free(_context, ex);
             throw new JsScriptException($"zents: {message}");
         }
 
-        internal static string FormatJsValue(IntPtr ctx, JSValue val)
+        internal static string FormatJsValue(IntPtr ctx, JsValue val)
         {
             if (JsValueUtil.GetNormTag(val) == JsValueUtil.TagUndefined)
             {
@@ -272,12 +273,12 @@ namespace ZenTS
             // Prefer Error.message when present.
             if (JsValueUtil.GetNormTag(val) == JsValueUtil.TagObject)
             {
-                JSValue msg = QuickJsDll.JS_GetPropertyStr(ctx, val, "message");
+                JsValue msg = EngineApi.GetPropertyStr(ctx, val, "message");
                 try
                 {
                     if (JsValueUtil.GetNormTag(msg) == JsValueUtil.TagString)
                     {
-                        IntPtr mptr = QuickJsDll.JS_ToCStringLen2(ctx, out UIntPtr mlen, msg, 0);
+                        IntPtr mptr = EngineApi.ToCStringLen2(ctx, out UIntPtr mlen, msg, 0);
                         if (mptr != IntPtr.Zero)
                         {
                             try
@@ -290,7 +291,7 @@ namespace ZenTS
                             }
                             finally
                             {
-                                QuickJsDll.JS_FreeCString(ctx, mptr);
+                                EngineApi.FreeCString(ctx, mptr);
                             }
                         }
                     }
@@ -301,7 +302,7 @@ namespace ZenTS
                 }
             }
 
-            IntPtr cstr = QuickJsDll.JS_ToCStringLen2(ctx, out UIntPtr len, val, 0);
+            IntPtr cstr = EngineApi.ToCStringLen2(ctx, out UIntPtr len, val, 0);
             if (cstr == IntPtr.Zero)
             {
                 return $"JS exception (tag={JsValueUtil.GetTag(val)})";
@@ -313,12 +314,13 @@ namespace ZenTS
             }
             finally
             {
-                QuickJsDll.JS_FreeCString(ctx, cstr);
+                EngineApi.FreeCString(ctx, cstr);
             }
         }
 
         public void Dispose()
         {
+            JsMainThread.EnsureMainThread();
             if (_disposed)
             {
                 return;
@@ -329,7 +331,7 @@ namespace ZenTS
 
             lock (_moduleNamespaces)
             {
-                foreach (JSValue ns in _moduleNamespaces.Values)
+                foreach (JsValue ns in _moduleNamespaces.Values)
                 {
                     JsValueUtil.Free(_context, ns);
                 }
@@ -339,26 +341,27 @@ namespace ZenTS
 
             if (_context != IntPtr.Zero)
             {
-                IntPtr opaque = QuickJsDll.JS_GetContextOpaque(_context);
+                IntPtr opaque = EngineApi.GetContextOpaque(_context);
                 if (opaque != IntPtr.Zero)
                 {
                     GCHandle.FromIntPtr(opaque).Free();
                 }
 
-                QuickJsDll.JS_FreeContext(_context);
+                EngineApi.FreeContext(_context);
                 _context = IntPtr.Zero;
             }
 
             if (_runtime != IntPtr.Zero)
             {
-                QuickJsDll.js_std_free_handlers(_runtime);
-                QuickJsDll.JS_FreeRuntime(_runtime);
+                EngineApi.StdFreeHandlers(_runtime);
+                EngineApi.FreeRuntime(_runtime);
                 _runtime = IntPtr.Zero;
             }
         }
 
         private void EnsureAlive()
         {
+            JsMainThread.EnsureMainThread();
             if (!IsAlive)
             {
                 throw new InvalidOperationException("JsEnv has been disposed or is not initialized.");
@@ -387,21 +390,21 @@ namespace ZenTS
                 }
 
                 byte[] bytes = Encoding.UTF8.GetBytes(source);
-                JSValue compiled = QuickJsDll.JS_Eval(
+                JsValue compiled = EngineApi.Eval(
                     ctx,
                     bytes,
                     (UIntPtr)bytes.Length,
                     moduleName,
-                    QuickJsDll.JsEvalTypeModule | QuickJsDll.JsEvalFlagCompileOnly);
+                    EngineApi.JsEvalTypeModule | EngineApi.JsEvalFlagCompileOnly);
 
-                if (QuickJsDll.IsException(compiled) || JsValueUtil.IsException(compiled))
+                if (EngineApi.IsException(compiled) || JsValueUtil.IsException(compiled))
                 {
                     JsCallbackBoundary.ThrowPendingJsException(ctx);
                     return IntPtr.Zero;
                 }
 
-                // Module is already referenced by the context module table; free the MODULE JSValue.
-                IntPtr moduleDef = JsValueUtil.GetPtr(compiled);
+                // Module is already referenced by the context module table; free the MODULE JsValue.
+                IntPtr moduleDef = JsValueUtil.GetCompiledModule(compiled);
                 JsValueUtil.Free(ctx, compiled);
                 return moduleDef;
             }
@@ -414,7 +417,7 @@ namespace ZenTS
 
         internal static JsEnv FromContext(IntPtr ctx)
         {
-            IntPtr opaque = QuickJsDll.JS_GetContextOpaque(ctx);
+            IntPtr opaque = EngineApi.GetContextOpaque(ctx);
             if (opaque == IntPtr.Zero)
             {
                 throw new InvalidOperationException("JsEnv context opaque is missing.");

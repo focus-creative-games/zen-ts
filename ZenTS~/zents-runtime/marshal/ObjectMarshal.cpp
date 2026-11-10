@@ -35,10 +35,10 @@
 
 namespace zents
 {
-void ObjectMarshal::Js2CsObject(JSContext* ctx, JSValueConst value, void* address, const MarshalMetaInfo* meta)
+void ObjectMarshal::Js2CsObject(js::Context* ctx, js::ValueConst value, void* address, const MarshalMetaInfo* meta)
 {
     Il2CppObject** out = reinterpret_cast<Il2CppObject**>(address);
-    if (JS_IsNull(value) || JS_IsUndefined(value))
+    if (js::IsNull(value))
     {
         *out = nullptr;
         return;
@@ -47,7 +47,7 @@ void ObjectMarshal::Js2CsObject(JSContext* ctx, JSValueConst value, void* addres
     Il2CppClass* expected = meta != nullptr ? meta->typeKlass : nullptr;
     if (expected == nullptr)
     {
-        JS_ThrowTypeError(ctx, "zents: missing class marshal meta");
+        js::ThrowTypeError(ctx, "zents: missing class marshal meta");
         return;
     }
 
@@ -57,12 +57,12 @@ void ObjectMarshal::Js2CsObject(JSContext* ctx, JSValueConst value, void* addres
         Il2CppObject* obj = ObjectRegistry::Get(ctx, value);
         if (obj == nullptr)
         {
-            JS_ThrowTypeError(ctx, "zents: invalid object handle");
+            js::ThrowTypeError(ctx, "zents: invalid object handle");
             return;
         }
         if (!il2cpp::vm::Class::IsAssignableFrom(expected, obj->klass))
         {
-            JS_ThrowTypeError(
+            js::ThrowTypeError(
                 ctx,
                 "zents: argument mismatch: object is not of type %s",
                 MetadataUtil::GetTypeFullName(expected));
@@ -75,16 +75,16 @@ void ObjectMarshal::Js2CsObject(JSContext* ctx, JSValueConst value, void* addres
     /* System.Object: box primitives / wrap string. */
     if (expected == il2cpp_defaults.object_class)
     {
-        if (JS_IsBool(value))
+        if (js::IsBool(value))
         {
-            bool b = JS_ToBool(ctx, value) != 0;
+            bool b = js::ToBool(ctx, value) != 0;
             *out = il2cpp::vm::Object::Box(il2cpp_defaults.boolean_class, &b);
             return;
         }
-        if (JS_IsNumber(value))
+        if (js::IsNumber(value))
         {
             double d = 0;
-            if (JS_ToFloat64(ctx, &d, value))
+            if (js::ToFloat64(ctx, &d, value))
                 return;
             if (std::floor(d) == d && d >= (double)INT32_MIN && d <= (double)INT32_MAX)
             {
@@ -97,11 +97,11 @@ void ObjectMarshal::Js2CsObject(JSContext* ctx, JSValueConst value, void* addres
             }
             return;
         }
-        if (JS_IsString(value))
+        if (js::IsString(value))
         {
             Il2CppString* storage = nullptr;
             PrimitiveMarshal::Js2CsString(ctx, value, &storage, meta);
-            if (JS_HasException(ctx))
+            if (js::HasException(ctx))
                 return;
             *out = reinterpret_cast<Il2CppObject*>(storage);
             return;
@@ -111,32 +111,32 @@ void ObjectMarshal::Js2CsObject(JSContext* ctx, JSValueConst value, void* addres
     /* Delegate: JS function → CLR delegate. */
     if (MetadataUtil::IsDelegateClass(expected))
     {
-        if (!JS_IsFunction(ctx, value))
+        if (!js::IsFunction(ctx, value))
         {
-            JS_ThrowTypeError(ctx, "zents: expected function for delegate argument");
+            js::ThrowTypeError(ctx, "zents: expected function for delegate argument");
             return;
         }
         Il2CppDelegate* del = DelegateMarshal::GetOrCreateFromJsFunction(ctx, expected, value);
         if (del == nullptr)
         {
-            JS_ThrowTypeError(ctx, "zents: failed to create delegate");
+            js::ThrowTypeError(ctx, "zents: failed to create delegate");
             return;
         }
         *out = reinterpret_cast<Il2CppObject*>(del);
         return;
     }
 
-    JS_ThrowTypeError(
+    js::ThrowTypeError(
         ctx,
         "zents: cannot convert value to object of type %s",
         MetadataUtil::GetTypeFullName(expected));
 }
 
-JSValue ObjectMarshal::Cs2JsObject(JSContext* ctx, void* address, const MarshalMetaInfo* meta)
+js::Value ObjectMarshal::Cs2JsObject(js::Context* ctx, void* address, const MarshalMetaInfo* meta)
 {
     Il2CppObject* obj = *reinterpret_cast<Il2CppObject**>(address);
     if (obj == nullptr)
-        return JS_NULL;
+        return js::Null();
 
     if (MetadataUtil::IsDelegateClass(obj->klass))
     {

@@ -1,0 +1,5 @@
+out/
+download-parts/
+*.tar.gz
+msvc-env.json
+__pycache__/

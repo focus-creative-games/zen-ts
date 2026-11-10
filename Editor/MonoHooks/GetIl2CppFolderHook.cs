@@ -39,6 +39,17 @@ namespace ZenTS.MonoHooks
 
         static GetIl2CppFolderHook()
         {
+            EditorApplication.delayCall += () =>
+            {
+                if (NativeSdkStore.HasTarget(NativeSdkStore.EditorTarget)) EnsureInstalled();
+            };
+        }
+
+        internal static void EnsureInstalled()
+        {
+#if UNITY_EDITOR_OSX
+            NativeEditorPlugins.Ensure();
+#endif
             if (_hook != null)
             {
                 return;

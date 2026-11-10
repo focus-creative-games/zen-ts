@@ -99,45 +99,44 @@ void JsLoader::LoadModuleSource(const char* moduleName, std::string& source)
     }
 }
 
-JSModuleDef* JsLoader::ModuleLoaderCallback(JSContext* ctx, const char* moduleName, void* /*opaque*/)
+js::Module* JsLoader::ModuleLoaderCallback(js::Context* ctx, const char* moduleName, void* /*opaque*/)
 {
     try
     {
         std::string source;
         LoadModuleSource(moduleName, source);
 
-        JSValue compiled = JS_Eval(
+        js::Value compiled = js::Eval(
             ctx,
             source.c_str(),
             source.size(),
             moduleName,
-            JS_EVAL_TYPE_MODULE | JS_EVAL_FLAG_COMPILE_ONLY);
+            js::EvalModule | js::EvalCompileOnly);
 
-        if (JS_IsException(compiled))
+        if (js::IsException(compiled))
         {
-            // Leave exception on context for QuickJS.
             return nullptr;
         }
 
-        JSModuleDef* def = (JSModuleDef*)JS_VALUE_GET_PTR(compiled);
-        JS_FreeValue(ctx, compiled);
+        js::Module* def = js::GetCompiledModule(compiled);
+        js::FreeValue(ctx, compiled);
         return def;
     }
     catch (Il2CppExceptionWrapper& e)
     {
-        JS_Throw(ctx, JS_NewString(ctx, "zents: module loader threw managed exception"));
+        js::Throw(ctx, js::NewString(ctx, "zents: module loader threw managed exception"));
         (void)e;
         return nullptr;
     }
     catch (...)
     {
-        JS_Throw(ctx, JS_NewString(ctx, "zents: module loader failed"));
+        js::Throw(ctx, js::NewString(ctx, "zents: module loader failed"));
         return nullptr;
     }
 }
 
-void JsLoader::InstallOnRuntime(JSRuntime* rt)
+void JsLoader::InstallOnRuntime(js::Runtime* rt)
 {
-    JS_SetModuleLoaderFunc(rt, nullptr, ModuleLoaderCallback, nullptr);
+    js::SetModuleLoaderFunc(rt, nullptr, ModuleLoaderCallback, nullptr);
 }
 }

@@ -64,6 +64,22 @@ namespace ZenTS.Editor.Typescript
                 StandardErrorEncoding = Encoding.UTF8,
             };
 
+#if UNITY_EDITOR_OSX
+            // Unity Hub does not necessarily inherit the user's shell PATH.
+            string path = Environment.GetEnvironmentVariable("PATH") ?? string.Empty;
+            foreach (string directory in new[] { "/opt/homebrew/bin", "/usr/local/bin" })
+                if (Directory.Exists(directory)) path += Path.PathSeparator + directory;
+            psi.EnvironmentVariables["PATH"] = path;
+            if (fileName == "node" || fileName == "npm")
+            {
+                foreach (string directory in path.Split(Path.PathSeparator))
+                {
+                    if (string.IsNullOrEmpty(directory)) continue;
+                    string executable = Path.Combine(directory, fileName);
+                    if (File.Exists(executable)) { psi.FileName = executable; break; }
+                }
+            }
+#endif
 #if UNITY_EDITOR_WIN
             psi.FileName = "cmd.exe";
             psi.Arguments = "/c " + Quote(fileName) + " " + arguments;

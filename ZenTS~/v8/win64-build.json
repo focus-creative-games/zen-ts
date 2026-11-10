@@ -1,0 +1,29 @@
+{
+  "backend": "V8",
+  "version": "13.6.233.17",
+  "host": "Windows-x64",
+  "sdk_provider": "official-v8-source",
+  "source_commit": "b0a55a7dad7f536cce1f9aaddba89894c8533946",
+  "upstream_patches": [],
+  "editor_crt": "MT",
+  "player_crt": "MT",
+  "player_debug_crt": "MT; Debug optimization/symbols preserved",
+  "standard": "C++20",
+  "v8_linkage": "static",
+  "adapter_linkage": "static",
+  "official_sdk_manifest_sha256": "a2b063da1c37dfa2ba0a938de6a2d46132be53d2af780c0f6aaebeb8bf977813",
+  "artifacts": [
+    {
+      "path": "Plugins/v8/win64/zents_v8.dll",
+      "sha256": "31602b3022a48d213cd802343e8a66cec7b68224304ae794713a5e2cd0c7b127"
+    },
+    {
+      "path": "ZenTS~/zents-runtime/engine/v8/sdk/lib/zents_v8_engine.lib",
+      "sha256": "58a230a3a392ecf7af05e5f07f5c30ac88556ef8a3ec5444ad57c2d3f6d9511a"
+    },
+    {
+      "path": "ZenTS~/zents-runtime/engine/v8/sdk/lib/v8_monolith.lib",
+      "sha256": "8bdfda28d3478543f86aee30e0087d190f1ea656397bffd7b128b9772bd10e0e"
+    }
+  ]
+}

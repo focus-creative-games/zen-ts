@@ -33,63 +33,37 @@
 
 namespace zents
 {
-enum class MetaKind : uint8_t
-{
-    Method = 0,
-    Field = 1,
-    Property = 2,
-    MethodDispatch = 3,
-};
+using FieldMarshalCtx = FieldPlan<MarshalMetaInfo>;
+using MetaInfo = MemberPlan<MethodMarshalCtx, FieldMarshalCtx, OverloadGroup>;
+using NameMetaMap = std::unordered_map<const char*, MetaInfo, CsStringHash, CsStringEqual>;
 
-struct FieldMarshalCtx
+struct TypeBinding : TypeBindingPlan<MethodMarshalCtx, MetaInfo, OverloadGroup>
 {
-    FieldInfo* field;
-    const MarshalMetaInfo* meta;
-};
-
-struct MetaInfo
-{
-    MetaKind kind;
-    MethodMarshalCtx* methodCtx;  /* Method, or Property getter */
-    MethodMarshalCtx* setterCtx;  /* Property setter */
-    FieldMarshalCtx* fieldCtx;
-    OverloadGroup* overloadGroup; /* MethodDispatch */
-};
-
-typedef std::unordered_map<const char*, MetaInfo, CsStringHash, CsStringEqual> NameMetaMap;
-
-struct TypeBinding
-{
-    Il2CppClass* klass;
-    NameMetaMap staticMap;
-    NameMetaMap instanceMap;
-    std::vector<MethodMarshalCtx*> ctors;
-    std::list<std::string> ownedNames;
-    std::vector<OverloadGroup*> ownedGroups;
-    std::unordered_set<std::string> memberKeys;
-    JSValue typeObject;
-    JSValue typeObjectRaw;
+    js::Value typeObject;
+    js::Value typeObjectRaw;
     /** IEO prototype (not miss-wrapped). Classes: ByObj; structs: alias of byobjInstanceProto. */
-    JSValue instanceProto;
+    js::Value instanceProto;
     /** Struct ByVal instance dispatch proto; undefined for reference types. */
-    JSValue byvalInstanceProto;
+    js::Value byvalInstanceProto;
     /** Struct ByObj instance dispatch proto; undefined for reference types (use instanceProto). */
-    JSValue byobjInstanceProto;
+    js::Value byobjInstanceProto;
     bool hasJsObject;
 };
 
 class MetaBinding
 {
 public:
-    static TypeBinding* EnsureBinding(JSContext* ctx, Il2CppClass* klass);
-    static Il2CppClass* TryGetKlassFromTypeValue(JSContext* ctx, JSValueConst typeVal);
+    static TypeBinding* EnsureBinding(js::Context* ctx, Il2CppClass* klass);
+    static Il2CppClass* TryGetKlassFromTypeValue(js::Context* ctx, js::ValueConst typeVal);
+    static MethodMarshalCtx* ResolveGtap(js::Context* ctx, const std::vector<MethodMarshalCtx*>& methods, int argc, js::ValueConst* argv, int* prefix);
+    static const MethodInfo* FindPublicMethod(Il2CppClass* owner, const char* key, int staticDomain, int genericArity);
     static MethodMarshalCtx* CreateMethodMarshalCtx(const MethodInfo* method);
-    static JSValue CreateInstanceMethodFunction(JSContext* ctx, MethodMarshalCtx* mctx);
-    static JSValue CreateStaticMethodFunction(JSContext* ctx, MethodMarshalCtx* mctx);
-    static MethodMarshalCtx* TryGetDirectMethodCtx(JSContext* ctx, JSValueConst fn);
-    static void AttachInstanceMembers(JSContext* ctx, JSValueConst jsObj, TypeBinding* binding);
-    static JSValue WrapStrictMiss(JSContext* ctx, JSValue obj);
-    static JSValue WrapDelegateCall(JSContext* ctx, JSValue obj);
-    static void Reset(JSContext* ctx);
+    static js::Value CreateInstanceMethodFunction(js::Context* ctx, MethodMarshalCtx* mctx, int mode = 0);
+    static js::Value CreateStaticMethodFunction(js::Context* ctx, MethodMarshalCtx* mctx);
+    static MethodMarshalCtx* TryGetDirectMethodCtx(js::Context* ctx, js::ValueConst fn);
+    static void AttachInstanceMembers(js::Context* ctx, js::ValueConst jsObj, TypeBinding* binding);
+    static js::Value WrapStrictMiss(js::Context* ctx, js::Value obj);
+    static js::Value WrapDelegateCall(js::Context* ctx, js::Value obj);
+    static void Reset(js::Context* ctx);
 };
 }

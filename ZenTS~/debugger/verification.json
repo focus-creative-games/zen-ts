@@ -1,0 +1,77 @@
+{
+  "verified_utc": "2026-11-10T11:24:20.655855+00:00",
+  "scope": "Native V8 Inspector in Unity Editor; official-source V8; loopback transport; no Player or HostJs debugger service",
+  "unity": {
+    "windows": "2022.3.62f3",
+    "macos_arm64": "2022.3.56f1c1, macOS 26.0"
+  },
+  "protocol_checks": [
+    "Unicode/space module URL encoding PASS",
+    "HTTP discovery + JS/TS source map routes PASS",
+    "TS-mapped breakpoint + locals + Unicode watch + watch exception PASS",
+    "stepOver PASS",
+    "Pause inside nested CLR callback PASS",
+    "Pause on exception PASS",
+    "Execution after exception PASS",
+    "Pause interrupts CPU-bound JavaScript on owner thread PASS",
+    "Reset target reattach + disconnect while CLR callback paused",
+    "Disconnect during paused Inspector Runtime.evaluate PASS",
+    "Editor breakpoint + transport + Reset full acceptance PASS"
+  ],
+  "windows": {
+    "protocol": "PASS",
+    "actual_domain_reload": "PASS, clean exit",
+    "editor_named_cases": "435/435; Smoke 8/8; TS 3/3",
+    "win64_named_cases": "435/435; Smoke 10/10; TS 3/3"
+  },
+  "macos_arm64": {
+    "protocol": "PASS, clean process exit",
+    "editor_named_cases": "435/435; Smoke 8/8; TS 3/3",
+    "actual_domain_reload_assertions": "PASS: Inspector count 1 -> 0 -> 1 -> 0, same port reused",
+    "actual_domain_reload_process_exit": "TIMEOUT; not counted as a clean full-run PASS",
+    "single_job_worker_recheck": "Same shutdown timeout after assertions pass",
+    "shutdown_sample": "Main thread in Unity Application::CoreShutdown / JobSystem::ShutdownJobThreads / ujob_shutdown; CurlExecutor active. Sample saved; no engine shutdown workaround applied."
+  },
+  "macos_x64": {
+    "adapter_and_editor_plugin_build": "PASS",
+    "runtime": "not rerun"
+  },
+  "not_rerun": [
+    "WebGL",
+    "WeChat",
+    "Android",
+    "iOS"
+  ],
+  "sdk_fingerprints": {
+    "macos-arm64": "59b09848d42e10e8efff722195ae9050d042fe8d0653050312308acb8cbe3df7",
+    "macos-x64": "03688ce9aa8412bb99c9af7895329aa8f97694b9eea2c3189f6c20d21b80323a",
+    "windows-x64": "c4f1c77cb8f8d1ebd8b7c9d78adc0bd41d354cc32d74c51d36efdb84f5c5c959"
+  },
+  "source_sha256": {
+    "Editor/Diagnostics/JsDebuggerBootstrap.cs": "701d93cb72cc4b77f3b83e98e123a552ba98a72c191f077be5ed63de18bc4ecf",
+    "Editor/Diagnostics/V8DebuggerHost.cs": "c57099f4b47494b0db003695af1825a50c81fb5f3a0ef8c44645283aba9b9aba",
+    "Editor/Diagnostics/V8InspectorServer.cs": "3f1f2aecd3e1288289e5fc28d3c94f2c8da25500c17625ddae82074d52af84cc",
+    "Editor/Diagnostics/V8DebuggerAcceptance.cs": "76e16334bf83c68ad373ce7e7398f435d8c88df7cc9f7924ff4284ab7116f92d",
+    "Editor/Settings.cs": "eb31dfefa764bdc939709036f0da53345ba4f464c83deab0f09edb7a4a471439",
+    "Editor/ZentsSettingsProvider.cs": "00095812b8499735ad4cb5dc642151d1eaeec3d8c3d4ba26ebb90847c1d61780",
+    "ZenTS~/zents-runtime/engine/v8/V8Mono.cpp": "e9cb7e39719de4942f54fe4cb10b107b5684d9419af063244c5382989f9ff83d",
+    "ZenTS~/debugger/run-inspector.mjs": "392579cef3de04a53cf211c3f8b38c393a6a0ad4b8b4f8852a20390c4f1f2f34"
+  },
+  "logs_sha256": {
+    "debugger-protocol.log": "dd9da1e5f777e2cdf9fd92fc42caf33f18a8fe26d9d457547b3ff5bc61e509d2",
+    "debugger-editor.log": "5107ec05e3a7055d333170263e42d1e02df38bef7199a74d417e246ba97755dc",
+    "debugger-reload.log": "a38888357ac54e81be45d6e9f0a9b47b52842b1858a880b9afb75abedaabfe99",
+    "debugger-editor-regression.log": "6ce3606f206bd12454503d13dce25f50cb87a570c84bffe69cef623520886867",
+    "p5-player.log": "47765c616e3c5cb01c8193f0df82eea21ee93a83610171683fd78c105ac6ae4c",
+    "debugger-mac-protocol-final.log": "bcea11a9b521eb20de607fafce1eae81eb615ca51c6024b616e7cc4358078a1b",
+    "debugger-mac-editor-final.log": "f1a07f301019c1cb75adebf6d09e0285b709beaa677695d2b0af3a71bcb6e6a0",
+    "debugger-mac-editor-regression.log": "0b4390f32921bdbfa6699cfaba1b5a6c95f94c4f5e4308da831ee156f5afa366",
+    "debugger-mac-reload.log": "de6703281ec9203641cfaa7044a693ca1c8d68eee6e2ca38674e7a1f23b9a0ff",
+    "debugger-mac-run.log": "8e86a3de286dfa2be36159d20b9ae7b9c45e6712709961c0c76edc32ab103f02",
+    "debugger-mac-reload-one-worker.log": "e3a9e26973e24cd8fbe4544c1f093391d7e481fd393ebb6dd15a03e7db16da2c",
+    "Library/ZenTS/Verification/debugger-mac-shutdown-sample.txt": "9c2a19f5f128c5eeeb8c34ef2c4e3c5f4af09413f183a6412b16356bae5955be"
+  },
+  "git_base": "e1c0dbd032b8384e9472187ce61b629de3bc83a3",
+  "gui_clients": "Actual CDP exercised; VS Code GUI not automated",
+  "commit": "not created"
+}

@@ -29,7 +29,7 @@ namespace ZenTS.Editor.Diagnostics
 {
     /// <summary>
     /// Reflects an <see cref="IZentsJsDebuggerHost"/> from Settings and installs it
-    /// after JsMonoAppDomain has finished core init. Missing host → log and skip.
+    /// after core init. An empty host override selects the built-in V8 Inspector host.
     /// </summary>
     public static class JsDebuggerBootstrap
     {
@@ -47,14 +47,7 @@ namespace ZenTS.Editor.Diagnostics
             }
 
             string typeName = settings.debuggerHostTypeName;
-            if (string.IsNullOrEmpty(typeName))
-            {
-                Debug.LogError(
-                    "[ZenTS] enableJsDebugger is on but debuggerHostTypeName is empty. Skipping debugger.");
-                return;
-            }
-
-            Type hostType = Type.GetType(typeName);
+            Type hostType = string.IsNullOrWhiteSpace(typeName) ? typeof(V8DebuggerHost) : Type.GetType(typeName);
             if (hostType == null)
             {
                 Debug.LogError(
@@ -89,6 +82,7 @@ namespace ZenTS.Editor.Diagnostics
             }
             catch (Exception ex)
             {
+                try { host.Uninstall(); } catch { }
                 Debug.LogError("[ZenTS] debugger host Install failed: " + ex.Message);
                 return;
             }
@@ -114,6 +108,7 @@ namespace ZenTS.Editor.Diagnostics
             }
 
             s_active = null;
+            if (s_tickHooked) { EditorApplication.update -= Tick; s_tickHooked = false; }
         }
 
         private static void EnsureTickHook()

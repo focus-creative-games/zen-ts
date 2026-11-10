@@ -1,0 +1,20 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Attach ZenTS V8 (Unity Editor)",
+      "type": "node",
+      "request": "attach",
+      "address": "127.0.0.1",
+      "port": 9230,
+      "sourceMaps": true,
+      "outFiles": [
+        "${workspaceFolder}/TsProject/out/**/*.js"
+      ],
+      "sourceMapPathOverrides": {
+        "http://127.0.0.1:9230/source/*": "${workspaceFolder}/TsProject/*"
+      },
+      "restart": true
+    }
+  ]
+}

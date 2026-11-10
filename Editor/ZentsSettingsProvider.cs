@@ -48,17 +48,17 @@ namespace ZenTS.Editor
                     DrawStringArray("Binding assemblies", ref s.typescriptBindingAssemblies);
 
                     EditorGUILayout.Space();
-                    EditorGUILayout.LabelField("JS Debugger (Editor Mono)", EditorStyles.boldLabel);
+                    EditorGUILayout.LabelField("V8 Inspector (Editor)", EditorStyles.boldLabel);
                     EditorGUILayout.HelpBox(
-                        "Editor Mono only. Wait for attach can block the main thread.",
+                        "Built-in V8 Inspector on loopback. Changes apply on the next runtime initialization. Wait for attach blocks the main thread.",
                         MessageType.Info);
                     s.enableJsDebugger = EditorGUILayout.Toggle("Enable JS debugger", s.enableJsDebugger);
                     s.debuggerHostTypeName = EditorGUILayout.TextField(
-                        "Host type (assembly-qualified)",
+                        "Host override (optional)",
                         s.debuggerHostTypeName ?? "");
                     s.debuggerPort = EditorGUILayout.IntField("Preferred port", s.debuggerPort);
                     s.debuggerWaitForAttach = EditorGUILayout.Toggle("Wait for attach", s.debuggerWaitForAttach);
-                    DrawStringArray("Extra source paths", ref s.debuggerSourcePaths);
+                    DrawStringArray("Extra source paths (custom hosts)", ref s.debuggerSourcePaths);
 
                     EditorGUILayout.Space();
                     EditorGUILayout.LabelField("XML Bindings (Editor Mono + Il2Cpp codegen)", EditorStyles.boldLabel);

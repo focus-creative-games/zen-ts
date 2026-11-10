@@ -54,7 +54,7 @@ namespace ZenTS
         [Tooltip("Editor Mono JS debugger host. Default off.")]
         public bool enableJsDebugger = false;
 
-        [Tooltip("IZentsJsDebuggerHost implementation type (assembly-qualified).")]
+        [Tooltip("Optional IZentsJsDebuggerHost override (assembly-qualified). Empty uses built-in V8 Inspector.")]
         public string debuggerHostTypeName = "";
 
         public int debuggerPort = 9230;
@@ -113,7 +113,7 @@ namespace ZenTS
                     typescriptBindingAssemblies = new[] { "Assembly-CSharp", "ZenTS.Tests" };
                 }
 
-                if (debuggerPort <= 0)
+                if (debuggerPort <= 0 || debuggerPort > 65535)
                 {
                     debuggerPort = 9230;
                 }

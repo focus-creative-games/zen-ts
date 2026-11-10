@@ -9,6 +9,94 @@
 #endif
 using namespace zents::engine;
 EXPORT int ze_GetLiveRuntimeCount() { return liveRuntimeCount; }
+#include "sdk/include/v8-inspector.h"
+#include <chrono>
+namespace {
+using InspectorSend = void (*)(const char*, int);
+using InspectorPump = void (*)(int);
+// Only the isolate owner enters Inspector; transport threads never enter V8.
+class EditorInspector final : public v8_inspector::V8InspectorClient {
+public:
+ Context* context; InspectorSend send; InspectorPump pump; std::string baseUrl;
+ bool paused=false, waiting=false;
+ std::unique_ptr<v8_inspector::V8Inspector> inspector;
+ // A dispatch keeps its connection alive even when the frontend detaches
+ // from inside Runtime.evaluate's nested pause. Stale replies are discarded.
+ struct Connection final : v8_inspector::V8Inspector::Channel {
+  EditorInspector* owner;
+  std::unique_ptr<v8_inspector::V8InspectorSession> session;
+  explicit Connection(EditorInspector* p):owner(p){}
+  void sendResponse(int,std::unique_ptr<v8_inspector::StringBuffer> s) override {Send(s->string());}
+  void sendNotification(std::unique_ptr<v8_inspector::StringBuffer> s) override {Send(s->string());}
+  void flushProtocolNotifications() override {}
+  void Send(v8_inspector::StringView s){if(owner->connection.get()==this)owner->Send(s);}
+ };
+ std::shared_ptr<Connection> connection;
+ static v8_inspector::StringView View(const char* s) {return v8_inspector::StringView((const uint8_t*)s,std::strlen(s));}
+ EditorInspector(Context* c,InspectorSend s,InspectorPump p,const char* url):context(c),send(s),pump(p),baseUrl(url?url:"") {
+  inspector=v8_inspector::V8Inspector::create(c->runtime->isolate,this);
+  v8_inspector::V8ContextInfo info(c->value.Get(c->runtime->isolate),1,View("ZenTS Editor"));
+  info.auxData=View("{\"isDefault\":true}");inspector->contextCreated(info);
+ }
+ v8::Local<v8::String> String(v8_inspector::StringView s) {
+  auto* i=context->runtime->isolate;
+  return s.is8Bit()?v8::String::NewFromOneByte(i,s.characters8(),v8::NewStringType::kNormal,(int)s.length()).ToLocalChecked():v8::String::NewFromTwoByte(i,s.characters16(),v8::NewStringType::kNormal,(int)s.length()).ToLocalChecked();
+ }
+ void Connect() {
+  bool w=waiting;Disconnect();waiting=w;
+  auto next=std::make_shared<Connection>(this);connection=next;
+  next->session=inspector->connect(1,next.get(),v8_inspector::StringView(),v8_inspector::V8Inspector::kFullyTrusted,
+   waiting?v8_inspector::V8Inspector::kWaitingForDebugger:v8_inspector::V8Inspector::kNotWaitingForDebugger);
+ }
+ void Disconnect() {waiting=false;paused=false;auto old=std::move(connection);if(old&&old->session)old->session->resume();}
+ void Send(v8_inspector::StringView s) {v8::HandleScope h(context->runtime->isolate);v8::String::Utf8Value text(context->runtime->isolate,String(s));send(*text,text.length());}
+ void runMessageLoopOnPause(int) override {paused=true;while(paused&&connection)pump(10);paused=false;}
+ void quitMessageLoopOnPause() override {paused=false;}
+ void runIfWaitingForDebugger(int) override {waiting=false;}
+ double currentTimeMS() override {return std::chrono::duration<double,std::milli>(std::chrono::system_clock::now().time_since_epoch()).count();}
+ v8::Local<v8::Context> ensureDefaultContextInGroup(int) override {return context->value.Get(context->runtime->isolate);}
+ std::unique_ptr<v8_inspector::StringBuffer> resourceNameToUrl(const v8_inspector::StringView& name) override {
+  v8::HandleScope h(context->runtime->isolate);v8::String::Utf8Value text(context->runtime->isolate,String(name));std::string url(*text,text.length());
+  if(url.find(":")!=std::string::npos||baseUrl.empty())return v8_inspector::StringBuffer::create(name);
+  if(url.size()<3||(url.compare(url.size()-3,3,".js")!=0&&(url.size()<4||url.compare(url.size()-4,4,".mjs")!=0)))url+=".js";
+  // Inspector's 8-bit StringView is Latin-1, not UTF-8. Encode canonical
+  // path bytes as an ASCII URL; preserve caller-supplied URLs as StringView.
+  std::string encoded;const char* hex="0123456789ABCDEF";
+  for(unsigned char ch:url){if((ch>='a'&&ch<='z')||(ch>='A'&&ch<='Z')||(ch>='0'&&ch<='9')||ch=='/'||ch=='-'||ch=='_'||ch=='.'||ch=='~')encoded+=ch;else{encoded+='%';encoded+=hex[ch>>4];encoded+=hex[ch&15];}}
+  url=baseUrl+encoded;
+  return v8_inspector::StringBuffer::create(View(url.c_str()));
+ }
+ ~EditorInspector() override {Disconnect();inspector->contextDestroyed(context->value.Get(context->runtime->isolate));inspector.reset();}
+};
+std::unordered_map<Context*,std::unique_ptr<EditorInspector>> editorInspectors;
+EditorInspector* FindInspector(void* handle) {for(auto& item:editorInspectors)if(item.second.get()==handle)return item.second.get();return nullptr;}
+void DestroyInspector(Context* c) {auto it=editorInspectors.find(c);if(it!=editorInspectors.end()){Scope scope(c);editorInspectors.erase(it);}}
+}
+EXPORT int ze_InspectorCount(){return (int)editorInspectors.size();}
+EXPORT void* ze_InspectorCreate(Context* c,InspectorSend send,InspectorPump pump,const char* url) {
+ DestroyInspector(c);Scope scope(c);auto value=std::make_unique<EditorInspector>(c,send,pump,url);auto* ptr=value.get();editorInspectors[c]=std::move(value);return ptr;
+}
+EXPORT void ze_InspectorDestroy(void* handle){if(auto* p=FindInspector(handle))DestroyInspector(p->context);}
+EXPORT void ze_InspectorConnect(void* handle){if(auto* p=FindInspector(handle)){Scope scope(p->context);p->Connect();}}
+EXPORT void ze_InspectorDisconnect(void* handle){if(auto* p=FindInspector(handle)){Scope scope(p->context);p->Disconnect();}}
+EXPORT void ze_InspectorDispatch(void* handle,const uint8_t* data,int length) {
+ auto* p=FindInspector(handle);if(!p||!p->connection)return;auto active=p->connection;Scope scope(p->context);
+ auto text=v8::String::NewFromUtf8(p->context->runtime->isolate,(const char*)data,v8::NewStringType::kNormal,length).ToLocalChecked();
+ v8::String::Value words(p->context->runtime->isolate,text);active->session->dispatchProtocolMessage(v8_inspector::StringView(*words,words.length()));
+}
+// The managed lifetime lock leases this handle while posting. The interrupt
+// callback resolves it again on the owner thread, so queued work cannot use a
+// destroyed session. This follows V8 test/inspector/task-runner.cc's protocol-only
+// interrupt loop; never run gameplay or Editor updates inside this callback.
+EXPORT void ze_InspectorInterrupt(void* handle) {
+ auto* p=static_cast<EditorInspector*>(handle);
+ p->context->runtime->isolate->RequestInterrupt([](v8::Isolate* isolate,void* token){
+  auto* current=FindInspector(token);
+  if(current&&current->context->runtime->isolate==isolate)current->pump(0);
+ },handle);
+}
+EXPORT void ze_InspectorWait(void* handle){if(auto* p=FindInspector(handle)){Scope scope(p->context);p->waiting=true;while(p->waiting)p->pump(10);}}
+
 
 namespace
 {
@@ -71,6 +159,7 @@ EXPORT void *ze_NewRuntime()
 }
 EXPORT void ze_FreeRuntime(void *rt)
 {
+    for (auto* c : reinterpret_cast<Runtime *>(rt)->contexts) DestroyInspector(c);
     FreeRuntime(reinterpret_cast<Runtime *>(rt));
 }
 EXPORT void *ze_NewContext(void *rt)
@@ -79,6 +168,7 @@ EXPORT void *ze_NewContext(void *rt)
 }
 EXPORT void ze_FreeContext(void *ctx)
 {
+    DestroyInspector(reinterpret_cast<Context *>(ctx));
     FreeContext(reinterpret_cast<Context *>(ctx));
 }
 EXPORT void *ze_GetRuntime(void *ctx)

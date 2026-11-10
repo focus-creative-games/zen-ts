@@ -47,7 +47,7 @@ ZenTS 是一个针对 Il2Cpp 优化的现代、简洁、易用的 Unity **TypeSc
 - **完备互操作**：字段 / 属性 / 方法 / 重载 / 扩展方法 / 泛型 / 委托 / 数组 / struct / enum / Nullable / ref·out·in / 指针
 - **双 Runtime**：Editor Mono（Expression Emit）+ Player Il2Cpp（C++ `zents-runtime`）
 - **TypeScript 工作流**：`ZenTS/Init TypeScript Project` → `TsProject/`；`tsc --noEmit` 检查；esbuild 1:1 emit；Player 拷贝到 StreamingAssets
-- **原生调试路径预留**：Editor 侧 Debugger Host 接口（持续完善）
+- **Editor V8 调试**：内置 V8 Inspector，支持断点、单步、变量/表达式与 TypeScript source map；默认关闭，见 [调试说明](ZenTS~/debugger/README.md)
 
 ### 平台与版本
 
